@@ -4,3 +4,9 @@ spring:
       uri: ${MONGODB_URI:mongodb://localhost:27017}
       auto-index-creation: true
       database: TravnerDB
+
+server:
+  servlet:
+    session:
+      cookie:
+        same-site: strict
