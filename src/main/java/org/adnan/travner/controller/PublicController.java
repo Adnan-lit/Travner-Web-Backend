@@ -7,23 +7,25 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
-@RequestMapping("/public")
+@CrossOrigin
+@RequestMapping("public")
 public class PublicController {
 
     @Autowired
     private UserService userService;
 
-    @GetMapping
-    private List<UserEntry> getAll() {
-        return userService.getAll();
-    }
-
-    @PostMapping
-    public ResponseEntity<?> createUser(@RequestBody UserEntry user) {
-        userService.saveNewUser(user);
-        return new ResponseEntity<>(HttpStatus.CREATED);
+    @PostMapping("create-user")
+    public ResponseEntity<Void> createUser(@RequestBody UserEntry user) {
+        if (user == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        try {
+            userService.saveNewUser(user);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
