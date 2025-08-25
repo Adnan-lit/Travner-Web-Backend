@@ -30,4 +30,20 @@ public class UserService {
     public void saveUser(UserEntry user) {
         userRepository.save(user);
     }
+
+    public UserEntry getByUsername(String username) {
+        return userRepository.findByuserName(username);
+    }
+
+    public boolean deleteUser(UserEntry user) {
+        if (user == null) {
+            return false;
+        }
+        try {
+            userRepository.delete(user);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
 }
