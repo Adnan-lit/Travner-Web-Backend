@@ -51,12 +51,6 @@ import org.springframework.security.web.SecurityFilterChain;
 //
 //}
 
-
-
-
-
-
-
 //@Configuration
 //@EnableWebSecurity
 //public class SpringSecurity {
@@ -94,14 +88,6 @@ import org.springframework.security.web.SecurityFilterChain;
 //    }
 //}
 
-
-
-
-
-
-
-
-
 @Configuration
 @EnableWebSecurity
 public class SpringSecurity {
@@ -112,11 +98,12 @@ public class SpringSecurity {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(Customizer.withDefaults()) // Enable CORS with default configuration
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/public/**").permitAll()
-                        .requestMatchers( "/user/**").authenticated()
+                        .requestMatchers("/user/**").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow preflight requests
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable);
