@@ -23,7 +23,7 @@ public class CorsConfig {
         config.addAllowedOrigin("http://127.0.0.1:3000");
         config.addAllowedOrigin("http://127.0.0.1:4200");
         config.addAllowedOrigin("http://127.0.0.1:5173");
-        // config.addAllowedOrigin("https://your-frontend-domain.com"); // Add your
+         config.addAllowedOrigin("https://travner.vercel.app"); // Add your
         // production domain
 
         // Allow all HTTP methods
