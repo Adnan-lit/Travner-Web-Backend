@@ -30,7 +30,7 @@ public class UserController {
         if (username == null) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
-        UserEntry user = userService.getByUsername(username);
+        UserEntry user = userService.getByUsernameSecure(username);
         if (user == null) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
