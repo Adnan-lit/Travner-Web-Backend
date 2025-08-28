@@ -3,8 +3,6 @@ spring:
     mongodb:
       uri: ${MONGODB_URI}
       database: ${MONGODB_DATABASE:TravnerDB}
-      auto-index-creation: true
 
 server:
   port: ${PORT:8080}
-  address: 0.0.0.0

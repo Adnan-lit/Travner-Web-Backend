@@ -50,7 +50,6 @@ public class AdminController {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
 
-            // Password already removed in UserService.getByUsernameSecure()
             return new ResponseEntity<>(user, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -202,7 +201,6 @@ public class AdminController {
             }
 
             List<UserEntry> users = userService.getUsersByRole(role.toUpperCase());
-            // Passwords already removed in UserService.getUsersByRole()
             return new ResponseEntity<>(users, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);

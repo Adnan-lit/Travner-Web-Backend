@@ -61,27 +61,6 @@ public class PublicController {
     }
 
     /**
-     * Helper method to create response maps
-     */
-    private Map<String, Object> createResponse(String messageKey, String message, Boolean available) {
-        Map<String, Object> response = new HashMap<>();
-        response.put(messageKey, message);
-        if (available != null) {
-            response.put("available", available);
-        }
-        return response;
-    }
-
-    /**
-     * Basic username validation
-     */
-    private boolean isValidUsername(String username) {
-        // Username should be 3-50 characters, alphanumeric and underscore only
-        return username != null &&
-                username.matches("^[a-zA-Z0-9_]{3,50}$");
-    }
-
-    /**
      * Request password reset
      * POST /public/forgot-password
      */
@@ -206,5 +185,26 @@ public class PublicController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createResponse("error", "Internal server error", null));
         }
+    }
+
+    /**
+     * Helper method to create response maps
+     */
+    private Map<String, Object> createResponse(String messageKey, String message, Boolean available) {
+        Map<String, Object> response = new HashMap<>();
+        response.put(messageKey, message);
+        if (available != null) {
+            response.put("available", available);
+        }
+        return response;
+    }
+
+    /**
+     * Basic username validation
+     */
+    private boolean isValidUsername(String username) {
+        // Username should be 3-50 characters, alphanumeric and underscore only
+        return username != null &&
+                username.matches("^[a-zA-Z0-9_]{3,50}$");
     }
 }
