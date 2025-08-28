@@ -94,7 +94,8 @@ public class PublicController {
                         .body(createResponse("error", "Username is required", null));
             }
 
-            // Generate reset token (this will return null if user doesn't exist, for security)
+            // Generate reset token (this will return null if user doesn't exist, for
+            // security)
             String token = userService.generatePasswordResetToken(username.trim());
 
             // Always return success to prevent username enumeration
@@ -146,8 +147,61 @@ public class PublicController {
             }
 
             return ResponseEntity.ok(
-                    createResponse("message", "Password reset successfully", null)
-            );
+                    createResponse("message", "Password reset successfully", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createResponse("error", "Internal server error", null));
+        }
+    }
+
+    /**
+     * Create first admin user - Only works if no admin exists
+     * POST /public/create-first-admin
+     * Security: This endpoint is only available when no admin users exist in the
+     * system
+     */
+    @PostMapping("create-first-admin")
+    public ResponseEntity<Map<String, Object>> createFirstAdmin(@RequestBody UserEntry user) {
+        try {
+            if (user == null) {
+                return ResponseEntity.badRequest()
+                        .body(createResponse("error", "User data is required", null));
+            }
+
+            if (user.getUserName().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(createResponse("error", "Username is required", null));
+            }
+
+            if (user.getPassword().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(createResponse("error", "Password is required", null));
+            }
+
+            if (user.getPassword().length() < 6) {
+                return ResponseEntity.badRequest()
+                        .body(createResponse("error", "Password must be at least 6 characters long", null));
+            }
+
+            // Check if any admin users already exist
+            if (!userService.getUsersByRole("ADMIN").isEmpty()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(createResponse("error", "Admin users already exist. Use regular admin endpoints.", null));
+            }
+
+            // Check if username already exists
+            if (!userService.isUsernameAvailable(user.getUserName().trim())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(createResponse("error", "Username already exists", null));
+            }
+
+            // Create user with admin roles
+            user.setUserName(user.getUserName().trim());
+            user.setRoles(java.util.List.of("USER", "ADMIN"));
+            userService.saveUser(user); // Use saveUser to preserve roles
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(createResponse("message", "First admin user created successfully", null));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createResponse("error", "Internal server error", null));

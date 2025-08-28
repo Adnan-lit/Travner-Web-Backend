@@ -1,5 +1,6 @@
 package org.adnan.travner.service;
 
+import lombok.Getter;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +13,6 @@ import org.bson.types.ObjectId;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 @Service
 public class UserService {
@@ -28,16 +28,13 @@ public class UserService {
 
     // Inner class for password reset token
     private static class PasswordResetToken {
+        @Getter
         private final String username;
         private final LocalDateTime expiry;
 
         public PasswordResetToken(String username) {
             this.username = username;
-            this.expiry = LocalDateTime.now().plus(15, ChronoUnit.MINUTES); // 15 minutes expiry
-        }
-
-        public String getUsername() {
-            return username;
+            this.expiry = LocalDateTime.now().plusMinutes(15); // 15 minutes expiry
         }
 
         public boolean isExpired() {
@@ -59,6 +56,10 @@ public class UserService {
     }
 
     public void saveUser(UserEntry user) {
+        // Check if password needs encoding (not already encoded)
+        if (!user.getPassword().startsWith("$2a$")) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         userRepository.save(user);
     }
 
