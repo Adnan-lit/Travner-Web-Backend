@@ -3,6 +3,14 @@ spring:
     mongodb:
       uri: ${MONGODB_URI}
       database: ${MONGODB_DATABASE:TravnerDB}
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
 
 server:
   port: ${PORT:8080}
+
+app:
+  upload:
+    dir: ${APP_UPLOAD_DIR:${user.home}/travner-uploads}
