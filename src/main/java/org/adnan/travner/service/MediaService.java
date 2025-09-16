@@ -10,6 +10,7 @@ import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.MediaRepository;
 import org.adnan.travner.repository.PostRepository;
 import org.adnan.travner.repository.UserRepository;
+import org.adnan.travner.util.FileValidationUtil;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -50,14 +52,10 @@ public class MediaService {
     /**
      * Upload a media file to GridFS and create a MediaEntry for it
      */
+    @Transactional
     public MediaDTO uploadMedia(MultipartFile file, String username, String postId) {
-        // Validate inputs
-        if (file == null) {
-            throw new IllegalArgumentException("File cannot be null");
-        }
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
-        }
+        // Validate file using security utility
+        FileValidationUtil.validateFile(file);
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("Username cannot be null or empty");
         }
@@ -94,10 +92,11 @@ public class MediaService {
         }
 
         try {
-            // Get file metadata
+            // Get file metadata and sanitize filename
             String originalFilename = file.getOriginalFilename();
-            if (originalFilename == null) {
-                originalFilename = "unnamed_file";
+            String sanitizedFilename = FileValidationUtil.sanitizeFilename(originalFilename);
+            if (sanitizedFilename.equals("file")) {
+                sanitizedFilename = "media_" + System.currentTimeMillis();
             }
 
             String contentType = file.getContentType();
@@ -206,6 +205,7 @@ public class MediaService {
     /**
      * Delete a media file from GridFS and remove its entry
      */
+    @Transactional
     public void deleteMedia(String id, String username) {
         UserEntry user = userRepository.findByuserName(username);
         if (user == null) {

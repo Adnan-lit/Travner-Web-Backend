@@ -14,6 +14,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public class PostService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
 
+    @Transactional
     public PostDTO createPost(String username, PostRequest postRequest) {
         UserEntry user = userRepository.findByuserName(username);
         if (user == null) {
@@ -110,13 +112,14 @@ public class PostService {
                 });
     }
 
-    public PostDTO updatePost(String id, String username, PostRequest postRequest) {
+    @Transactional
+    public PostDTO updatePost(String postId, String username, PostRequest postRequest) {
         UserEntry user = userRepository.findByuserName(username);
         if (user == null) {
             throw new RuntimeException("User not found");
         }
 
-        Optional<PostEntry> postOptional = postRepository.findById(new ObjectId(id));
+        Optional<PostEntry> postOptional = postRepository.findById(new ObjectId(postId));
         if (postOptional.isEmpty()) {
             throw new RuntimeException("Post not found");
         }
@@ -140,6 +143,7 @@ public class PostService {
         return convertToDTO(updatedPost, commentCount);
     }
 
+    @Transactional
     public void deletePost(String id, String username) {
         UserEntry user = userRepository.findByuserName(username);
         if (user == null) {

@@ -34,8 +34,9 @@ public class SpringSecurity {
                         .requestMatchers("/posts/{id}").permitAll()
                         .requestMatchers("/posts/{postId}/comments").permitAll()
                         .requestMatchers("/posts/{postId}/comments/{id}").permitAll()
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers("/debug/**").permitAll()
+                        .requestMatchers("/posts/{postId}/media/{mediaId}").permitAll() // Allow media file access
+                        .requestMatchers("/actuator/health").permitAll() // Allow health checks
+                        .requestMatchers("/debug/**").hasRole("ADMIN") // Secure debug endpoints
                         .requestMatchers("/user/**").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())

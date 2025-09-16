@@ -1,5 +1,6 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.dto.UserRequest;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,11 +21,19 @@ public class PublicController {
     private UserService userService;
 
     @PostMapping("create-user")
-    public ResponseEntity<Void> createUser(@RequestBody UserEntry user) {
-        if (user == null) {
+    public ResponseEntity<Void> createUser(@Valid @RequestBody UserRequest userRequest) {
+        if (userRequest == null) {
             return ResponseEntity.badRequest().build();
         }
         try {
+            // Convert UserRequest to UserEntry
+            UserEntry user = new UserEntry();
+            user.setUserName(userRequest.getUserName());
+            user.setPassword(userRequest.getPassword());
+            user.setFirstName(userRequest.getFirstName());
+            user.setLastName(userRequest.getLastName());
+            user.setEmail(userRequest.getEmail());
+
             userService.saveNewUser(user);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception e) {

@@ -14,6 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import java.util.List;
 import java.util.Optional;
 
@@ -187,7 +190,7 @@ public class PostController {
     @PostMapping
     public ResponseEntity<ApiResponse<PostDTO>> createPost(
             Authentication authentication,
-            @RequestBody PostRequest postRequest) {
+            @Valid @RequestBody PostRequest postRequest) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -216,7 +219,7 @@ public class PostController {
     public ResponseEntity<ApiResponse<PostDTO>> updatePost(
             Authentication authentication,
             @PathVariable String id,
-            @RequestBody PostRequest postRequest) {
+            @Valid @RequestBody PostRequest postRequest) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
