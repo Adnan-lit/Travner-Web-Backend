@@ -17,12 +17,22 @@ For easier testing, create a Postman environment with these variables:
 1. `base_url`: Your API base URL (e.g., `http://localhost:8080`)
 2. `username`: Your test user's username
 3. `password`: Your test user's password
-4. `post_id`: ID of a test post (you'll set this after creating your first post)
-5. `comment_id`: ID of a test comment (you'll set this after creating your first comment)
+4. `jwt_token`: JWT token for WebSocket authentication (set via auth endpoint)
+5. `post_id`: ID of a test post (you'll set this after creating your first post)
+6. `comment_id`: ID of a test comment (you'll set this after creating your first comment)
 
 ## Authentication
 
-The collection uses Basic Authentication. Each request that requires authentication will use the `username` and `password` variables.
+The collection uses two types of authentication:
+
+### Basic Authentication
+- REST API endpoints use Basic Authentication
+- Each request uses the `username` and `password` variables
+
+### JWT Authentication  
+- WebSocket connections use JWT tokens
+- First obtain a JWT token via the `/api/auth/token` endpoint
+- Use the token for WebSocket connections
 
 ## Testing Workflow
 
@@ -47,6 +57,16 @@ Below is a recommended testing workflow to validate all aspects of the API:
 
 2. **Test Login**
    - Access any authenticated endpoint to verify credentials
+
+3. **Generate JWT Token (for Chat/WebSocket)**
+   - Endpoint: `POST {{base_url}}/api/auth/token`
+   - Authorization: Basic Auth using `{{username}}` and `{{password}}`
+   - Response will contain JWT token for WebSocket authentication
+   - Save the `accessToken` to `jwt_token` environment variable
+
+4. **Validate JWT Token (optional)**
+   - Endpoint: `POST {{base_url}}/api/auth/validate?token={{jwt_token}}`
+   - Verifies that the JWT token is valid
 
 ### 2. Post Management
 
@@ -192,11 +212,16 @@ The chat system requires:
 
 To extend this collection with chat endpoints, add these requests:
 
+**Authentication**:
+
+- `POST {{base_url}}/api/auth/token` - Generate JWT token (Basic Auth)
+- `POST {{base_url}}/api/auth/validate?token={{jwt_token}}` - Validate JWT token
+
 **Conversations**:
 
-- `POST {{base_url}}/api/chat/conversations` - Create conversation
-- `GET {{base_url}}/api/chat/conversations` - Get conversations
-- `POST {{base_url}}/api/chat/conversations/{conversationId}/members` - Add members
+- `POST {{base_url}}/api/chat/conversations` - Create conversation (Basic Auth)
+- `GET {{base_url}}/api/chat/conversations` - Get conversations (Basic Auth)
+- `POST {{base_url}}/api/chat/conversations/{conversationId}/members` - Add members (Basic Auth)
 
 **Messages**:
 

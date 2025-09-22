@@ -834,6 +834,11 @@ For detailed chat API documentation including all endpoints, request/response fo
 
 #### Key Endpoints Summary
 
+**Authentication**:
+
+- `POST /api/auth/token` - Generate JWT token for WebSocket authentication
+- `POST /api/auth/validate` - Validate JWT token
+
 **Conversations**:
 
 - `POST /api/chat/conversations` - Create conversation

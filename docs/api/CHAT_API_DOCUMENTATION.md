@@ -25,11 +25,97 @@ WebSocket connections use JWT authentication for real-time features:
 Authorization: Bearer <jwt-token>
 ```
 
-**Note**: The JWT token is obtained through the Basic Authentication system but used specifically for WebSocket connections.
+#### Getting JWT Token for WebSocket
+
+Before connecting to WebSocket, you need to obtain a JWT token:
+
+**1. Generate JWT Token:**
+
+```http
+POST /api/auth/token
+Authorization: Basic <base64-encoded-credentials>
+Content-Type: application/json
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "JWT token generated successfully",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400000,
+    "issuedAt": "2025-09-22T10:30:00Z",
+    "username": "john_doe"
+  }
+}
+```
+
+**2. Use Token for WebSocket Connection:**
+
+```javascript
+// Frontend example
+const token = response.data.accessToken;
+const socket = new SockJS('/ws');
+const stompClient = Stomp.over(socket);
+
+stompClient.connect(
+  { Authorization: `Bearer ${token}` },
+  function(frame) {
+    console.log('Connected: ' + frame);
+    // Subscribe to channels and send messages
+  }
+);
+```
 
 ---
 
-## 💬 Chat REST API Endpoints
+## � Authentication API Endpoints
+
+### Generate JWT Token
+
+```http
+POST /api/auth/token
+Authorization: Basic <base64-encoded-credentials>
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "JWT token generated successfully",
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400000,
+    "issuedAt": "2025-09-22T10:30:00Z",
+    "username": "john_doe"
+  }
+}
+```
+
+### Validate JWT Token
+
+```http
+POST /api/auth/validate?token=<jwt-token>
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Token is valid",
+  "data": "john_doe"
+}
+```
+
+---
+
+## �💬 Chat REST API Endpoints
 
 ### Conversations
 

@@ -37,6 +37,8 @@ public class SpringSecurity {
                         .requestMatchers("/posts/{postId}/media/{mediaId}").permitAll() // Allow media file access
                         .requestMatchers("/actuator/health").permitAll() // Allow health checks
                         .requestMatchers("/debug/**").hasRole("ADMIN") // Secure debug endpoints
+                        .requestMatchers("/api/auth/**").authenticated() // Auth endpoints require authentication
+                        .requestMatchers("/api/chat/**").authenticated() // Chat endpoints require authentication
                         .requestMatchers("/user/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
