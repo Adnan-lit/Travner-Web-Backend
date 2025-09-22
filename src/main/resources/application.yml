@@ -7,6 +7,8 @@ spring:
     multipart:
       max-file-size: 20MB
       max-request-size: 25MB
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
 server:
   port: ${PORT:8080}
@@ -14,6 +16,33 @@ server:
 app:
   upload:
     dir: ${APP_UPLOAD_DIR:${user.home}/travner-uploads}
+
+  # JWT Configuration
+  jwt:
+    secret: ${JWT_SECRET:mySecretKey12345678901234567890123456789012345678901234567890}
+    expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+
+  # CORS Configuration
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000,https://travner.vercel.app}
+    allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+
+  # Chat Configuration
+  chat:
+    message:
+      max-length: ${CHAT_MESSAGE_MAX_LENGTH:4000}
+      max-attachments: ${CHAT_MESSAGE_MAX_ATTACHMENTS:5}
+    rate-limit:
+      messages-per-minute: ${CHAT_RATE_LIMIT_MESSAGES:60}
+      typing-cooldown-seconds: ${CHAT_TYPING_COOLDOWN:2}
+    broker:
+      type: ${CHAT_BROKER_TYPE:simple} # simple or external
+      relay-host: ${CHAT_RELAY_HOST:localhost}
+      relay-port: ${CHAT_RELAY_PORT:61613}
+      relay-login: ${CHAT_RELAY_LOGIN:guest}
+      relay-passcode: ${CHAT_RELAY_PASSCODE:guest}
 
 # Actuator configuration for monitoring
 management:

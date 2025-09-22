@@ -12,6 +12,7 @@
    - [Posts APIs](#posts-apis)
    - [Media APIs](#media-apis)
    - [Comments APIs](#comments-apis)
+   - [Chat APIs](#chat-apis)
    - [Admin APIs](#admin-apis)
    - [Debug APIs](#debug-apis)
 
@@ -182,11 +183,32 @@ Create the first admin user (only works when no admin exists).
 
 These endpoints require user authentication.
 
+**Note**: User endpoints support dual path patterns for compatibility:
+
+- **Legacy paths**: `/user/*`
+- **API paths**: `/api/users/*`
+
+Both patterns provide identical functionality and can be used interchangeably.
+
 #### Get Current User Profile
 
 Get the authenticated user's profile information.
 
-**Endpoint**: `GET /user`
+**Endpoint**: `GET /user` or `GET /api/users`
+
+**Headers**:
+
+```
+Authorization: Basic <credentials>
+```
+
+**Response**: Returns the user object with secure information.
+
+#### Get User Profile
+
+Get the authenticated user's detailed profile information.
+
+**Endpoint**: `GET /user/profile` or `GET /api/users/profile`
 
 **Headers**:
 
@@ -200,7 +222,7 @@ Authorization: Basic <credentials>
 
 Delete the authenticated user's account.
 
-**Endpoint**: `DELETE /user`
+**Endpoint**: `DELETE /user` or `DELETE /api/users`
 
 **Headers**:
 
@@ -214,7 +236,7 @@ Authorization: Basic <credentials>
 
 Update the user's complete profile information.
 
-**Endpoint**: `PUT /user/profile`
+**Endpoint**: `PUT /user/profile` or `PUT /api/users/profile`
 
 **Headers**:
 
@@ -245,7 +267,7 @@ Authorization: Basic <credentials>
 
 Partially update user profile information.
 
-**Endpoint**: `PATCH /user/profile`
+**Endpoint**: `PATCH /user/profile` or `PATCH /api/users/profile`
 
 **Headers**:
 
@@ -274,7 +296,7 @@ Authorization: Basic <credentials>
 
 Change the user's password.
 
-**Endpoint**: `POST /user/change-password`
+**Endpoint**: `PUT /user/password` or `PUT /api/users/password`
 
 **Headers**:
 
@@ -783,6 +805,56 @@ Authorization: Basic <credentials>
 ```
 
 **Response**: `200 OK` with the updated comment object.
+
+---
+
+### Chat APIs
+
+The Travner platform includes a comprehensive real-time chat system with both REST APIs for traditional operations and WebSocket support for real-time messaging.
+
+#### Chat System Overview
+
+- **REST APIs**: Use Basic Authentication for conversation and message management
+- **WebSocket**: Uses JWT authentication for real-time messaging
+- **Conversation Types**: Direct (1-on-1) and Group conversations
+- **Features**: Real-time messaging, typing indicators, read receipts, file attachments
+
+#### Important Notes
+
+- **Authentication Split**: REST endpoints use Basic Auth, WebSocket connections require JWT tokens
+- **Real-time Features**: WebSocket connection at `/ws` endpoint with SockJS fallback
+- **Message Types**: TEXT, IMAGE, FILE, and SYSTEM messages supported
+- **Permissions**: Conversation admins can manage members and settings
+
+#### Quick Reference
+
+For detailed chat API documentation including all endpoints, request/response formats, and WebSocket event handling, please refer to:
+
+**[📖 Complete Chat API Documentation](./CHAT_API_DOCUMENTATION.md)**
+
+#### Key Endpoints Summary
+
+**Conversations**:
+
+- `POST /api/chat/conversations` - Create conversation
+- `GET /api/chat/conversations` - Get user's conversations
+- `GET /api/chat/conversations/{id}` - Get conversation details
+- `POST /api/chat/conversations/{id}/members` - Add members
+- `DELETE /api/chat/conversations/{id}/members/{userId}` - Remove member
+
+**Messages**:
+
+- `POST /api/chat/messages` - Send message
+- `GET /api/chat/conversations/{id}/messages` - Get messages
+- `PUT /api/chat/messages/{id}` - Edit message
+- `DELETE /api/chat/messages/{id}` - Delete message
+- `POST /api/chat/messages/read` - Mark messages as read
+
+**WebSocket**:
+
+- Connection: `ws://localhost:8080/ws` (with JWT auth)
+- Real-time messaging, typing indicators, presence updates
+- Event-driven architecture with full chat functionality
 
 ---
 

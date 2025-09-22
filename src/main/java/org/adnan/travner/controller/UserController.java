@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping({ "/user", "/api/users" })
 public class UserController {
 
     @Autowired
@@ -55,6 +55,23 @@ public class UserController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    /**
+     * Get user profile
+     * GET /user/profile
+     */
+    @GetMapping("/profile")
+    public ResponseEntity<Object> getProfile() {
+        String username = getAuthenticatedUsername();
+        if (username == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+        UserEntry user = userService.getByUsernameSecure(username);
+        if (user == null) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
+        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 
     /**

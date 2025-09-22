@@ -38,6 +38,7 @@ public class SpringSecurity {
                         .requestMatchers("/actuator/health").permitAll() // Allow health checks
                         .requestMatchers("/debug/**").hasRole("ADMIN") // Secure debug endpoints
                         .requestMatchers("/user/**").authenticated()
+                        .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())

@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="TravnerApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+    <option name="ALTERNATIVE_JRE_PATH" value="21" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <envs>
+      <env name="MONGODB_URI" value="mongodb+srv://madnan221314:SA8rldSab9dfdy10@cluster0.5os88dy.mongodb.net/?retryWrites=true&amp;w=majority&amp;appName=Cluster0" />
+    </envs>
+    <module name="Travner" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="org.adnan.travner.TravnerApplication" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

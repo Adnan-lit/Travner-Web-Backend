@@ -166,3 +166,41 @@ For each request, check:
 
 3. **Location Search**:
    - `GET {{base_url}}/posts/location?location=Switzerland`
+
+## Chat System Testing
+
+**Note**: The current Postman collection focuses on the core travel blog functionality (posts, comments, media, users).
+
+For **Chat System Testing**, the platform includes:
+
+- **REST API Chat Endpoints**: Available at `/api/chat/*` (use Basic Auth)
+- **WebSocket Real-time Features**: Connection at `ws://localhost:8080/ws` (requires JWT tokens)
+
+### Chat API Testing
+
+For comprehensive chat system testing including conversations, messages, and real-time features, refer to:
+
+**[📖 Complete Chat API Documentation](../api/CHAT_API_DOCUMENTATION.md)**
+
+The chat system requires:
+
+1. **REST endpoints**: Use existing Basic Auth setup from this Postman collection
+2. **WebSocket testing**: Requires specialized WebSocket testing tools or frontend integration
+3. **JWT tokens**: Separate authentication flow for real-time features
+
+### Adding Chat Endpoints to Postman
+
+To extend this collection with chat endpoints, add these requests:
+
+**Conversations**:
+
+- `POST {{base_url}}/api/chat/conversations` - Create conversation
+- `GET {{base_url}}/api/chat/conversations` - Get conversations
+- `POST {{base_url}}/api/chat/conversations/{conversationId}/members` - Add members
+
+**Messages**:
+
+- `POST {{base_url}}/api/chat/messages` - Send message
+- `GET {{base_url}}/api/chat/conversations/{conversationId}/messages` - Get messages
+
+All chat REST endpoints use the same Basic Authentication as other API endpoints in this collection.
