@@ -27,6 +27,7 @@ public class SpringSecurity {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/public/**").permitAll()
+                        .requestMatchers("/user/public/**").permitAll() // Allow public profile access
                         .requestMatchers("/posts").permitAll()
                         .requestMatchers("/posts/search").permitAll()
                         .requestMatchers("/posts/location").permitAll()
@@ -37,7 +38,6 @@ public class SpringSecurity {
                         .requestMatchers("/posts/{postId}/media/{mediaId}").permitAll() // Allow media file access
                         .requestMatchers("/actuator/health").permitAll() // Allow health checks
                         .requestMatchers("/debug/**").hasRole("ADMIN") // Secure debug endpoints
-                        .requestMatchers("/api/auth/**").authenticated() // Auth endpoints require authentication
                         .requestMatchers("/api/chat/**").authenticated() // Chat endpoints require authentication
                         .requestMatchers("/user/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()

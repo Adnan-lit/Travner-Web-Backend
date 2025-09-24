@@ -89,13 +89,16 @@ public class UserController {
             String firstName = profileData.get("firstName");
             String lastName = profileData.get("lastName");
             String email = profileData.get("email");
+            String bio = profileData.get("bio");
+            String location = profileData.get("location");
 
             // Validate email format if provided
             if (email != null && !email.trim().isEmpty() && !isValidEmail(email)) {
                 return new ResponseEntity<>(createResponse("error", "Invalid email format"), HttpStatus.BAD_REQUEST);
             }
 
-            boolean updated = userService.updateUserProfile(username, firstName, lastName, email);
+            boolean updated = userService.updateUserProfileEnhanced(username, firstName, lastName, email, bio,
+                    location);
             if (!updated) {
                 return new ResponseEntity<>(createResponse("error", "Failed to update profile"),
                         HttpStatus.INTERNAL_SERVER_ERROR);
@@ -193,6 +196,39 @@ public class UserController {
             }
 
             return new ResponseEntity<>(createResponse("message", "Password changed successfully"), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(createResponse("error", "Internal server error"),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Get public user profile by username
+     * GET /user/public/{username}
+     */
+    @GetMapping("/public/{username}")
+    public ResponseEntity<Object> getPublicProfile(@PathVariable String username) {
+        try {
+            if (username == null || username.trim().isEmpty()) {
+                return new ResponseEntity<>(createResponse("error", "Username is required"), HttpStatus.BAD_REQUEST);
+            }
+
+            UserEntry user = userService.getByUsernameSecure(username.trim());
+            if (user == null) {
+                return new ResponseEntity<>(createResponse("error", "User not found"), HttpStatus.NOT_FOUND);
+            }
+
+            // Create public profile response (exclude sensitive data)
+            Map<String, Object> publicProfile = new HashMap<>();
+            publicProfile.put("userName", user.getUserName());
+            publicProfile.put("firstName", user.getFirstName());
+            publicProfile.put("lastName", user.getLastName());
+            publicProfile.put("bio", user.getBio());
+            publicProfile.put("location", user.getLocation());
+            publicProfile.put("profileImageUrl", user.getProfileImageUrl());
+            publicProfile.put("createdAt", user.getCreatedAt());
+
+            return new ResponseEntity<>(publicProfile, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(createResponse("error", "Internal server error"),
                     HttpStatus.INTERNAL_SERVER_ERROR);

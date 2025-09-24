@@ -54,6 +54,8 @@ public class UserService {
     public void saveNewUser(UserEntry user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRoles(List.of("USER"));
+        user.setCreatedAt(java.time.LocalDateTime.now());
+        user.setActive(true);
         userRepository.save(user);
     }
 
@@ -200,6 +202,31 @@ public class UserService {
         }
     }
 
+    // Enhanced profile update method with additional fields
+    public boolean updateUserProfileEnhanced(String username, String firstName, String lastName,
+            String email, String bio, String location) {
+        try {
+            UserEntry user = getByUsername(username);
+            if (user == null) {
+                return false;
+            }
+            if (firstName != null)
+                user.setFirstName(firstName);
+            if (lastName != null)
+                user.setLastName(lastName);
+            if (email != null)
+                user.setEmail(email);
+            if (bio != null)
+                user.setBio(bio);
+            if (location != null)
+                user.setLocation(location);
+            userRepository.save(user);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     public boolean changeUserPassword(String username, String currentPassword, String newPassword) {
         try {
             UserEntry user = getByUsername(username);
@@ -247,6 +274,18 @@ public class UserService {
                     case "email" -> {
                         if (value instanceof String)
                             user.setEmail((String) value);
+                    }
+                    case "bio" -> {
+                        if (value instanceof String)
+                            user.setBio((String) value);
+                    }
+                    case "location" -> {
+                        if (value instanceof String)
+                            user.setLocation((String) value);
+                    }
+                    case "profileImageUrl" -> {
+                        if (value instanceof String)
+                            user.setProfileImageUrl((String) value);
                     }
                     // Note: username and password changes should use dedicated methods
                 }
@@ -325,5 +364,33 @@ public class UserService {
                 .filter(user -> email.trim().equalsIgnoreCase(user.getEmail()))
                 .findFirst()
                 .orElse(null);
+    }
+
+    // Update last login time
+    public void updateLastLogin(String username) {
+        try {
+            UserEntry user = getByUsername(username);
+            if (user != null) {
+                user.setLastLoginAt(java.time.LocalDateTime.now());
+                userRepository.save(user);
+            }
+        } catch (RuntimeException e) {
+            // Log error but don't fail authentication
+        }
+    }
+
+    // Set user active/inactive status
+    public boolean setUserActiveStatus(String username, boolean active) {
+        try {
+            UserEntry user = getByUsername(username);
+            if (user == null) {
+                return false;
+            }
+            user.setActive(active);
+            userRepository.save(user);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 }

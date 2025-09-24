@@ -14,18 +14,28 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserService userService;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         UserEntry user = userRepository.findByuserName(username);
-        if (user != null) {
+        if (user != null && user.isActive()) {
+            // Update last login time (async to not slow down authentication)
+            try {
+                userService.updateLastLogin(username);
+            } catch (Exception e) {
+                // Don't fail authentication if logging fails
+            }
+
             UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                     .username(user.getUserName())
                     .password(user.getPassword())
                     .roles(user.getRoles().toArray(new String[0]))
+                    .disabled(!user.isActive())
                     .build();
             return userDetails;
         }
         throw new UsernameNotFoundException("User Not Found With UserName: " + username);
     }
-
 }

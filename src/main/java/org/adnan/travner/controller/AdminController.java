@@ -272,6 +272,40 @@ public class AdminController {
     }
 
     /**
+     * Set user active/inactive status (Admin only)
+     * PUT /admin/users/{username}/status
+     * Body: {"active": true/false}
+     */
+    @PutMapping("/users/{username}/status")
+    public ResponseEntity<Map<String, String>> setUserActiveStatus(
+            @PathVariable String username,
+            @RequestBody Map<String, Boolean> request) {
+        try {
+            if (username == null || username.trim().isEmpty()) {
+                return new ResponseEntity<>(createResponse("error", "Username is required"), HttpStatus.BAD_REQUEST);
+            }
+
+            Boolean active = request.get("active");
+            if (active == null) {
+                return new ResponseEntity<>(createResponse("error", "Active status is required"),
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            boolean updated = userService.setUserActiveStatus(username, active);
+            if (!updated) {
+                return new ResponseEntity<>(createResponse("error", "User not found or could not be updated"),
+                        HttpStatus.NOT_FOUND);
+            }
+
+            String message = active ? "User activated successfully" : "User deactivated successfully";
+            return new ResponseEntity<>(createResponse("message", message), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(createResponse("error", "Internal server error"),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
      * Helper method to create response maps
      */
     private Map<String, String> createResponse(String key, String value) {
