@@ -475,18 +475,52 @@ POST /posts/{postId}/comments/{commentId}/downvote
 
 **Authentication Required:** Basic Auth
 
-### Conversation Management
+### Conversation Management (DIRECT one-to-one only)
 
 #### Get User Conversations
 
 ```
 GET /api/chat/conversations?page=0&size=20
+Authorization: Basic <base64-credentials>
 ```
 
-#### Create Conversation
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Conversations retrieved successfully",
+  "data": {
+    "content": [
+      {
+        "id": "conv123",
+        "type": "DIRECT",
+        "title": "Travel Chat",
+        "memberCount": 2,
+        "lastMessage": {
+          "content": "Hello there!",
+          "senderName": "John Doe",
+          "createdAt": "2025-01-15T14:30:00Z"
+        },
+        "unreadCount": 3,
+        "createdAt": "2025-01-15T14:00:00Z"
+      }
+    ],
+    "pageable": {
+      "pageNumber": 0,
+      "pageSize": 20
+    },
+    "totalElements": 5
+  }
+}
+```
+
+#### Create DIRECT Conversation
 
 ```
 POST /api/chat/conversations
+Authorization: Basic <base64-credentials>
+Content-Type: application/json
 ```
 
 **Request Body:**
@@ -494,8 +528,38 @@ POST /api/chat/conversations
 ```json
 {
   "type": "DIRECT",
-  "participantIds": ["user123"],
-  "name": "Travel Chat"
+  "memberIds": ["otherUser"],
+  "title": null
+}
+```
+
+**Rules and Field Requirements (DIRECT only):**
+
+- Only DIRECT (one-to-one) conversations are supported.
+- `memberIds`: Required. Must contain exactly one identifier: the other user's username OR ObjectId string.
+- If a DIRECT conversation between the two users already exists, it will be returned (idempotent behavior).
+- `title`: Ignored for DIRECT conversations.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Conversation created successfully",
+  "data": {
+    "id": "conv123",
+    "type": "DIRECT",
+    "title": "Travel Chat",
+    "members": [
+      {
+        "id": "user123",
+        "userName": "john",
+        "firstName": "John",
+        "lastName": "Doe"
+      }
+    ],
+    "createdAt": "2025-01-15T14:30:00Z"
+  }
 }
 ```
 
@@ -503,27 +567,27 @@ POST /api/chat/conversations
 
 ```
 GET /api/chat/conversations/{conversationId}
+Authorization: Basic <base64-credentials>
 ```
 
-#### Add Members to Conversation
+**Path Parameters:**
+
+- `conversationId`: Valid ObjectId format required
+
+#### Get or Create DIRECT Conversation (convenience)
 
 ```
-POST /api/chat/conversations/{conversationId}/members
+GET /api/chat/conversations/direct/{otherUserId}
+Authorization: Basic <base64-credentials>
 ```
 
-**Request Body:**
+**Path Parameters:**
 
-```json
-{
-  "userIds": ["user123", "user456"]
-}
-```
+- `otherUserId`: The other user's username OR ObjectId string.
 
-#### Remove Member
+Returns an existing DIRECT conversation or creates one if none exists.
 
-```
-DELETE /api/chat/conversations/{conversationId}/members/{userId}
-```
+Note: Adding/removing members is not supported for DIRECT conversations and will return 400 Bad Request if attempted.
 
 ### Message Management
 
@@ -531,15 +595,61 @@ DELETE /api/chat/conversations/{conversationId}/members/{userId}
 
 ```
 POST /api/chat/messages
+Authorization: Basic <base64-credentials>
+Content-Type: application/json
 ```
 
 **Request Body:**
 
 ```json
 {
-  "conversationId": "conv123",
+  "conversationId": "64f2e...abc1",
   "content": "Hello everyone!",
-  "type": "TEXT"
+  "kind": "TEXT",
+  "replyToMessageId": "msg456",
+  "attachments": [
+    {
+      "mediaId": "media123",
+      "caption": "Tokyo sunset photo"
+    }
+  ]
+}
+```
+
+**Field Requirements:**
+
+- `conversationId`: Required. Valid ObjectId string
+- `content`: Required if kind is TEXT. Cannot be blank
+- `kind`: Required. Must be "TEXT", "IMAGE", "FILE", or "SYSTEM"
+- `replyToMessageId`: Optional. Valid ObjectId format if provided
+- `attachments`: Optional. Array of attachment objects
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Message sent successfully",
+  "data": {
+    "id": "msg123",
+    "conversationId": "conv123",
+    "senderId": "user123",
+    "senderName": "John Doe",
+    "content": "Hello everyone!",
+    "kind": "TEXT",
+    "attachments": [
+      {
+        "id": "media123",
+        "filename": "Tokyo sunset photo",
+        "url": "media123",
+        "contentType": "application/octet-stream",
+        "size": 0
+      }
+    ],
+    "createdAt": "2025-01-15T14:30:00Z",
+    "readBy": [],
+    "readCount": 0
+  }
 }
 ```
 
@@ -547,24 +657,59 @@ POST /api/chat/messages
 
 ```
 GET /api/chat/conversations/{conversationId}/messages?page=0&size=50
+Authorization: Basic <base64-credentials>
 ```
+
+**Query Parameters:**
+
+- `page`: Page number (default: 0)
+- `size`: Page size (default: 50, max: 100)
+
+**Path Parameters:**
+
+- `conversationId`: Valid ObjectId format required
 
 #### Edit Message
 
 ```
-PUT /api/chat/messages/{messageId}?content=Updated message text
+PUT /api/chat/messages/{messageId}
+Authorization: Basic <base64-credentials>
+Content-Type: application/json
 ```
+
+**Request Body:**
+
+```json
+{
+  "content": "Updated message text"
+}
+```
+
+**Path Parameters:**
+
+- `messageId`: Valid ObjectId format required
+
+**Field Requirements:**
+
+- `content`: Required. Cannot be blank
 
 #### Delete Message
 
 ```
 DELETE /api/chat/messages/{messageId}
+Authorization: Basic <base64-credentials>
 ```
+
+**Path Parameters:**
+
+- `messageId`: Valid ObjectId format required
 
 #### Mark Messages as Read
 
 ```
 POST /api/chat/messages/read
+Authorization: Basic <base64-credentials>
+Content-Type: application/json
 ```
 
 **Request Body:**
@@ -575,6 +720,110 @@ POST /api/chat/messages/read
   "lastReadMessageId": "msg456"
 }
 ```
+
+**Field Requirements:**
+
+- `conversationId`: Required. Valid ObjectId format
+- `lastReadMessageId`: Required. Valid ObjectId format
+
+#### Get Unread Count
+
+```
+GET /api/chat/conversations/{conversationId}/unread-count
+Authorization: Basic <base64-credentials>
+```
+
+**Path Parameters:**
+
+- `conversationId`: Valid ObjectId format required
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Unread count retrieved successfully",
+  "data": {
+    "conversationId": "conv123",
+    "unreadCount": 5
+  }
+}
+```
+
+### Error Responses
+
+#### 400 Bad Request
+
+- Invalid ObjectId format for IDs
+- Missing required fields
+- Invalid field values (e.g., unsupported message kind)
+
+```json
+{
+  "success": false,
+  "message": "Invalid ID format: invalid-id",
+  "timestamp": "2025-01-15T14:30:00Z"
+}
+```
+
+#### 401 Unauthorized
+
+- Missing or invalid Basic Authentication header
+
+```json
+{
+  "success": false,
+  "message": "Authentication required",
+  "timestamp": "2025-01-15T14:30:00Z"
+}
+```
+
+#### 404 Not Found
+
+- Conversation or message not found
+
+```json
+{
+  "success": false,
+  "message": "Conversation not found",
+  "timestamp": "2025-01-15T14:30:00Z"
+}
+```
+
+```
+
+#### Edit Message
+
+```
+
+PUT /api/chat/messages/{messageId}?content=Updated message text
+
+```
+
+#### Delete Message
+
+```
+
+DELETE /api/chat/messages/{messageId}
+
+```
+
+#### Mark Messages as Read
+
+```
+
+POST /api/chat/messages/read
+
+````
+
+**Request Body:**
+
+```json
+{
+  "conversationId": "conv123",
+  "lastReadMessageId": "msg456"
+}
+````
 
 #### Get Unread Count
 
@@ -826,7 +1075,7 @@ Authentication is handled during the WebSocket handshake using Basic Auth creden
   "type": "SEND_MESSAGE",
   "conversationId": "conv123",
   "content": "Hello there!",
-  "messageType": "TEXT"
+  "kind": "TEXT"
 }
 ```
 
@@ -851,9 +1100,8 @@ Authentication is handled during the WebSocket handshake using Basic Auth creden
 
 ### Subscription Endpoints
 
-- `/topic/conversation/{conversationId}` - Receive messages for a conversation
-- `/user/queue/messages` - Receive direct messages
-- `/user/queue/notifications` - Receive notifications
+- `/topic/conversation/{conversationId}` - Receive messages and events for a conversation
+- `/user/queue/notifications` - Receive personal notifications
 
 ---
 
@@ -896,19 +1144,13 @@ curl -X POST http://localhost:8080/posts \
 curl http://localhost:8080/posts/user/traveler123
 ```
 
-### Chat Example
+### Chat Example (DIRECT)
 
-#### 1. Create Conversation
+#### 1. Get or Create DIRECT Conversation
 
 ```bash
-curl -X POST http://localhost:8080/api/chat/conversations \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Basic dHJhdmVsZXIxMjM6bXlwYXNzd29yZA==" \
-  -d '{
-    "type": "DIRECT",
-    "participantIds": ["othertraveler"],
-    "name": "Travel Discussion"
-  }'
+curl -X GET http://localhost:8080/api/chat/conversations/direct/othertraveler \
+  -H "Authorization: Basic dHJhdmVsZXIxMjM6bXlwYXNzd29yZA=="
 ```
 
 #### 2. Send Message
@@ -920,7 +1162,7 @@ curl -X POST http://localhost:8080/api/chat/messages \
   -d '{
     "conversationId": "60b5d9f5e1b2c3d4e5f6g7h8",
     "content": "Hey! Loved your Bali post!",
-    "type": "TEXT"
+    "kind": "TEXT"
   }'
 ```
 

@@ -27,6 +27,7 @@ public class SpringSecurity {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(request -> request
                         .requestMatchers("/public/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll() // Allow WebSocket handshake
                         .requestMatchers("/user/public/**").permitAll() // Allow public profile access
                         .requestMatchers("/posts").permitAll()
                         .requestMatchers("/posts/search").permitAll()

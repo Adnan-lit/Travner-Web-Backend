@@ -9,7 +9,9 @@ import org.adnan.travner.domain.conversation.ConversationRepository;
 import org.adnan.travner.domain.message.MessageRepository;
 import org.adnan.travner.dto.chat.ConversationResponse;
 import org.adnan.travner.dto.chat.CreateConversationRequest;
+import org.adnan.travner.exception.ResourceNotFoundException;
 import org.adnan.travner.repository.UserRepository;
+import org.adnan.travner.util.ObjectIdUtil;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +35,18 @@ public class ConversationService {
         private final ConversationMembershipRepository membershipRepository;
         private final UserRepository userRepository;
         private final MessageRepository messageRepository;
+        private final UserService userService;
+
+        private ObjectId resolveUserId(String usernameOrId) {
+                if (ObjectIdUtil.isValidObjectId(usernameOrId)) {
+                        return new ObjectId(usernameOrId);
+                }
+                var user = userService.getByUsername(usernameOrId);
+                if (user == null || user.getId() == null) {
+                        throw new IllegalArgumentException("User not found: " + usernameOrId);
+                }
+                return user.getId();
+        }
 
         /**
          * Create a new conversation
@@ -40,55 +54,77 @@ public class ConversationService {
         public ConversationResponse createConversation(CreateConversationRequest request, String currentUserId) {
                 log.debug("Creating conversation for user: {}", currentUserId);
 
-                ObjectId currentUserObjectId = new ObjectId(currentUserId);
+                // Enforce one-to-one (DIRECT) conversations only
+                if (request.getType() == null || request.getType() != Conversation.ConversationType.DIRECT) {
+                        throw new IllegalArgumentException("Only DIRECT (one-to-one) conversations are supported");
+                }
 
-                // Create conversation entity
+                if (request.getMemberIds() == null || request.getMemberIds().size() != 1) {
+                        throw new IllegalArgumentException("DIRECT conversation must specify exactly one other user");
+                }
+
+                ObjectId currentUserObjectId = resolveUserId(currentUserId);
+                ObjectId otherUserObjectId = resolveUserId(request.getMemberIds().get(0));
+
+                if (currentUserObjectId.equals(otherUserObjectId)) {
+                        throw new IllegalArgumentException("Cannot create a conversation with yourself");
+                }
+
+                // If a direct conversation between these two users exists, return it
+                var existing = conversationRepository.findDirectConversationBetweenUsers(currentUserObjectId,
+                                otherUserObjectId);
+                if (existing.isPresent()) {
+                        var convo = existing.get();
+                        var memberships = membershipRepository.findByConversationId(convo.getId());
+                        return mapToResponse(convo, memberships, currentUserId);
+                }
+
+                // Create a new DIRECT conversation
                 Conversation conversation = Conversation.builder()
-                                .type(request.getType())
-                                .title(request.getTitle())
-                                .ownerId(currentUserObjectId)
-                                .adminIds(List.of(currentUserObjectId))
+                                .type(Conversation.ConversationType.DIRECT)
+                                .title(null)
+                                .ownerId(null)
+                                .adminIds(null)
                                 .createdAt(Instant.now())
                                 .lastMessageAt(Instant.now())
                                 .isArchived(false)
                                 .build();
 
-                // Save conversation
+                // Save conversation shell
                 Conversation savedConversation = conversationRepository.save(conversation);
 
-                // Create membership for creator
-                ConversationMembership creatorMembership = ConversationMembership.builder()
+                // Set memberIds to exactly the two participants
+                java.util.List<ObjectId> memberIds = new java.util.ArrayList<>();
+                memberIds.add(currentUserObjectId);
+                memberIds.add(otherUserObjectId);
+                savedConversation.setMemberIds(memberIds);
+                conversationRepository.save(savedConversation);
+
+                // Create memberships for both users
+                ConversationMembership m1 = ConversationMembership.builder()
                                 .conversationId(savedConversation.getId())
                                 .userId(currentUserObjectId)
-                                .role(ConversationMembership.MemberRole.ADMIN)
+                                .role(ConversationMembership.MemberRole.MEMBER)
                                 .joinedAt(Instant.now())
                                 .lastReadAt(Instant.now())
                                 .muted(false)
                                 .build();
 
-                membershipRepository.save(creatorMembership);
+                ConversationMembership m2 = ConversationMembership.builder()
+                                .conversationId(savedConversation.getId())
+                                .userId(otherUserObjectId)
+                                .role(ConversationMembership.MemberRole.MEMBER)
+                                .joinedAt(Instant.now())
+                                .lastReadAt(Instant.now())
+                                .muted(false)
+                                .build();
 
-                // Add other members if specified
-                if (request.getMemberIds() != null && !request.getMemberIds().isEmpty()) {
-                        List<ConversationMembership> memberships = request.getMemberIds().stream()
-                                        .filter(userId -> !userId.equals(currentUserId)) // Don't add creator twice
-                                        .map(userId -> ConversationMembership.builder()
-                                                        .conversationId(savedConversation.getId())
-                                                        .userId(new ObjectId(userId))
-                                                        .role(ConversationMembership.MemberRole.MEMBER)
-                                                        .joinedAt(Instant.now())
-                                                        .lastReadAt(Instant.now())
-                                                        .muted(false)
-                                                        .build())
-                                        .collect(Collectors.toList());
+                membershipRepository.saveAll(java.util.List.of(m1, m2));
 
-                        membershipRepository.saveAll(memberships);
-                }
+                log.info("Created DIRECT conversation: {} between {} and {}", savedConversation.getId(),
+                                currentUserObjectId, otherUserObjectId);
 
-                log.info("Created conversation: {} with {} members", savedConversation.getId(),
-                                1 + (request.getMemberIds() != null ? request.getMemberIds().size() : 0));
-
-                return mapToResponse(savedConversation, List.of(creatorMembership), currentUserId);
+                return mapToResponse(savedConversation, java.util.List.of(m1, m2), currentUserId);
         }
 
         /**
@@ -98,7 +134,7 @@ public class ConversationService {
         public Page<ConversationResponse> getUserConversations(String userId, Pageable pageable) {
                 log.debug("Getting conversations for user: {}", userId);
 
-                ObjectId userObjectId = new ObjectId(userId);
+                ObjectId userObjectId = resolveUserId(userId);
                 Page<Conversation> conversations = conversationRepository
                                 .findByMemberIdsContainingAndIsArchivedFalse(userObjectId, pageable);
 
@@ -116,8 +152,8 @@ public class ConversationService {
         public ConversationResponse getConversation(String conversationId, String userId) {
                 log.debug("Getting conversation: {} for user: {}", conversationId, userId);
 
-                ObjectId conversationObjectId = new ObjectId(conversationId);
-                ObjectId userObjectId = new ObjectId(userId);
+                ObjectId conversationObjectId = ObjectIdUtil.safeObjectId(conversationId);
+                ObjectId userObjectId = resolveUserId(userId);
 
                 // Check if user is a member
                 if (!membershipRepository.existsByConversationIdAndUserId(conversationObjectId, userObjectId)) {
@@ -125,7 +161,7 @@ public class ConversationService {
                 }
 
                 Conversation conversation = conversationRepository.findById(conversationObjectId)
-                                .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
+                                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
 
                 List<ConversationMembership> memberships = membershipRepository
                                 .findByConversationId(conversationObjectId);
@@ -141,6 +177,13 @@ public class ConversationService {
 
                 ObjectId conversationObjectId = new ObjectId(conversationId);
                 ObjectId currentUserObjectId = new ObjectId(currentUserId);
+
+                // Disallow adding members to DIRECT conversations
+                Conversation convo = conversationRepository.findById(conversationObjectId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+                if (convo.getType() == Conversation.ConversationType.DIRECT) {
+                        throw new IllegalArgumentException("Cannot add members to a DIRECT (one-to-one) conversation");
+                }
 
                 // Verify current user is admin
                 ConversationMembership currentUserMembership = membershipRepository
@@ -183,6 +226,20 @@ public class ConversationService {
 
                 membershipRepository.saveAll(newMemberships);
                 log.info("Added {} new members to conversation: {}", newMemberships.size(), conversationId);
+
+                // Update conversation.memberIds list as well
+                conversationRepository.findById(conversationObjectId).ifPresent(conv -> {
+                        List<ObjectId> updated = conv.getMemberIds() == null
+                                        ? new java.util.ArrayList<>()
+                                        : new java.util.ArrayList<>(conv.getMemberIds());
+                        for (ObjectId id : newMemberObjectIds) {
+                                if (!updated.contains(id)) {
+                                        updated.add(id);
+                                }
+                        }
+                        conv.setMemberIds(updated);
+                        conversationRepository.save(conv);
+                });
         }
 
         /**
@@ -191,9 +248,17 @@ public class ConversationService {
         public void removeMember(String conversationId, String userIdToRemove, String currentUserId) {
                 log.debug("Removing member: {} from conversation: {}", userIdToRemove, conversationId);
 
-                ObjectId conversationObjectId = new ObjectId(conversationId);
-                ObjectId currentUserObjectId = new ObjectId(currentUserId);
-                ObjectId userToRemoveObjectId = new ObjectId(userIdToRemove);
+                ObjectId conversationObjectId = ObjectIdUtil.safeObjectId(conversationId);
+                ObjectId currentUserObjectId = resolveUserId(currentUserId);
+                ObjectId userToRemoveObjectId = resolveUserId(userIdToRemove);
+
+                // Disallow removing members from DIRECT conversations
+                Conversation convo = conversationRepository.findById(conversationObjectId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+                if (convo.getType() == Conversation.ConversationType.DIRECT) {
+                        throw new IllegalArgumentException(
+                                        "Cannot remove members from a DIRECT (one-to-one) conversation");
+                }
 
                 // Verify current user is admin or removing themselves
                 ConversationMembership currentUserMembership = membershipRepository
@@ -208,6 +273,16 @@ public class ConversationService {
 
                 membershipRepository.deleteByConversationIdAndUserId(conversationObjectId, userToRemoveObjectId);
                 log.info("Removed member: {} from conversation: {}", userIdToRemove, conversationId);
+
+                // Also update the conversation memberIds array
+                conversationRepository.findById(conversationObjectId).ifPresent(conv -> {
+                        if (conv.getMemberIds() != null) {
+                                conv.setMemberIds(conv.getMemberIds().stream()
+                                                .filter(id -> !id.equals(userToRemoveObjectId))
+                                                .collect(Collectors.toList()));
+                                conversationRepository.save(conv);
+                        }
+                });
         }
 
         /**
@@ -257,7 +332,7 @@ public class ConversationService {
          */
         private int calculateUnreadCount(ObjectId conversationId, String userId) {
                 try {
-                        ObjectId userObjectId = new ObjectId(userId);
+                        ObjectId userObjectId = ObjectIdUtil.safeObjectId(userId);
 
                         // Find the user's membership to get lastReadAt
                         ConversationMembership membership = membershipRepository
@@ -265,8 +340,8 @@ public class ConversationService {
                                         .orElse(null);
 
                         if (membership == null || membership.getLastReadAt() == null) {
-                                // If no membership or never read, count all messages
-                                return (int) messageRepository.count();
+                                // If no membership or never read, count all messages in this conversation
+                                return (int) messageRepository.countByConversationIdAndDeletedAtIsNull(conversationId);
                         }
 
                         // Count messages created after user's last read time

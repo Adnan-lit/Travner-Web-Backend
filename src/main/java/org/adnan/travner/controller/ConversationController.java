@@ -53,6 +53,37 @@ public class ConversationController {
         }
 
         /**
+         * Get or create a DIRECT (one-to-one) conversation between the authenticated
+         * user and the specified user
+         */
+        @GetMapping("/direct/{otherUserId}")
+        @Operation(summary = "Get or create DIRECT conversation", description = "Fetch an existing one-to-one conversation with the specified user or create it if it doesn't exist")
+        public ResponseEntity<ApiResponse<ConversationResponse>> getOrCreateDirectConversation(
+                        @Parameter(description = "Other user's ID or username") @PathVariable String otherUserId,
+                        Authentication authentication) {
+
+                log.debug("Get or create DIRECT conversation between {} and {}", authentication.getName(),
+                                otherUserId);
+
+                // Delegate to the same create flow; service will reuse if exists
+                var req = CreateConversationRequest.builder()
+                                .type(org.adnan.travner.domain.conversation.Conversation.ConversationType.DIRECT)
+                                .memberIds(java.util.List.of(otherUserId))
+                                .build();
+
+                ConversationResponse conversation = conversationService.createConversation(req,
+                                authentication.getName());
+
+                ApiResponse<ConversationResponse> response = ApiResponse.<ConversationResponse>builder()
+                                .success(true)
+                                .message("DIRECT conversation ready")
+                                .data(conversation)
+                                .build();
+
+                return ResponseEntity.ok(response);
+        }
+
+        /**
          * Get user's conversations with pagination
          */
         @GetMapping

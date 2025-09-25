@@ -229,42 +229,42 @@ DELETE {{base_url}}/posts/{{post_id}}/comments/{{comment_id}}
 Authorization: Basic {{auth_header}}
 ```
 
-### Phase 4: Chat System
+### Phase 4: Chat System Testing (DIRECT one-to-one)
 
-#### 4.1 Create Direct Conversation
+**⚠️ IMPORTANT: ID/Username Inputs**
+- For REST message and conversation endpoints, `conversationId` and `messageId` must be valid MongoDB ObjectId strings (24-character hex).
+- For creating or referencing the other user in DIRECT chat, you may use either their username or ObjectId.
 
-```http
-POST {{base_url}}/api/chat/conversations
-Authorization: Basic {{auth_header}}
-Content-Type: application/json
-
-{
-  "type": "DIRECT",
-  "memberIds": ["testuser2"]
-}
-```
-
-_📝 Copy the returned conversation ID to your `conversation_id` environment variable_
-
-#### 4.2 Create Group Conversation
+#### 4.1 Get or Create Direct Conversation
 
 ```http
-POST {{base_url}}/api/chat/conversations
+GET {{base_url}}/api/chat/conversations/direct/{{other_user}}
 Authorization: Basic {{auth_header}}
-Content-Type: application/json
-
-{
-  "type": "GROUP",
-  "title": "Tokyo Travel Group",
-  "memberIds": ["testuser2", "testuser3"]
-}
 ```
+
+_📝 Save the returned conversation id to `{{conversation_id}}`_
 
 #### 4.3 Get User's Conversations
 
 ```http
 GET {{base_url}}/api/chat/conversations?page=0&size=20
 Authorization: Basic {{auth_header}}
+```
+
+**✅ Expected Success Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "content": [...],
+    "pageable": {
+      "pageNumber": 0,
+      "pageSize": 20
+    },
+    "totalElements": 5
+  }
+}
 ```
 
 #### 4.4 Get Conversation Details
@@ -274,7 +274,12 @@ GET {{base_url}}/api/chat/conversations/{{conversation_id}}
 Authorization: Basic {{auth_header}}
 ```
 
-#### 4.5 Send Message
+**❌ Common Errors:**
+
+- 400 Bad Request: Invalid ObjectId format for conversationId
+- 404 Not Found: Conversation doesn't exist (now returns 404 instead of 400)
+
+#### 4.5 Send Text Message
 
 ```http
 POST {{base_url}}/api/chat/messages
@@ -285,6 +290,32 @@ Content-Type: application/json
   "conversationId": "{{conversation_id}}",
   "kind": "TEXT",
   "content": "Hey! How was your trip to Tokyo?"
+}
+```
+
+**Field Validation:**
+
+- `conversationId`: Required, valid ObjectId format
+- `kind`: Required ("TEXT", "IMAGE", "FILE", "SYSTEM")
+- `content`: Required for TEXT messages, cannot be blank
+
+**✅ Expected Success Response:**
+
+```json
+{
+  "success": true,
+  "message": "Message sent successfully",
+  "data": {
+    "id": "msg123",
+    "conversationId": "conv123",
+    "senderName": "John Doe",
+    "content": "Hey! How was your trip to Tokyo?",
+    "kind": "TEXT",
+    "attachments": [],
+    "createdAt": "2025-01-15T14:30:00Z",
+    "readBy": [],
+    "readCount": 0
+  }
 }
 ```
 
@@ -305,21 +336,65 @@ Content-Type: application/json
 }
 ```
 
-#### 4.7 Get Conversation Messages
+**Field Validation:**
+
+- `replyToMessageId`: Optional, must be valid ObjectId format if provided
+
+#### 4.7 Send Message with Attachments
+
+```http
+POST {{base_url}}/api/chat/messages
+Authorization: Basic {{auth_header}}
+Content-Type: application/json
+
+{
+  "conversationId": "{{conversation_id}}",
+  "kind": "IMAGE",
+  "content": "Check out this sunset!",
+  "attachments": [
+    {
+      "mediaId": "media123",
+      "caption": "Tokyo sunset photo"
+    }
+  ]
+}
+```
+
+**Attachment Fields:**
+
+- `mediaId`: Required, attachment identifier
+- `caption`: Optional, attachment description
+
+#### 4.8 Get Conversation Messages
 
 ```http
 GET {{base_url}}/api/chat/conversations/{{conversation_id}}/messages?page=0&size=50
 Authorization: Basic {{auth_header}}
 ```
 
-#### 4.8 Edit Message
+**Query Parameters:**
+
+- `page`: Page number (default: 0)
+- `size`: Page size (default: 50, max: 100)
+
+#### 4.9 Edit Message
 
 ```http
-PUT {{base_url}}/api/chat/messages/{{message_id}}?content=Hey! How was your amazing trip to Tokyo?
+PUT {{base_url}}/api/chat/messages/{{message_id}}
 Authorization: Basic {{auth_header}}
+Content-Type: application/json
+
+{
+  "content": "Hey! How was your amazing trip to Tokyo?"
+}
 ```
 
-#### 4.9 Mark Messages as Read
+**Field Validation:**
+
+- `content`: Required, cannot be blank
+- Only the message sender can edit their messages
+
+#### 4.10 Mark Messages as Read
 
 ```http
 POST {{base_url}}/api/chat/messages/read
@@ -332,37 +407,92 @@ Content-Type: application/json
 }
 ```
 
-#### 4.10 Get Unread Message Count
+**Field Validation:**
+
+- `conversationId`: Required, valid ObjectId format
+- `lastReadMessageId`: Required, valid ObjectId format
+
+#### 4.11 Get Unread Message Count
 
 ```http
 GET {{base_url}}/api/chat/conversations/{{conversation_id}}/unread-count
 Authorization: Basic {{auth_header}}
 ```
 
-#### 4.11 Delete Message
+**✅ Expected Success Response:**
+
+```json
+{
+  "success": true,
+  "message": "Unread count retrieved successfully",
+  "data": {
+    "conversationId": "conv123",
+    "unreadCount": 5
+  }
+}
+```
+
+**🔧 Fixed Issues:**
+
+- Unread count now correctly counts messages per conversation (not globally)
+- Better error handling for invalid ObjectIds
+
+#### 4.12 Delete Message
 
 ```http
 DELETE {{base_url}}/api/chat/messages/{{message_id}}
 Authorization: Basic {{auth_header}}
 ```
 
-#### 4.12 Add Members to Group Conversation
+**Permissions:**
 
-```http
-POST {{base_url}}/api/chat/conversations/{{conversation_id}}/members
-Authorization: Basic {{auth_header}}
-Content-Type: application/json
+- Only the message sender or conversation admin can delete messages
 
+Note: Adding/removing members is not supported for DIRECT conversations (will return 400 Bad Request if attempted).
+
+### 🔧 Chat System Improvements Applied
+
+#### Fixed Issues:
+
+1. **ObjectId Validation**: Proper error handling for invalid ID formats
+2. **Unread Count Bug**: Now counts messages per conversation, not globally
+3. **404 vs 400 Errors**: Missing resources now return 404 Not Found instead of 400 Bad Request
+4. **Complete Attachment Data**: Attachment responses now include url, contentType, size fields
+5. **Better Error Messages**: More descriptive validation error messages
+
+#### Error Response Examples:
+
+**400 Bad Request - Invalid ObjectId:**
+
+```json
 {
-  "memberIds": ["testuser4", "testuser5"]
+  "success": false,
+  "message": "Invalid ID format: invalid-id",
+  "timestamp": "2025-01-15T14:30:00Z"
 }
 ```
 
-#### 4.13 Remove Member from Conversation
+**404 Not Found - Missing Resource:**
 
-```http
-DELETE {{base_url}}/api/chat/conversations/{{conversation_id}}/members/testuser4
-Authorization: Basic {{auth_header}}
+```json
+{
+  "success": false,
+  "message": "Conversation not found",
+  "timestamp": "2025-01-15T14:30:00Z"
+}
+```
+
+**400 Bad Request - Validation Error:**
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": {
+    "content": "Content is required"
+  },
+  "timestamp": "2025-01-15T14:30:00Z"
+}
 ```
 
 ### Phase 5: WebSocket Chat Testing
@@ -386,25 +516,35 @@ stompClient.subscribe(
   }
 );
 
-// Subscribe to direct messages
-stompClient.subscribe("/user/queue/messages", function (message) {
-  console.log("Direct message:", JSON.parse(message.body));
+// Subscribe to notifications (optional)
+stompClient.subscribe("/user/queue/notifications", function (message) {
+  console.log("Notification:", JSON.parse(message.body));
 });
 ```
 
 #### 5.3 Send Message via WebSocket
+
+**✅ CORRECTED MESSAGE FORMAT:**
 
 ```javascript
 stompClient.send(
   "/app/chat.sendMessage",
   {},
   JSON.stringify({
-    conversationId: "your-conversation-id",
-    kind: "TEXT",
+    conversationId: "60f4b2e6c8f1a2c8f4b2e6c9", // Valid ObjectId format
+    kind: "TEXT", // Correct field name (not "type")
     content: "Hello from WebSocket!",
+    replyToMessageId: "60f4b2e6c8f1a2c8f4b2e6ca", // Optional, must be valid ObjectId
   })
 );
 ```
+
+**Field Requirements:**
+
+- `conversationId`: Required, valid ObjectId format (24-char hex)
+- `kind`: Required, must be "TEXT", "IMAGE", "FILE", or "SYSTEM"
+- `content`: Required for TEXT messages
+- `replyToMessageId`: Optional, valid ObjectId format if provided
 
 #### 5.4 Send Typing Indicator
 
@@ -413,11 +553,39 @@ stompClient.send(
   "/app/chat.typing",
   {},
   JSON.stringify({
-    conversationId: "your-conversation-id",
+    conversationId: "60f4b2e6c8f1a2c8f4b2e6c9", // Valid ObjectId format
     isTyping: true,
   })
 );
 ```
+
+#### 5.5 WebSocket Message Response Format
+
+**✅ Expected Message Response:**
+
+```javascript
+{
+  "id": "60f4b2e6c8f1a2c8f4b2e6cd",
+  "conversationId": "60f4b2e6c8f1a2c8f4b2e6c9",
+  "senderId": "60f4b2e6c8f1a2c8f4b2e6ce",
+  "senderName": "John Doe",
+  "content": "Hello from WebSocket!",
+  "kind": "TEXT",
+  "attachments": [],
+  "createdAt": "2025-01-15T14:30:00Z",
+  "readBy": [],
+  "readCount": 0
+}
+```
+
+### 🔧 WebSocket Fixes Applied
+
+#### Issues Fixed:
+
+1. **Field Name Correction**: Use `kind` field (not `type`) in WebSocket messages
+2. **ObjectId Validation**: All IDs must be valid 24-character hexadecimal format
+3. **Complete Response Data**: WebSocket responses now include complete attachment information
+4. **Better Error Handling**: Invalid messages are rejected with proper error messages
 
 ---
 
@@ -776,12 +944,120 @@ For each request, check:
 - **404 Not Found**: Check if IDs are correct
 - **400 Bad Request**: Check request body format and required fields
 
-### Chat-Specific Issues
+### Chat-Specific Issues (Updated)
 
-- **Chat endpoints returning 401**: Ensure you're using Basic Authentication headers
-- **"User is not a member of this conversation"**: User must be added to conversation before sending messages
-- **WebSocket connection fails**: Verify WebSocket URL (`ws://localhost:8080/ws`) and authentication
-- **Messages not appearing in real-time**: Check WebSocket subscription to correct topic (`/topic/conversation/{id}`)
+#### 🔧 **Fixed Issues (After Backend Updates):**
+
+- ✅ **Unread count bug fixed**: Now correctly counts messages per conversation
+- ✅ **ObjectId validation**: Better error messages for invalid ID formats
+- ✅ **404 vs 400 errors**: Missing resources now return proper 404 Not Found
+- ✅ **Complete attachment data**: Attachments now include all required fields
+
+#### ❌ **Common Issues & Solutions:**
+
+**400 Bad Request - Invalid ObjectId Format:**
+
+```
+Error: "Invalid ID format: invalid-id"
+Solution: Use valid MongoDB ObjectId format (24-character hexadecimal)
+Example: "60f4b2e6c8f1a2c8f4b2e6c8"
+```
+
+**400 Bad Request - Wrong Field Names:**
+
+```
+❌ Wrong: {"conversationId": "...", "type": "TEXT", "content": "..."}
+✅ Correct: {"conversationId": "...", "kind": "TEXT", "content": "..."}
+
+❌ Wrong: {"type": "DIRECT", "participantIds": ["..."]}
+✅ Correct: {"type": "DIRECT", "memberIds": ["..."]}
+```
+
+**400 Bad Request - URL Encoding Issues:**
+
+```
+❌ Problem: /api/chat/messages/?content=Hello [UPDATED] ]
+✅ Solution: Use POST body instead of query parameters
+Or properly encode: /api/chat/messages/?content=Hello%20%5BUPDATED%5D
+```
+
+**401 Unauthorized:**
+
+- Ensure Basic Authentication header is included: `Authorization: Basic <base64-credentials>`
+- Verify username and password are correct
+- Check credentials are base64 encoded properly
+
+**404 Not Found:**
+
+- Conversation or message doesn't exist
+- Check ObjectId format is valid
+- Verify the resource exists in the system
+
+**403 Forbidden:**
+
+- User doesn't have permission (e.g., not a conversation member)
+- Only message sender can edit their messages
+- Only conversation admins can remove members
+
+#### 🧪 **Testing ObjectId Validation:**
+
+**Generate Valid Test ObjectIds:**
+
+```javascript
+// In browser console or Node.js
+const ObjectId = (
+  m = Math,
+  d = Date,
+  h = 16,
+  s = (s) => m.floor(s).toString(h)
+) => s(d.now() / 1000) + " ".repeat(16).replace(/./g, () => s(m.random() * h));
+console.log(ObjectId()); // Example: 60f4b2e6c8f1a2c8f4b2e6c8
+```
+
+**Test Invalid ObjectId Handling:**
+
+```http
+POST {{base_url}}/api/chat/conversations
+{
+  "type": "DIRECT",
+  "memberIds": ["invalid-id"] // Should return 400 with clear error message
+}
+```
+
+#### 🔄 **WebSocket Issues:**
+
+**Connection Problems:**
+
+- URL: `ws://localhost:8080/ws`
+- Include Basic Auth during handshake
+- Verify STOMP protocol support
+
+**Message Format Issues:**
+
+```javascript
+❌ Wrong WebSocket message:
+{
+  "conversationId": "conv123",
+  "type": "TEXT",  // Wrong field name
+  "content": "Hello"
+}
+
+✅ Correct WebSocket message:
+{
+  "conversationId": "60f4b2e6c8f1a2c8f4b2e6c9",  // Valid ObjectId
+  "kind": "TEXT",                                  // Correct field name
+  "content": "Hello"
+}
+```
+
+#### 🎯 **Best Practices:**
+
+1. **Always use valid ObjectId formats** for all ID parameters
+2. **Use POST requests with JSON bodies** for complex data (not query parameters)
+3. **Include proper Basic Auth headers** in all requests
+4. **Check field names match DTOs** (kind vs type, memberIds vs participantIds)
+5. **Handle 404 errors** appropriately (resource not found)
+6. **Validate request bodies** before sending to avoid 400 errors
 
 ### Admin-Specific Issues
 

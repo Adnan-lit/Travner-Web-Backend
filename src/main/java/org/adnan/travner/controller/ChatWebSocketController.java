@@ -10,7 +10,6 @@ import org.adnan.travner.service.UserService;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.stereotype.Controller;
@@ -46,8 +45,7 @@ public class ChatWebSocketController {
          * Handle real-time message sending
          */
         @MessageMapping("/chat.sendMessage")
-        @SendTo("/topic/conversation/{conversationId}")
-        public ChatEventDTO sendMessage(@Payload SendMessageRequest request, Principal principal) {
+        public void sendMessage(@Payload SendMessageRequest request, Principal principal) {
                 log.debug("WebSocket message received from user: {} for conversation: {}",
                                 principal.getName(), request.getConversationId());
 
@@ -56,7 +54,7 @@ public class ChatWebSocketController {
                         var messageResponse = messageService.sendMessage(request, principal.getName());
 
                         // Create real-time event
-                        return ChatEventDTO.builder()
+                        var event = ChatEventDTO.builder()
                                         .type(ChatEventDTO.EventType.MESSAGE_SENT)
                                         .conversationId(request.getConversationId())
                                         .userId(principal.getName())
@@ -64,6 +62,11 @@ public class ChatWebSocketController {
                                         .data(messageResponse)
                                         .timestamp(Instant.now())
                                         .build();
+
+                        // Broadcast to the conversation topic
+                        messagingTemplate.convertAndSend(
+                                        "/topic/conversation/" + request.getConversationId(),
+                                        event);
 
                 } catch (Exception e) {
                         log.error("Error sending message via WebSocket: {}", e.getMessage());

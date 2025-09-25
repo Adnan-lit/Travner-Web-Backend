@@ -8,6 +8,7 @@ import org.adnan.travner.domain.message.MessageRepository;
 import org.adnan.travner.dto.chat.MessageResponse;
 import org.adnan.travner.dto.chat.SendMessageRequest;
 import org.adnan.travner.repository.UserRepository;
+import org.adnan.travner.util.ObjectIdUtil;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +30,23 @@ public class MessageService {
 
     private final MessageRepository messageRepository;
     private final ConversationMembershipRepository membershipRepository;
+    private final org.adnan.travner.domain.conversation.ConversationRepository conversationRepository;
     private final UserRepository userRepository;
+
+    /**
+     * Resolve a user identifier that may be either a username or an ObjectId string
+     * into the canonical ObjectId of the user document.
+     */
+    private ObjectId resolveUserId(String usernameOrId) {
+        if (org.adnan.travner.util.ObjectIdUtil.isValidObjectId(usernameOrId)) {
+            return new ObjectId(usernameOrId);
+        }
+        var user = userRepository.findByuserName(usernameOrId);
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("User not found: " + usernameOrId);
+        }
+        return user.getId();
+    }
 
     /**
      * Send a message in a conversation
@@ -37,8 +54,8 @@ public class MessageService {
     public MessageResponse sendMessage(SendMessageRequest request, String senderId) {
         log.debug("Sending message in conversation: {} from user: {}", request.getConversationId(), senderId);
 
-        ObjectId conversationObjectId = new ObjectId(request.getConversationId());
-        ObjectId senderObjectId = new ObjectId(senderId);
+        ObjectId conversationObjectId = ObjectIdUtil.safeObjectId(request.getConversationId());
+        ObjectId senderObjectId = resolveUserId(senderId);
 
         // Verify sender is a member of the conversation
         if (!membershipRepository.existsByConversationIdAndUserId(conversationObjectId, senderObjectId)) {
@@ -52,6 +69,9 @@ public class MessageService {
                     .map(attachmentRequest -> Message.MessageAttachment.builder()
                             .id(attachmentRequest.getMediaId())
                             .filename(attachmentRequest.getCaption()) // Using caption as filename for now
+                            .url(attachmentRequest.getMediaId()) // Set URL to mediaId for now
+                            .contentType("application/octet-stream") // Default content type
+                            .size(0) // Size not provided in request
                             .build())
                     .collect(Collectors.toList());
         }
@@ -63,12 +83,20 @@ public class MessageService {
                 .kind(request.getKind())
                 .body(request.getContent())
                 .attachments(attachments)
-                .replyTo(request.getReplyToMessageId() != null ? new ObjectId(request.getReplyToMessageId()) : null)
+                .replyTo(
+                        request.getReplyToMessageId() != null ? ObjectIdUtil.safeObjectId(request.getReplyToMessageId())
+                                : null)
                 .createdAt(Instant.now())
                 .build();
 
         Message savedMessage = messageRepository.save(message);
         log.info("Sent message: {} in conversation: {}", savedMessage.getId(), request.getConversationId());
+
+        // Update conversation last activity timestamp
+        conversationRepository.findById(conversationObjectId).ifPresent(conv -> {
+            conv.setLastMessageAt(Instant.now());
+            conversationRepository.save(conv);
+        });
 
         return mapToResponse(savedMessage);
     }
@@ -81,7 +109,7 @@ public class MessageService {
         log.debug("Getting messages for conversation: {} user: {}", conversationId, userId);
 
         ObjectId conversationObjectId = new ObjectId(conversationId);
-        ObjectId userObjectId = new ObjectId(userId);
+        ObjectId userObjectId = resolveUserId(userId);
 
         // Verify user is a member of the conversation
         if (!membershipRepository.existsByConversationIdAndUserId(conversationObjectId, userObjectId)) {
@@ -102,7 +130,7 @@ public class MessageService {
                 conversationId, lastReadMessageId, userId);
 
         ObjectId conversationObjectId = new ObjectId(conversationId);
-        ObjectId userObjectId = new ObjectId(userId);
+        ObjectId userObjectId = resolveUserId(userId);
         ObjectId lastReadMessageObjectId = new ObjectId(lastReadMessageId);
 
         // Verify user is a member of the conversation
@@ -130,7 +158,7 @@ public class MessageService {
     @Transactional(readOnly = true)
     public long getUnreadCount(String conversationId, String userId) {
         ObjectId conversationObjectId = new ObjectId(conversationId);
-        ObjectId userObjectId = new ObjectId(userId);
+        ObjectId userObjectId = resolveUserId(userId);
 
         return membershipRepository.findByConversationIdAndUserId(conversationObjectId, userObjectId)
                 .map(membership -> {
@@ -147,7 +175,7 @@ public class MessageService {
         log.debug("Editing message: {} by user: {}", messageId, userId);
 
         ObjectId messageObjectId = new ObjectId(messageId);
-        ObjectId userObjectId = new ObjectId(userId);
+        ObjectId userObjectId = resolveUserId(userId);
 
         Message message = messageRepository.findById(messageObjectId)
                 .orElseThrow(() -> new IllegalArgumentException("Message not found"));
@@ -174,7 +202,7 @@ public class MessageService {
         log.debug("Deleting message: {} by user: {}", messageId, userId);
 
         ObjectId messageObjectId = new ObjectId(messageId);
-        ObjectId userObjectId = new ObjectId(userId);
+        ObjectId userObjectId = resolveUserId(userId);
 
         Message message = messageRepository.findById(messageObjectId)
                 .orElseThrow(() -> new IllegalArgumentException("Message not found"));
