@@ -232,6 +232,7 @@ Authorization: Basic {{auth_header}}
 ### Phase 4: Chat System Testing (DIRECT one-to-one)
 
 **⚠️ IMPORTANT: ID/Username Inputs**
+
 - For REST message and conversation endpoints, `conversationId` and `messageId` must be valid MongoDB ObjectId strings (24-character hex).
 - For creating or referencing the other user in DIRECT chat, you may use either their username or ObjectId.
 
