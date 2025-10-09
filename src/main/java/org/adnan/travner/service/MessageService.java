@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.domain.conversation.ConversationMembershipRepository;
 import org.adnan.travner.domain.message.Message;
 import org.adnan.travner.domain.message.MessageRepository;
+import org.adnan.travner.domain.message.MessageReadStatus;
 import org.adnan.travner.dto.chat.MessageResponse;
 import org.adnan.travner.dto.chat.SendMessageRequest;
+import org.adnan.travner.repository.MessageReadStatusRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.adnan.travner.util.ObjectIdUtil;
 import org.bson.types.ObjectId;
@@ -32,6 +34,7 @@ public class MessageService {
     private final ConversationMembershipRepository membershipRepository;
     private final org.adnan.travner.domain.conversation.ConversationRepository conversationRepository;
     private final UserRepository userRepository;
+    private final MessageReadStatusRepository messageReadStatusRepository;
 
     /**
      * Resolve a user identifier that may be either a username or an ObjectId string
@@ -149,6 +152,35 @@ public class MessageService {
                     membershipRepository.save(membership);
                 });
 
+        // Mark individual message as read
+        if (messageReadStatusRepository.findByMessageIdAndUserId(lastReadMessageObjectId, userObjectId).isEmpty()) {
+            MessageReadStatus readStatus = MessageReadStatus.builder()
+                    .messageId(lastReadMessageObjectId)
+                    .conversationId(conversationObjectId)
+                    .userId(userObjectId)
+                    .readAt(Instant.now())
+                    .createdAt(Instant.now())
+                    .build();
+            messageReadStatusRepository.save(readStatus);
+        }
+
+        // Mark all previous messages as read too
+        List<Message> unreadMessages = messageRepository.findByConversationIdAndCreatedAtLessThanEqualAndDeletedAtIsNull(
+                conversationObjectId, lastReadMessage.getCreatedAt());
+
+        for (Message message : unreadMessages) {
+            if (messageReadStatusRepository.findByMessageIdAndUserId(message.getId(), userObjectId).isEmpty()) {
+                MessageReadStatus readStatus = MessageReadStatus.builder()
+                        .messageId(message.getId())
+                        .conversationId(conversationObjectId)
+                        .userId(userObjectId)
+                        .readAt(Instant.now())
+                        .createdAt(Instant.now())
+                        .build();
+                messageReadStatusRepository.save(readStatus);
+            }
+        }
+
         log.info("Marked messages as read for user: {} in conversation: {}", userId, conversationId);
     }
 
@@ -160,12 +192,14 @@ public class MessageService {
         ObjectId conversationObjectId = new ObjectId(conversationId);
         ObjectId userObjectId = resolveUserId(userId);
 
-        return membershipRepository.findByConversationIdAndUserId(conversationObjectId, userObjectId)
-                .map(membership -> {
-                    Instant lastReadAt = membership.getLastReadAt();
-                    return messageRepository.countUnreadMessages(conversationObjectId, lastReadAt);
-                })
-                .orElse(0L);
+        // Count total messages in conversation
+        long totalMessages = messageRepository.countByConversationIdAndDeletedAtIsNull(conversationObjectId);
+
+        // Count read messages by this user
+        long readMessages = messageReadStatusRepository.findByConversationIdAndUserId(conversationObjectId, userObjectId).size();
+
+        // Return unread count
+        return Math.max(0, totalMessages - readMessages);
     }
 
     /**
@@ -260,15 +294,13 @@ public class MessageService {
     }
 
     private List<String> getMessageReadByUserIds(Message message) {
-        // TODO: Implement proper read tracking based on your message read schema
-        // For now, return empty list as read tracking may require additional schema
-        return List.of();
+        List<MessageReadStatus> readStatuses = messageReadStatusRepository.findByMessageId(message.getId());
+        return readStatuses.stream()
+                .map(status -> status.getUserId().toString())
+                .collect(Collectors.toList());
     }
 
     private int getMessageReadCount(Message message) {
-        // TODO: Implement proper read count calculation based on your read tracking
-        // schema
-        // For now, return 0 as read tracking may require additional schema
-        return 0;
+        return (int) messageReadStatusRepository.findByMessageId(message.getId()).size();
     }
 }

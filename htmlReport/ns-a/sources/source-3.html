@@ -1,0 +1,471 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ConversationService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.adnan.travner.service</a>
+</div>
+
+<h1>Coverage Summary for Class: ConversationService (org.adnan.travner.service)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ConversationService</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    7.1%
+  </span>
+  <span class="absValue">
+    (1/14)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/48)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0.6%
+  </span>
+  <span class="absValue">
+    (1/179)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.service;
+&nbsp;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import lombok.extern.slf4j.Slf4j;
+&nbsp;import org.adnan.travner.domain.conversation.Conversation;
+&nbsp;import org.adnan.travner.domain.conversation.ConversationMembership;
+&nbsp;import org.adnan.travner.domain.conversation.ConversationMembershipRepository;
+&nbsp;import org.adnan.travner.domain.conversation.ConversationRepository;
+&nbsp;import org.adnan.travner.domain.message.MessageRepository;
+&nbsp;import org.adnan.travner.dto.chat.ConversationResponse;
+&nbsp;import org.adnan.travner.dto.chat.CreateConversationRequest;
+&nbsp;import org.adnan.travner.exception.ResourceNotFoundException;
+&nbsp;import org.adnan.travner.repository.UserRepository;
+&nbsp;import org.adnan.travner.util.ObjectIdUtil;
+&nbsp;import org.bson.types.ObjectId;
+&nbsp;import org.springframework.data.domain.Page;
+&nbsp;import org.springframework.data.domain.Pageable;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import org.springframework.transaction.annotation.Transactional;
+&nbsp;
+&nbsp;import java.time.Instant;
+&nbsp;import java.util.List;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+&nbsp;/**
+&nbsp; * Service for managing conversations
+&nbsp; */
+&nbsp;@Service
+&nbsp;@RequiredArgsConstructor
+<b class="fc">&nbsp;@Slf4j</b>
+&nbsp;@Transactional
+&nbsp;public class ConversationService {
+&nbsp;
+&nbsp;        private final ConversationRepository conversationRepository;
+&nbsp;        private final ConversationMembershipRepository membershipRepository;
+&nbsp;        private final UserRepository userRepository;
+&nbsp;        private final MessageRepository messageRepository;
+&nbsp;        private final UserService userService;
+&nbsp;
+&nbsp;        private ObjectId resolveUserId(String usernameOrId) {
+<b class="nc">&nbsp;                if (ObjectIdUtil.isValidObjectId(usernameOrId)) {</b>
+<b class="nc">&nbsp;                        return new ObjectId(usernameOrId);</b>
+&nbsp;                }
+<b class="nc">&nbsp;                var user = userService.getByUsername(usernameOrId);</b>
+<b class="nc">&nbsp;                if (user == null || user.getId() == null) {</b>
+<b class="nc">&nbsp;                        throw new IllegalArgumentException(&quot;User not found: &quot; + usernameOrId);</b>
+&nbsp;                }
+<b class="nc">&nbsp;                return user.getId();</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Create a new conversation
+&nbsp;         */
+&nbsp;        public ConversationResponse createConversation(CreateConversationRequest request, String currentUserId) {
+<b class="nc">&nbsp;                log.debug(&quot;Creating conversation for user: {}&quot;, currentUserId);</b>
+&nbsp;
+&nbsp;                // Enforce one-to-one (DIRECT) conversations only
+<b class="nc">&nbsp;                if (request.getType() == null || request.getType() != Conversation.ConversationType.DIRECT) {</b>
+<b class="nc">&nbsp;                        throw new IllegalArgumentException(&quot;Only DIRECT (one-to-one) conversations are supported&quot;);</b>
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                if (request.getMemberIds() == null || request.getMemberIds().size() != 1) {</b>
+<b class="nc">&nbsp;                        throw new IllegalArgumentException(&quot;DIRECT conversation must specify exactly one other user&quot;);</b>
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                ObjectId currentUserObjectId = resolveUserId(currentUserId);</b>
+<b class="nc">&nbsp;                ObjectId otherUserObjectId = resolveUserId(request.getMemberIds().get(0));</b>
+&nbsp;
+<b class="nc">&nbsp;                if (currentUserObjectId.equals(otherUserObjectId)) {</b>
+<b class="nc">&nbsp;                        throw new IllegalArgumentException(&quot;Cannot create a conversation with yourself&quot;);</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                // If a direct conversation between these two users exists, return it
+<b class="nc">&nbsp;                var existing = conversationRepository.findDirectConversationBetweenUsers(currentUserObjectId,</b>
+&nbsp;                                otherUserObjectId);
+<b class="nc">&nbsp;                if (existing.isPresent()) {</b>
+<b class="nc">&nbsp;                        var convo = existing.get();</b>
+<b class="nc">&nbsp;                        var memberships = membershipRepository.findByConversationId(convo.getId());</b>
+<b class="nc">&nbsp;                        return mapToResponse(convo, memberships, currentUserId);</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                // Create a new DIRECT conversation
+<b class="nc">&nbsp;                Conversation conversation = Conversation.builder()</b>
+<b class="nc">&nbsp;                                .type(Conversation.ConversationType.DIRECT)</b>
+<b class="nc">&nbsp;                                .title(null)</b>
+<b class="nc">&nbsp;                                .ownerId(null)</b>
+<b class="nc">&nbsp;                                .adminIds(null)</b>
+<b class="nc">&nbsp;                                .createdAt(Instant.now())</b>
+<b class="nc">&nbsp;                                .lastMessageAt(Instant.now())</b>
+<b class="nc">&nbsp;                                .isArchived(false)</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;
+&nbsp;                // Save conversation shell
+<b class="nc">&nbsp;                Conversation savedConversation = conversationRepository.save(conversation);</b>
+&nbsp;
+&nbsp;                // Set memberIds to exactly the two participants
+<b class="nc">&nbsp;                java.util.List&lt;ObjectId&gt; memberIds = new java.util.ArrayList&lt;&gt;();</b>
+<b class="nc">&nbsp;                memberIds.add(currentUserObjectId);</b>
+<b class="nc">&nbsp;                memberIds.add(otherUserObjectId);</b>
+<b class="nc">&nbsp;                savedConversation.setMemberIds(memberIds);</b>
+<b class="nc">&nbsp;                conversationRepository.save(savedConversation);</b>
+&nbsp;
+&nbsp;                // Create memberships for both users
+<b class="nc">&nbsp;                ConversationMembership m1 = ConversationMembership.builder()</b>
+<b class="nc">&nbsp;                                .conversationId(savedConversation.getId())</b>
+<b class="nc">&nbsp;                                .userId(currentUserObjectId)</b>
+<b class="nc">&nbsp;                                .role(ConversationMembership.MemberRole.MEMBER)</b>
+<b class="nc">&nbsp;                                .joinedAt(Instant.now())</b>
+<b class="nc">&nbsp;                                .lastReadAt(Instant.now())</b>
+<b class="nc">&nbsp;                                .muted(false)</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;
+<b class="nc">&nbsp;                ConversationMembership m2 = ConversationMembership.builder()</b>
+<b class="nc">&nbsp;                                .conversationId(savedConversation.getId())</b>
+<b class="nc">&nbsp;                                .userId(otherUserObjectId)</b>
+<b class="nc">&nbsp;                                .role(ConversationMembership.MemberRole.MEMBER)</b>
+<b class="nc">&nbsp;                                .joinedAt(Instant.now())</b>
+<b class="nc">&nbsp;                                .lastReadAt(Instant.now())</b>
+<b class="nc">&nbsp;                                .muted(false)</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;
+<b class="nc">&nbsp;                membershipRepository.saveAll(java.util.List.of(m1, m2));</b>
+&nbsp;
+<b class="nc">&nbsp;                log.info(&quot;Created DIRECT conversation: {} between {} and {}&quot;, savedConversation.getId(),</b>
+&nbsp;                                currentUserObjectId, otherUserObjectId);
+&nbsp;
+<b class="nc">&nbsp;                return mapToResponse(savedConversation, java.util.List.of(m1, m2), currentUserId);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Get user&#39;s conversations with pagination
+&nbsp;         */
+&nbsp;        @Transactional(readOnly = true)
+&nbsp;        public Page&lt;ConversationResponse&gt; getUserConversations(String userId, Pageable pageable) {
+<b class="nc">&nbsp;                log.debug(&quot;Getting conversations for user: {}&quot;, userId);</b>
+&nbsp;
+<b class="nc">&nbsp;                ObjectId userObjectId = resolveUserId(userId);</b>
+<b class="nc">&nbsp;                Page&lt;Conversation&gt; conversations = conversationRepository</b>
+<b class="nc">&nbsp;                                .findByMemberIdsContainingAndIsArchivedFalse(userObjectId, pageable);</b>
+&nbsp;
+<b class="nc">&nbsp;                return conversations.map(conversation -&gt; {</b>
+<b class="nc">&nbsp;                        List&lt;ConversationMembership&gt; memberships = membershipRepository</b>
+<b class="nc">&nbsp;                                        .findByConversationId(conversation.getId());</b>
+<b class="nc">&nbsp;                        return mapToResponse(conversation, memberships, userId);</b>
+&nbsp;                });
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Get conversation by ID with member check
+&nbsp;         */
+&nbsp;        @Transactional(readOnly = true)
+&nbsp;        public ConversationResponse getConversation(String conversationId, String userId) {
+<b class="nc">&nbsp;                log.debug(&quot;Getting conversation: {} for user: {}&quot;, conversationId, userId);</b>
+&nbsp;
+<b class="nc">&nbsp;                ObjectId conversationObjectId = ObjectIdUtil.safeObjectId(conversationId);</b>
+<b class="nc">&nbsp;                ObjectId userObjectId = resolveUserId(userId);</b>
+&nbsp;
+&nbsp;                // Check if user is a member
+<b class="nc">&nbsp;                if (!membershipRepository.existsByConversationIdAndUserId(conversationObjectId, userObjectId)) {</b>
+<b class="nc">&nbsp;                        throw new IllegalArgumentException(&quot;User is not a member of this conversation&quot;);</b>
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                Conversation conversation = conversationRepository.findById(conversationObjectId)</b>
+<b class="nc">&nbsp;                                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Conversation not found&quot;));</b>
+&nbsp;
+<b class="nc">&nbsp;                List&lt;ConversationMembership&gt; memberships = membershipRepository</b>
+<b class="nc">&nbsp;                                .findByConversationId(conversationObjectId);</b>
+&nbsp;
+<b class="nc">&nbsp;                return mapToResponse(conversation, memberships, userId);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Add members to conversation
+&nbsp;         */
+&nbsp;        public void addMembers(String conversationId, List&lt;String&gt; userIds, String currentUserId) {
+<b class="nc">&nbsp;                log.debug(&quot;Adding {} members to conversation: {}&quot;, userIds.size(), conversationId);</b>
+&nbsp;
+<b class="nc">&nbsp;                ObjectId conversationObjectId = new ObjectId(conversationId);</b>
+<b class="nc">&nbsp;                ObjectId currentUserObjectId = new ObjectId(currentUserId);</b>
+&nbsp;
+&nbsp;                // Disallow adding members to DIRECT conversations
+<b class="nc">&nbsp;                Conversation convo = conversationRepository.findById(conversationObjectId)</b>
+<b class="nc">&nbsp;                                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Conversation not found&quot;));</b>
+<b class="nc">&nbsp;                if (convo.getType() == Conversation.ConversationType.DIRECT) {</b>
+<b class="nc">&nbsp;                        throw new IllegalArgumentException(&quot;Cannot add members to a DIRECT (one-to-one) conversation&quot;);</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                // Verify current user is admin
+<b class="nc">&nbsp;                ConversationMembership currentUserMembership = membershipRepository</b>
+<b class="nc">&nbsp;                                .findByConversationIdAndUserId(conversationObjectId, currentUserObjectId)</b>
+<b class="nc">&nbsp;                                .orElseThrow(() -&gt; new IllegalArgumentException(</b>
+&nbsp;                                                &quot;User is not a member of this conversation&quot;));
+&nbsp;
+<b class="nc">&nbsp;                if (currentUserMembership.getRole() != ConversationMembership.MemberRole.ADMIN) {</b>
+<b class="nc">&nbsp;                        throw new IllegalArgumentException(&quot;Only admins can add members&quot;);</b>
+&nbsp;                }
+&nbsp;
+&nbsp;                // Check which users are not already members
+<b class="nc">&nbsp;                List&lt;ObjectId&gt; existingMemberIds = membershipRepository</b>
+<b class="nc">&nbsp;                                .findByConversationId(conversationObjectId)</b>
+<b class="nc">&nbsp;                                .stream()</b>
+<b class="nc">&nbsp;                                .map(ConversationMembership::getUserId)</b>
+<b class="nc">&nbsp;                                .collect(Collectors.toList());</b>
+&nbsp;
+<b class="nc">&nbsp;                List&lt;ObjectId&gt; newMemberObjectIds = userIds.stream()</b>
+<b class="nc">&nbsp;                                .map(ObjectId::new)</b>
+<b class="nc">&nbsp;                                .filter(userId -&gt; !existingMemberIds.contains(userId))</b>
+<b class="nc">&nbsp;                                .collect(Collectors.toList());</b>
+&nbsp;
+<b class="nc">&nbsp;                if (newMemberObjectIds.isEmpty()) {</b>
+<b class="nc">&nbsp;                        log.warn(&quot;No new members to add to conversation: {}&quot;, conversationId);</b>
+&nbsp;                        return;
+&nbsp;                }
+&nbsp;
+&nbsp;                // Create memberships for new members
+<b class="nc">&nbsp;                List&lt;ConversationMembership&gt; newMemberships = newMemberObjectIds.stream()</b>
+<b class="nc">&nbsp;                                .map(userId -&gt; ConversationMembership.builder()</b>
+<b class="nc">&nbsp;                                                .conversationId(conversationObjectId)</b>
+<b class="nc">&nbsp;                                                .userId(userId)</b>
+<b class="nc">&nbsp;                                                .role(ConversationMembership.MemberRole.MEMBER)</b>
+<b class="nc">&nbsp;                                                .joinedAt(Instant.now())</b>
+<b class="nc">&nbsp;                                                .lastReadAt(Instant.now())</b>
+<b class="nc">&nbsp;                                                .muted(false)</b>
+<b class="nc">&nbsp;                                                .build())</b>
+<b class="nc">&nbsp;                                .collect(Collectors.toList());</b>
+&nbsp;
+<b class="nc">&nbsp;                membershipRepository.saveAll(newMemberships);</b>
+<b class="nc">&nbsp;                log.info(&quot;Added {} new members to conversation: {}&quot;, newMemberships.size(), conversationId);</b>
+&nbsp;
+&nbsp;                // Update conversation.memberIds list as well
+<b class="nc">&nbsp;                conversationRepository.findById(conversationObjectId).ifPresent(conv -&gt; {</b>
+<b class="nc">&nbsp;                        List&lt;ObjectId&gt; updated = conv.getMemberIds() == null</b>
+<b class="nc">&nbsp;                                        ? new java.util.ArrayList&lt;&gt;()</b>
+<b class="nc">&nbsp;                                        : new java.util.ArrayList&lt;&gt;(conv.getMemberIds());</b>
+<b class="nc">&nbsp;                        for (ObjectId id : newMemberObjectIds) {</b>
+<b class="nc">&nbsp;                                if (!updated.contains(id)) {</b>
+<b class="nc">&nbsp;                                        updated.add(id);</b>
+&nbsp;                                }
+&nbsp;                        }
+<b class="nc">&nbsp;                        conv.setMemberIds(updated);</b>
+<b class="nc">&nbsp;                        conversationRepository.save(conv);</b>
+&nbsp;                });
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Remove member from conversation
+&nbsp;         */
+&nbsp;        public void removeMember(String conversationId, String userIdToRemove, String currentUserId) {
+<b class="nc">&nbsp;                log.debug(&quot;Removing member: {} from conversation: {}&quot;, userIdToRemove, conversationId);</b>
+&nbsp;
+<b class="nc">&nbsp;                ObjectId conversationObjectId = ObjectIdUtil.safeObjectId(conversationId);</b>
+<b class="nc">&nbsp;                ObjectId currentUserObjectId = resolveUserId(currentUserId);</b>
+<b class="nc">&nbsp;                ObjectId userToRemoveObjectId = resolveUserId(userIdToRemove);</b>
+&nbsp;
+&nbsp;                // Disallow removing members from DIRECT conversations
+<b class="nc">&nbsp;                Conversation convo = conversationRepository.findById(conversationObjectId)</b>
+<b class="nc">&nbsp;                                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Conversation not found&quot;));</b>
+<b class="nc">&nbsp;                if (convo.getType() == Conversation.ConversationType.DIRECT) {</b>
+<b class="nc">&nbsp;                        throw new IllegalArgumentException(</b>
+&nbsp;                                        &quot;Cannot remove members from a DIRECT (one-to-one) conversation&quot;);
+&nbsp;                }
+&nbsp;
+&nbsp;                // Verify current user is admin or removing themselves
+<b class="nc">&nbsp;                ConversationMembership currentUserMembership = membershipRepository</b>
+<b class="nc">&nbsp;                                .findByConversationIdAndUserId(conversationObjectId, currentUserObjectId)</b>
+<b class="nc">&nbsp;                                .orElseThrow(() -&gt; new IllegalArgumentException(</b>
+&nbsp;                                                &quot;User is not a member of this conversation&quot;));
+&nbsp;
+<b class="nc">&nbsp;                if (!currentUserId.equals(userIdToRemove) &amp;&amp;</b>
+<b class="nc">&nbsp;                                currentUserMembership.getRole() != ConversationMembership.MemberRole.ADMIN) {</b>
+<b class="nc">&nbsp;                        throw new IllegalArgumentException(&quot;Only admins can remove other members&quot;);</b>
+&nbsp;                }
+&nbsp;
+<b class="nc">&nbsp;                membershipRepository.deleteByConversationIdAndUserId(conversationObjectId, userToRemoveObjectId);</b>
+<b class="nc">&nbsp;                log.info(&quot;Removed member: {} from conversation: {}&quot;, userIdToRemove, conversationId);</b>
+&nbsp;
+&nbsp;                // Also update the conversation memberIds array
+<b class="nc">&nbsp;                conversationRepository.findById(conversationObjectId).ifPresent(conv -&gt; {</b>
+<b class="nc">&nbsp;                        if (conv.getMemberIds() != null) {</b>
+<b class="nc">&nbsp;                                conv.setMemberIds(conv.getMemberIds().stream()</b>
+<b class="nc">&nbsp;                                                .filter(id -&gt; !id.equals(userToRemoveObjectId))</b>
+<b class="nc">&nbsp;                                                .collect(Collectors.toList()));</b>
+<b class="nc">&nbsp;                                conversationRepository.save(conv);</b>
+&nbsp;                        }
+&nbsp;                });
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Map conversation entity to response DTO
+&nbsp;         */
+&nbsp;        private ConversationResponse mapToResponse(Conversation conversation,
+&nbsp;                        List&lt;ConversationMembership&gt; memberships, String currentUserId) {
+<b class="nc">&nbsp;                List&lt;ConversationResponse.ConversationMemberResponse&gt; memberResponses = memberships.stream()</b>
+<b class="nc">&nbsp;                                .map(membership -&gt; {</b>
+&nbsp;                                        // Fetch user details from UserRepository
+<b class="nc">&nbsp;                                        String userName = userRepository.findById(membership.getUserId())</b>
+<b class="nc">&nbsp;                                                        .map(user -&gt; user.getUserName())</b>
+<b class="nc">&nbsp;                                                        .orElse(&quot;User &quot; + membership.getUserId().toString());</b>
+&nbsp;
+<b class="nc">&nbsp;                                        return ConversationResponse.ConversationMemberResponse.builder()</b>
+<b class="nc">&nbsp;                                                        .userId(membership.getUserId().toString())</b>
+<b class="nc">&nbsp;                                                        .userName(userName)</b>
+<b class="nc">&nbsp;                                                        .role(membership.getRole())</b>
+<b class="nc">&nbsp;                                                        .lastReadAt(membership.getLastReadAt())</b>
+<b class="nc">&nbsp;                                                        .muted(membership.isMuted())</b>
+<b class="nc">&nbsp;                                                        .joinedAt(membership.getJoinedAt())</b>
+<b class="nc">&nbsp;                                                        .build();</b>
+&nbsp;                                })
+<b class="nc">&nbsp;                                .collect(Collectors.toList());</b>
+&nbsp;
+<b class="nc">&nbsp;                List&lt;String&gt; adminIdStrings = conversation.getAdminIds() != null ? conversation.getAdminIds().stream()</b>
+<b class="nc">&nbsp;                                .map(ObjectId::toString)</b>
+<b class="nc">&nbsp;                                .collect(Collectors.toList()) : List.of();</b>
+&nbsp;
+<b class="nc">&nbsp;                return ConversationResponse.builder()</b>
+<b class="nc">&nbsp;                                .id(conversation.getId().toString())</b>
+<b class="nc">&nbsp;                                .type(conversation.getType())</b>
+<b class="nc">&nbsp;                                .title(conversation.getTitle())</b>
+<b class="nc">&nbsp;                                .members(memberResponses)</b>
+<b class="nc">&nbsp;                                .ownerId(conversation.getOwnerId() != null ? conversation.getOwnerId().toString()</b>
+<b class="nc">&nbsp;                                                : null)</b>
+<b class="nc">&nbsp;                                .adminIds(adminIdStrings)</b>
+<b class="nc">&nbsp;                                .createdAt(conversation.getCreatedAt())</b>
+<b class="nc">&nbsp;                                .lastMessageAt(conversation.getLastMessageAt())</b>
+<b class="nc">&nbsp;                                .isArchived(conversation.isArchived())</b>
+<b class="nc">&nbsp;                                .unreadCount(calculateUnreadCount(conversation.getId(), currentUserId))</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Calculate unread message count for a user in a conversation
+&nbsp;         */
+&nbsp;        private int calculateUnreadCount(ObjectId conversationId, String userId) {
+&nbsp;                try {
+<b class="nc">&nbsp;                        ObjectId userObjectId = ObjectIdUtil.safeObjectId(userId);</b>
+&nbsp;
+&nbsp;                        // Find the user&#39;s membership to get lastReadAt
+<b class="nc">&nbsp;                        ConversationMembership membership = membershipRepository</b>
+<b class="nc">&nbsp;                                        .findByConversationIdAndUserId(conversationId, userObjectId)</b>
+<b class="nc">&nbsp;                                        .orElse(null);</b>
+&nbsp;
+<b class="nc">&nbsp;                        if (membership == null || membership.getLastReadAt() == null) {</b>
+&nbsp;                                // If no membership or never read, count all messages in this conversation
+<b class="nc">&nbsp;                                return (int) messageRepository.countByConversationIdAndDeletedAtIsNull(conversationId);</b>
+&nbsp;                        }
+&nbsp;
+&nbsp;                        // Count messages created after user&#39;s last read time
+<b class="nc">&nbsp;                        return (int) messageRepository.countUnreadMessages(conversationId, membership.getLastReadAt());</b>
+&nbsp;                } catch (Exception e) {
+<b class="nc">&nbsp;                        log.warn(&quot;Error calculating unread count for conversation {} and user {}: {}&quot;,</b>
+<b class="nc">&nbsp;                                        conversationId, userId, e.getMessage());</b>
+<b class="nc">&nbsp;                        return 0;</b>
+&nbsp;                }
+&nbsp;        }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-10-08 15:15</div>
+</div>
+</body>
+</html>

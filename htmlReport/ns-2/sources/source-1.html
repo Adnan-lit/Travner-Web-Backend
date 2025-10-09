@@ -1,0 +1,214 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > CorsConfig</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.adnan.travner.config</a>
+</div>
+
+<h1>Coverage Summary for Class: CorsConfig (org.adnan.travner.config)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">CorsConfig</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (3/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    50%
+  </span>
+  <span class="absValue">
+    (2/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    89.5%
+  </span>
+  <span class="absValue">
+    (17/19)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">CorsConfig$$SpringCGLIB$$0</td>
+  </tr>
+  <tr>
+    <td class="name">CorsConfig$$SpringCGLIB$$FastClass$$0</td>
+  </tr>
+  <tr>
+    <td class="name">CorsConfig$$SpringCGLIB$$FastClass$$1</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (3/3)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    50%
+  </span>
+  <span class="absValue">
+    (2/4)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    89.5%
+  </span>
+  <span class="absValue">
+    (17/19)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.config;
+&nbsp;
+&nbsp;import org.springframework.beans.factory.annotation.Value;
+&nbsp;import org.springframework.context.annotation.Bean;
+&nbsp;import org.springframework.context.annotation.Configuration;
+&nbsp;import org.springframework.util.StringUtils;
+&nbsp;import org.springframework.web.cors.CorsConfiguration;
+&nbsp;import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+&nbsp;import org.springframework.web.filter.CorsFilter;
+&nbsp;
+&nbsp;import java.util.Arrays;
+&nbsp;import java.util.List;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+&nbsp;/**
+&nbsp; * Central CORS configuration.
+&nbsp; * Reads values from application.yml under app.cors.* so that environments can
+&nbsp; * override
+&nbsp; * allowed origins without code changes.
+&nbsp; */
+&nbsp;@Configuration
+<b class="fc">&nbsp;public class CorsConfig {</b>
+&nbsp;
+&nbsp;    @Value(&quot;${app.cors.allowed-origins:http://localhost:3000,http://localhost:4200,http://localhost:5173,https://travner.vercel.app}&quot;)
+&nbsp;    private String allowedOriginsProp;
+&nbsp;
+&nbsp;    @Value(&quot;${app.cors.allowed-methods:GET,POST,PUT,DELETE,PATCH,OPTIONS}&quot;)
+&nbsp;    private String allowedMethodsProp;
+&nbsp;
+&nbsp;    @Value(&quot;${app.cors.allowed-headers:*}&quot;)
+&nbsp;    private String allowedHeadersProp;
+&nbsp;
+&nbsp;    @Value(&quot;${app.cors.allow-credentials:true}&quot;)
+&nbsp;    private boolean allowCredentials;
+&nbsp;
+&nbsp;    @Bean
+&nbsp;    public CorsFilter corsFilter() {
+<b class="fc">&nbsp;        CorsConfiguration config = new CorsConfiguration();</b>
+&nbsp;
+&nbsp;        // Origins: support both exact matches and wildcard patterns via
+&nbsp;        // setAllowedOriginPatterns
+<b class="fc">&nbsp;        List&lt;String&gt; origins = splitAndTrim(allowedOriginsProp);</b>
+&nbsp;        // If any origin contains a wildcard, use patterns; otherwise set as exact
+&nbsp;        // origins
+<b class="pc">&nbsp;        if (origins.stream().anyMatch(o -&gt; o.contains(&quot;*&quot;))) {</b>
+<b class="nc">&nbsp;            config.setAllowedOriginPatterns(origins);</b>
+&nbsp;        } else {
+<b class="fc">&nbsp;            origins.forEach(config::addAllowedOrigin);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Methods
+<b class="fc">&nbsp;        splitAndTrim(allowedMethodsProp).forEach(config::addAllowedMethod);</b>
+&nbsp;
+&nbsp;        // Headers
+<b class="fc">&nbsp;        splitAndTrim(allowedHeadersProp).forEach(config::addAllowedHeader);</b>
+&nbsp;
+<b class="fc">&nbsp;        config.setAllowCredentials(allowCredentials);</b>
+&nbsp;        // Cache preflight response for 1 hour to reduce OPTIONS traffic
+<b class="fc">&nbsp;        config.setMaxAge(3600L);</b>
+&nbsp;
+<b class="fc">&nbsp;        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();</b>
+<b class="fc">&nbsp;        source.registerCorsConfiguration(&quot;/**&quot;, config);</b>
+<b class="fc">&nbsp;        return new CorsFilter(source);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    private List&lt;String&gt; splitAndTrim(String csv) {
+<b class="pc">&nbsp;        if (!StringUtils.hasText(csv))</b>
+<b class="nc">&nbsp;            return List.of();</b>
+<b class="fc">&nbsp;        return Arrays.stream(csv.split(&quot;,&quot;))</b>
+<b class="fc">&nbsp;                .map(String::trim)</b>
+<b class="fc">&nbsp;                .filter(s -&gt; !s.isEmpty())</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-10-08 15:15</div>
+</div>
+</body>
+</html>

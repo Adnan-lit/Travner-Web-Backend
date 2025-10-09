@@ -28,10 +28,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 // Don't fail authentication if logging fails
             }
 
+            // Fix: Handle null roles list to prevent runtime NullPointerException
+            String[] roles = user.getRoles() != null ?
+                user.getRoles().toArray(new String[0]) :
+                new String[]{"USER"};
+
             UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                     .username(user.getUserName())
                     .password(user.getPassword())
-                    .roles(user.getRoles().toArray(new String[0]))
+                    .roles(roles)
                     .disabled(!user.isActive())
                     .build();
             return userDetails;

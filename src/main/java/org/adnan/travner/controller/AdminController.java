@@ -1,316 +1,395 @@
 package org.adnan.travner.controller;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.adnan.travner.dto.ApiResponse;
+import org.adnan.travner.dto.PostDTO;
+import org.adnan.travner.dto.ProductDTO;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.service.CommentService;
+import org.adnan.travner.service.PostService;
+import org.adnan.travner.service.ProductService;
 import org.adnan.travner.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Admin Controller for managing users, posts, products, and system statistics
+ * All endpoints require ADMIN role
+ */
 @RestController
-@RequestMapping("/admin")
+@CrossOrigin(origins = "*", maxAge = 3600)
+@RequestMapping("/api/admin")
+@RequiredArgsConstructor
+@Slf4j
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final PostService postService;
+    private final ProductService productService;
+    private final CommentService commentService;
+
+    // ===========================================
+    // USER MANAGEMENT
+    // ===========================================
 
     /**
-     * Get all users (Admin only)
-     * GET /admin/users
+     * Get all users with pagination
      */
     @GetMapping("/users")
-    public ResponseEntity<List<UserEntry>> getAllUsers() {
+    public ResponseEntity<ApiResponse<List<UserEntry>>> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
+
         try {
+            // TODO: Implement pagination in UserService
+            // For now, get all users (pagination can be added to UserService later)
             List<UserEntry> users = userService.getAll();
-            return new ResponseEntity<>(users, HttpStatus.OK);
+
+            // Log pagination parameters for future implementation
+            log.info("Admin requested users with pagination: page={}, size={}, sortBy={}, direction={}",
+                    page, size, sortBy, direction);
+
+            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", users));
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Error retrieving users: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve users: " + e.getMessage()));
         }
     }
 
     /**
-     * Get user by username (Admin only)
-     * GET /admin/users/{username}
+     * Get user by username
      */
     @GetMapping("/users/{username}")
-    public ResponseEntity<UserEntry> getUserByUsername(@PathVariable String username) {
+    public ResponseEntity<ApiResponse<UserEntry>> getUserByUsername(@PathVariable String username) {
         try {
-            if (username == null || username.trim().isEmpty()) {
-                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-            }
-
             UserEntry user = userService.getByUsernameSecure(username);
             if (user == null) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found: " + username));
             }
-
-            return new ResponseEntity<>(user, HttpStatus.OK);
+            return ResponseEntity.ok(ApiResponse.success(user));
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Error retrieving user {}: {}", username, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve user: " + e.getMessage()));
         }
     }
 
     /**
-     * Delete user by username (Admin only)
-     * DELETE /admin/users/{username}
-     */
-    @DeleteMapping("/users/{username}")
-    public ResponseEntity<Map<String, String>> deleteUserByUsername(@PathVariable String username) {
-        try {
-            if (username == null || username.trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Username is required"), HttpStatus.BAD_REQUEST);
-            }
-
-            // Prevent admin from deleting themselves
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && username.equals(auth.getName())) {
-                return new ResponseEntity<>(createResponse("error", "Cannot delete your own account"),
-                        HttpStatus.FORBIDDEN);
-            }
-
-            boolean deleted = userService.deleteUserByUsername(username);
-            if (!deleted) {
-                return new ResponseEntity<>(createResponse("error", "User not found or could not be deleted"),
-                        HttpStatus.NOT_FOUND);
-            }
-
-            return new ResponseEntity<>(createResponse("message", "User deleted successfully"), HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Update user roles (Admin only)
-     * PUT /admin/users/{username}/roles
-     * Body: {"roles": ["USER", "ADMIN"]}
-     */
-    @PutMapping("/users/{username}/roles")
-    public ResponseEntity<Map<String, String>> updateUserRoles(
-            @PathVariable String username,
-            @RequestBody Map<String, List<String>> request) {
-        try {
-            if (username == null || username.trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Username is required"), HttpStatus.BAD_REQUEST);
-            }
-
-            List<String> roles = request.get("roles");
-            if (roles == null || roles.isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Roles are required"), HttpStatus.BAD_REQUEST);
-            }
-
-            // Validate roles (only allow USER and ADMIN for now)
-            for (String role : roles) {
-                if (!role.equals("USER") && !role.equals("ADMIN")) {
-                    return new ResponseEntity<>(createResponse("error", "Invalid role: " + role),
-                            HttpStatus.BAD_REQUEST);
-                }
-            }
-
-            boolean updated = userService.updateUserRoles(username, roles);
-            if (!updated) {
-                return new ResponseEntity<>(createResponse("error", "User not found or could not be updated"),
-                        HttpStatus.NOT_FOUND);
-            }
-
-            return new ResponseEntity<>(createResponse("message", "User roles updated successfully"), HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Reset user password (Admin only)
-     * PUT /admin/users/{username}/password
-     * Body: {"password": "new-password"}
-     */
-    @PutMapping("/users/{username}/password")
-    public ResponseEntity<Map<String, String>> resetUserPassword(
-            @PathVariable String username,
-            @RequestBody Map<String, String> request) {
-        try {
-            if (username == null || username.trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Username is required"), HttpStatus.BAD_REQUEST);
-            }
-
-            String newPassword = request.get("password");
-            if (newPassword == null || newPassword.trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Password is required"), HttpStatus.BAD_REQUEST);
-            }
-
-            if (newPassword.length() < 6) {
-                return new ResponseEntity<>(createResponse("error", "Password must be at least 6 characters long"),
-                        HttpStatus.BAD_REQUEST);
-            }
-
-            boolean updated = userService.resetUserPassword(username, newPassword);
-            if (!updated) {
-                return new ResponseEntity<>(createResponse("error", "User not found or could not be updated"),
-                        HttpStatus.NOT_FOUND);
-            }
-
-            return new ResponseEntity<>(createResponse("message", "Password reset successfully"), HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Promote user to admin (Admin only)
-     * POST /admin/users/{username}/promote
-     */
-    @PostMapping("/users/{username}/promote")
-    public ResponseEntity<Map<String, String>> promoteUserToAdmin(@PathVariable String username) {
-        try {
-            if (username == null || username.trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Username is required"), HttpStatus.BAD_REQUEST);
-            }
-
-            boolean promoted = userService.promoteUserToAdmin(username);
-            if (!promoted) {
-                return new ResponseEntity<>(createResponse("error", "User not found or could not be promoted"),
-                        HttpStatus.NOT_FOUND);
-            }
-
-            return new ResponseEntity<>(createResponse("message", "User promoted to admin successfully"),
-                    HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Get users by role (Admin only)
-     * GET /admin/users/role/{role}
-     */
-    @GetMapping("/users/role/{role}")
-    public ResponseEntity<List<UserEntry>> getUsersByRole(@PathVariable String role) {
-        try {
-            if (role == null || role.trim().isEmpty()) {
-                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-            }
-
-            List<UserEntry> users = userService.getUsersByRole(role.toUpperCase());
-            return new ResponseEntity<>(users, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Get system statistics (Admin only)
-     * GET /admin/stats
-     */
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getSystemStats() {
-        try {
-            Map<String, Object> stats = new HashMap<>();
-
-            long totalUsers = userService.getUserCount();
-            long adminUsers = userService.getUsersByRole("ADMIN").size();
-            long regularUsers = userService.getUsersByRole("USER").size();
-
-            stats.put("totalUsers", totalUsers);
-            stats.put("adminUsers", adminUsers);
-            stats.put("regularUsers", regularUsers);
-            stats.put("timestamp", System.currentTimeMillis());
-
-            return new ResponseEntity<>(stats, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Create admin user (Admin only)
-     * POST /admin/users
-     * Body: {"userName": "admin", "password": "password", "firstName": "Admin",
-     * "lastName": "User", "email": "admin@example.com"}
+     * Create new admin user
      */
     @PostMapping("/users")
-    public ResponseEntity<Map<String, String>> createAdminUser(@RequestBody UserEntry userEntry) {
+    public ResponseEntity<ApiResponse<UserEntry>> createAdminUser(@Valid @RequestBody UserEntry userEntry) {
         try {
-            if (userEntry.getUserName().trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Username is required"), HttpStatus.BAD_REQUEST);
-            }
-
-            if (userEntry.getPassword().trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Password is required"), HttpStatus.BAD_REQUEST);
-            }
-
-            if (userEntry.getPassword().length() < 6) {
-                return new ResponseEntity<>(createResponse("error", "Password must be at least 6 characters long"),
-                        HttpStatus.BAD_REQUEST);
-            }
-
             // Check if user already exists
-            UserEntry existingUser = userService.getByUsername(userEntry.getUserName());
-            if (existingUser != null) {
-                return new ResponseEntity<>(createResponse("error", "User already exists"), HttpStatus.CONFLICT);
+            if (!userService.isUsernameAvailable(userEntry.getUserName())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(ApiResponse.error("Username already exists"));
             }
 
             // Set admin roles
             userEntry.setRoles(List.of("USER", "ADMIN"));
             userService.saveNewUser(userEntry);
 
-            return new ResponseEntity<>(createResponse("message", "Admin user created successfully"),
-                    HttpStatus.CREATED);
+            // Return user without password
+            UserEntry createdUser = userService.getByUsernameSecure(userEntry.getUserName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Admin user created successfully", createdUser));
         } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Error creating admin user: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Failed to create admin user: " + e.getMessage()));
         }
     }
 
     /**
-     * Set user active/inactive status (Admin only)
-     * PUT /admin/users/{username}/status
-     * Body: {"active": true/false}
+     * Update user roles
+     */
+    @PutMapping("/users/{username}/roles")
+    public ResponseEntity<ApiResponse<UserEntry>> updateUserRoles(
+            @PathVariable String username,
+            @RequestBody Map<String, List<String>> request) {
+        try {
+            List<String> roles = request.get("roles");
+            if (roles == null || roles.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("Roles are required"));
+            }
+
+            boolean updated = userService.updateUserRoles(username, roles);
+            if (!updated) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found"));
+            }
+
+            UserEntry updatedUser = userService.getByUsernameSecure(username);
+            return ResponseEntity.ok(ApiResponse.success("User roles updated successfully", updatedUser));
+        } catch (Exception e) {
+            log.error("Error updating user roles for {}: {}", username, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to update user roles: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Set user active/inactive status
      */
     @PutMapping("/users/{username}/status")
-    public ResponseEntity<Map<String, String>> setUserActiveStatus(
+    public ResponseEntity<ApiResponse<UserEntry>> setUserActiveStatus(
             @PathVariable String username,
             @RequestBody Map<String, Boolean> request) {
         try {
-            if (username == null || username.trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Username is required"), HttpStatus.BAD_REQUEST);
-            }
-
             Boolean active = request.get("active");
             if (active == null) {
-                return new ResponseEntity<>(createResponse("error", "Active status is required"),
-                        HttpStatus.BAD_REQUEST);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("Active status is required"));
             }
 
             boolean updated = userService.setUserActiveStatus(username, active);
             if (!updated) {
-                return new ResponseEntity<>(createResponse("error", "User not found or could not be updated"),
-                        HttpStatus.NOT_FOUND);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found"));
             }
 
+            UserEntry updatedUser = userService.getByUsernameSecure(username);
             String message = active ? "User activated successfully" : "User deactivated successfully";
-            return new ResponseEntity<>(createResponse("message", message), HttpStatus.OK);
+            return ResponseEntity.ok(ApiResponse.success(message, updatedUser));
         } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Error updating user status for {}: {}", username, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to update user status: " + e.getMessage()));
         }
     }
 
     /**
-     * Helper method to create response maps
+     * Delete user
      */
-    private Map<String, String> createResponse(String key, String value) {
-        Map<String, String> response = new HashMap<>();
-        response.put(key, value);
-        return response;
+    @DeleteMapping("/users/{username}")
+    public ResponseEntity<ApiResponse<Object>> deleteUser(
+            Authentication authentication,
+            @PathVariable String username) {
+        try {
+            // Prevent admin from deleting themselves
+            if (authentication != null && username.equals(authentication.getName())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Cannot delete your own account"));
+            }
+
+            boolean deleted = userService.deleteUserByUsername(username);
+            if (!deleted) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found"));
+            }
+
+            return ResponseEntity.ok(ApiResponse.success("User deleted successfully", null));
+        } catch (Exception e) {
+            log.error("Error deleting user {}: {}", username, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to delete user: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Reset user password
+     */
+    @PutMapping("/users/{username}/password")
+    public ResponseEntity<ApiResponse<Object>> resetUserPassword(
+            @PathVariable String username,
+            @RequestBody Map<String, String> request) {
+        try {
+            String newPassword = request.get("password");
+            if (newPassword == null || newPassword.length() < 6) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("Password must be at least 6 characters long"));
+            }
+
+            boolean updated = userService.resetUserPassword(username, newPassword);
+            if (!updated) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found"));
+            }
+
+            return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null));
+        } catch (Exception e) {
+            log.error("Error resetting password for {}: {}", username, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to reset password: " + e.getMessage()));
+        }
+    }
+
+    // ===========================================
+    // CONTENT MANAGEMENT
+    // ===========================================
+
+    /**
+     * Get all posts (including unpublished) with pagination
+     */
+    @GetMapping("/posts")
+    public ResponseEntity<ApiResponse<List<PostDTO>>> getAllPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
+        try {
+            Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+
+            // Get all posts including unpublished ones (admin can see all)
+            Page<PostDTO> posts = postService.getAllPosts(pageable);
+            return ResponseEntity.ok(ApiResponse.fromPage(posts));
+        } catch (Exception e) {
+            log.error("Error retrieving posts: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve posts: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete any post (admin privilege)
+     */
+    @DeleteMapping("/posts/{id}")
+    public ResponseEntity<ApiResponse<Object>> deletePost(@PathVariable String id) {
+        try {
+            // Admin can delete any post - the PostService now checks for admin role
+            postService.deletePost(id, "admin");
+            return ResponseEntity.ok(ApiResponse.success("Post deleted successfully", null));
+        } catch (Exception e) {
+            log.error("Error deleting post {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to delete post: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all products with pagination
+     */
+    @GetMapping("/products")
+    public ResponseEntity<ApiResponse<List<ProductDTO>>> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction) {
+        try {
+            Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+
+            Page<ProductDTO> products = productService.getAllAvailableProducts(pageable);
+            return ResponseEntity.ok(ApiResponse.fromPage(products));
+        } catch (Exception e) {
+            log.error("Error retrieving products: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve products: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete any product (admin privilege)
+     */
+    @DeleteMapping("/products/{id}")
+    public ResponseEntity<ApiResponse<Object>> deleteProduct(@PathVariable String id) {
+        try {
+            productService.deleteProduct(id, "admin"); // Now supports admin deletion
+            return ResponseEntity.ok(ApiResponse.success("Product deleted successfully", null));
+        } catch (Exception e) {
+            log.error("Error deleting product {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to delete product: " + e.getMessage()));
+        }
+    }
+
+    // ===========================================
+    // STATISTICS & ANALYTICS
+    // ===========================================
+
+    /**
+     * Get comprehensive system statistics
+     */
+    @GetMapping("/statistics")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSystemStatistics() {
+        try {
+            Map<String, Object> stats = new HashMap<>();
+
+            // User statistics
+            long totalUsers = userService.getUserCount();
+            long adminUsers = userService.getUsersByRole("ADMIN").size();
+            long regularUsers = userService.getUsersByRole("USER").size();
+
+            stats.put("users", Map.of(
+                "total", totalUsers,
+                "admins", adminUsers,
+                "regular", regularUsers,
+                "activeUsers", totalUsers // TODO: Add active user count when user activity tracking is implemented
+            ));
+
+            // Content statistics - now using actual count methods
+            stats.put("content", Map.of(
+                "totalPosts", postService.getPostCount(),
+                "totalProducts", productService.getProductCount(),
+                "totalComments", commentService.getCommentCount(),
+                "availableProducts", productService.getAvailableProductCount()
+            ));
+
+            stats.put("timestamp", System.currentTimeMillis());
+            stats.put("serverTime", java.time.LocalDateTime.now());
+
+            return ResponseEntity.ok(ApiResponse.success("Statistics retrieved successfully", stats));
+        } catch (Exception e) {
+            log.error("Error retrieving statistics: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve statistics: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get users by role
+     */
+    @GetMapping("/users/role/{role}")
+    public ResponseEntity<ApiResponse<List<UserEntry>>> getUsersByRole(@PathVariable String role) {
+        try {
+            List<UserEntry> users = userService.getUsersByRole(role.toUpperCase());
+            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", users));
+        } catch (Exception e) {
+            log.error("Error retrieving users by role {}: {}", role, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve users by role: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Promote user to admin
+     */
+    @PostMapping("/users/{username}/promote")
+    public ResponseEntity<ApiResponse<UserEntry>> promoteUserToAdmin(@PathVariable String username) {
+        try {
+            boolean promoted = userService.promoteUserToAdmin(username);
+            if (!promoted) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found"));
+            }
+
+            UserEntry updatedUser = userService.getByUsernameSecure(username);
+            return ResponseEntity.ok(ApiResponse.success("User promoted to admin successfully", updatedUser));
+        } catch (Exception e) {
+            log.error("Error promoting user {}: {}", username, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to promote user: " + e.getMessage()));
+        }
     }
 }

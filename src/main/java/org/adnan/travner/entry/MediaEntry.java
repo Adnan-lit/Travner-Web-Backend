@@ -27,18 +27,19 @@ public class MediaEntry {
     @Id
     private ObjectId id;
 
-    private String fileName;
-
-    private String gridFsId; // ID of the file in GridFS
-
-    private String fileType; // image/jpeg, video/mp4, etc.
-
-    private long fileSize;
+    private String filename;        // Fixed: was fileName, now matches MediaService usage
+    private String originalFilename; // Added: missing field
+    private String gridFsId;        // ID of the file in GridFS
+    private String contentType;     // Added: was fileType, now matches MediaService usage
+    private Long size;              // Added: was fileSize, now matches MediaService usage
+    private String uploadedBy;      // Added: username of uploader
+    private String type;            // Added: media type (post, profile, etc.)
+    private String entityId;        // Added: associated entity ID
 
     @DBRef
-    private UserEntry uploader;
+    private UserEntry uploader;     // Keep for reference
 
-    private ObjectId postId; // The post this media belongs to
+    private ObjectId postId;        // The post this media belongs to
 
     @CreatedDate
     private LocalDateTime uploadedAt;

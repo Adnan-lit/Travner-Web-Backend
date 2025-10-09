@@ -57,6 +57,7 @@ public class ApiResponse<T> {
         return ApiResponse.<T>builder()
                 .success(false)
                 .message(message)
+                .data(null)
                 .build();
     }
 
@@ -68,8 +69,9 @@ public class ApiResponse<T> {
                 .build();
     }
 
+    // Factory method for paginated responses
     public static <T> ApiResponse<List<T>> fromPage(Page<T> page) {
-        PaginationMeta meta = PaginationMeta.builder()
+        PaginationMeta pagination = PaginationMeta.builder()
                 .page(page.getNumber())
                 .size(page.getSize())
                 .totalElements(page.getTotalElements())
@@ -80,9 +82,9 @@ public class ApiResponse<T> {
 
         return ApiResponse.<List<T>>builder()
                 .success(true)
-                .message("Success")
+                .message("Data retrieved successfully")
                 .data(page.getContent())
-                .pagination(meta)
+                .pagination(pagination)
                 .build();
     }
 }

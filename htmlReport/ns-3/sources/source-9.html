@@ -1,0 +1,284 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > MessageController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.adnan.travner.controller</a>
+</div>
+
+<h1>Coverage Summary for Class: MessageController (org.adnan.travner.controller)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">MessageController</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    14.3%
+  </span>
+  <span class="absValue">
+    (1/7)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    1.6%
+  </span>
+  <span class="absValue">
+    (1/61)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.controller;
+&nbsp;
+&nbsp;import io.swagger.v3.oas.annotations.Operation;
+&nbsp;import io.swagger.v3.oas.annotations.Parameter;
+&nbsp;import io.swagger.v3.oas.annotations.tags.Tag;
+&nbsp;import jakarta.validation.Valid;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import lombok.extern.slf4j.Slf4j;
+&nbsp;import org.adnan.travner.dto.ApiResponse;
+&nbsp;import org.adnan.travner.dto.chat.MarkMessagesReadRequest;
+&nbsp;import org.adnan.travner.dto.chat.MessageResponse;
+&nbsp;import org.adnan.travner.dto.chat.SendMessageRequest;
+&nbsp;import org.adnan.travner.service.MessageService;
+&nbsp;import org.springframework.data.domain.Page;
+&nbsp;import org.springframework.data.domain.Pageable;
+&nbsp;import org.springframework.data.web.PageableDefault;
+&nbsp;import org.springframework.http.HttpStatus;
+&nbsp;import org.springframework.http.ResponseEntity;
+&nbsp;import org.springframework.security.core.Authentication;
+&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;
+&nbsp;/**
+&nbsp; * REST Controller for message management
+&nbsp; */
+&nbsp;@RestController
+&nbsp;@RequestMapping(&quot;/api/chat&quot;)
+&nbsp;@RequiredArgsConstructor
+<b class="fc">&nbsp;@Slf4j</b>
+&nbsp;@Tag(name = &quot;Messages&quot;, description = &quot;Message management APIs&quot;)
+&nbsp;public class MessageController {
+&nbsp;
+&nbsp;        private final MessageService messageService;
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Send a message in a conversation
+&nbsp;         */
+&nbsp;        @PostMapping(&quot;/messages&quot;)
+&nbsp;        @Operation(summary = &quot;Send message&quot;, description = &quot;Send a message in a conversation&quot;)
+&nbsp;        public ResponseEntity&lt;ApiResponse&lt;MessageResponse&gt;&gt; sendMessage(
+&nbsp;                        @Valid @RequestBody SendMessageRequest request,
+&nbsp;                        Authentication authentication) {
+&nbsp;
+<b class="nc">&nbsp;                log.debug(&quot;Sending message in conversation: {} from user: {}&quot;,</b>
+<b class="nc">&nbsp;                                request.getConversationId(), authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                MessageResponse message = messageService.sendMessage(request, authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                ApiResponse&lt;MessageResponse&gt; response = ApiResponse.&lt;MessageResponse&gt;builder()</b>
+<b class="nc">&nbsp;                                .success(true)</b>
+<b class="nc">&nbsp;                                .message(&quot;Message sent successfully&quot;)</b>
+<b class="nc">&nbsp;                                .data(message)</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;
+<b class="nc">&nbsp;                return ResponseEntity.status(HttpStatus.CREATED).body(response);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Get messages for a conversation
+&nbsp;         */
+&nbsp;        @GetMapping(&quot;/conversations/{conversationId}/messages&quot;)
+&nbsp;        @Operation(summary = &quot;Get messages&quot;, description = &quot;Get messages for a conversation with pagination&quot;)
+&nbsp;        public ResponseEntity&lt;ApiResponse&lt;Page&lt;MessageResponse&gt;&gt;&gt; getMessages(
+&nbsp;                        @Parameter(description = &quot;Conversation ID&quot;) @PathVariable String conversationId,
+&nbsp;                        @Parameter(description = &quot;Pagination parameters&quot;) @PageableDefault(size = 50, sort = &quot;createdAt&quot;) Pageable pageable,
+&nbsp;                        Authentication authentication) {
+&nbsp;
+<b class="nc">&nbsp;                log.debug(&quot;Getting messages for conversation: {} user: {}&quot;, conversationId, authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                Page&lt;MessageResponse&gt; messages = messageService.getMessages(conversationId, authentication.getName(),</b>
+&nbsp;                                pageable);
+&nbsp;
+<b class="nc">&nbsp;                ApiResponse&lt;Page&lt;MessageResponse&gt;&gt; response = ApiResponse.&lt;Page&lt;MessageResponse&gt;&gt;builder()</b>
+<b class="nc">&nbsp;                                .success(true)</b>
+<b class="nc">&nbsp;                                .message(&quot;Messages retrieved successfully&quot;)</b>
+<b class="nc">&nbsp;                                .data(messages)</b>
+<b class="nc">&nbsp;                                .pagination(ApiResponse.PaginationMeta.builder()</b>
+<b class="nc">&nbsp;                                                .page(messages.getNumber())</b>
+<b class="nc">&nbsp;                                                .size(messages.getSize())</b>
+<b class="nc">&nbsp;                                                .totalElements(messages.getTotalElements())</b>
+<b class="nc">&nbsp;                                                .totalPages(messages.getTotalPages())</b>
+<b class="nc">&nbsp;                                                .first(messages.isFirst())</b>
+<b class="nc">&nbsp;                                                .last(messages.isLast())</b>
+<b class="nc">&nbsp;                                                .build())</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;
+<b class="nc">&nbsp;                return ResponseEntity.ok(response);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Edit a message
+&nbsp;         */
+&nbsp;        @PutMapping(&quot;/messages/{messageId}&quot;)
+&nbsp;        @Operation(summary = &quot;Edit message&quot;, description = &quot;Edit an existing message&quot;)
+&nbsp;        public ResponseEntity&lt;ApiResponse&lt;MessageResponse&gt;&gt; editMessage(
+&nbsp;                        @Parameter(description = &quot;Message ID&quot;) @PathVariable String messageId,
+&nbsp;                        @Parameter(description = &quot;New message content&quot;) @RequestParam String content,
+&nbsp;                        Authentication authentication) {
+&nbsp;
+<b class="nc">&nbsp;                log.debug(&quot;Editing message: {} by user: {}&quot;, messageId, authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                MessageResponse message = messageService.editMessage(messageId, content, authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                ApiResponse&lt;MessageResponse&gt; response = ApiResponse.&lt;MessageResponse&gt;builder()</b>
+<b class="nc">&nbsp;                                .success(true)</b>
+<b class="nc">&nbsp;                                .message(&quot;Message edited successfully&quot;)</b>
+<b class="nc">&nbsp;                                .data(message)</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;
+<b class="nc">&nbsp;                return ResponseEntity.ok(response);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Delete a message
+&nbsp;         */
+&nbsp;        @DeleteMapping(&quot;/messages/{messageId}&quot;)
+&nbsp;        @Operation(summary = &quot;Delete message&quot;, description = &quot;Delete a message&quot;)
+&nbsp;        public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; deleteMessage(
+&nbsp;                        @Parameter(description = &quot;Message ID&quot;) @PathVariable String messageId,
+&nbsp;                        Authentication authentication) {
+&nbsp;
+<b class="nc">&nbsp;                log.debug(&quot;Deleting message: {} by user: {}&quot;, messageId, authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                messageService.deleteMessage(messageId, authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                ApiResponse&lt;Void&gt; response = ApiResponse.&lt;Void&gt;builder()</b>
+<b class="nc">&nbsp;                                .success(true)</b>
+<b class="nc">&nbsp;                                .message(&quot;Message deleted successfully&quot;)</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;
+<b class="nc">&nbsp;                return ResponseEntity.ok(response);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Mark messages as read
+&nbsp;         */
+&nbsp;        @PostMapping(&quot;/messages/read&quot;)
+&nbsp;        @Operation(summary = &quot;Mark messages read&quot;, description = &quot;Mark messages as read up to a specific message&quot;)
+&nbsp;        public ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt; markMessagesAsRead(
+&nbsp;                        @Valid @RequestBody MarkMessagesReadRequest request,
+&nbsp;                        Authentication authentication) {
+&nbsp;
+<b class="nc">&nbsp;                log.debug(&quot;Marking messages as read in conversation: {} up to message: {} for user: {}&quot;,</b>
+<b class="nc">&nbsp;                                request.getConversationId(), request.getLastReadMessageId(), authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                messageService.markMessagesAsRead(</b>
+<b class="nc">&nbsp;                                request.getConversationId(),</b>
+<b class="nc">&nbsp;                                request.getLastReadMessageId(),</b>
+<b class="nc">&nbsp;                                authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                ApiResponse&lt;Void&gt; response = ApiResponse.&lt;Void&gt;builder()</b>
+<b class="nc">&nbsp;                                .success(true)</b>
+<b class="nc">&nbsp;                                .message(&quot;Messages marked as read&quot;)</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;
+<b class="nc">&nbsp;                return ResponseEntity.ok(response);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        /**
+&nbsp;         * Get unread message count for a conversation
+&nbsp;         */
+&nbsp;        @GetMapping(&quot;/conversations/{conversationId}/unread-count&quot;)
+&nbsp;        @Operation(summary = &quot;Get unread count&quot;, description = &quot;Get unread message count for a conversation&quot;)
+&nbsp;        public ResponseEntity&lt;ApiResponse&lt;Long&gt;&gt; getUnreadCount(
+&nbsp;                        @Parameter(description = &quot;Conversation ID&quot;) @PathVariable String conversationId,
+&nbsp;                        Authentication authentication) {
+&nbsp;
+<b class="nc">&nbsp;                log.debug(&quot;Getting unread count for conversation: {} user: {}&quot;, conversationId,</b>
+<b class="nc">&nbsp;                                authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                long unreadCount = messageService.getUnreadCount(conversationId, authentication.getName());</b>
+&nbsp;
+<b class="nc">&nbsp;                ApiResponse&lt;Long&gt; response = ApiResponse.&lt;Long&gt;builder()</b>
+<b class="nc">&nbsp;                                .success(true)</b>
+<b class="nc">&nbsp;                                .message(&quot;Unread count retrieved successfully&quot;)</b>
+<b class="nc">&nbsp;                                .data(unreadCount)</b>
+<b class="nc">&nbsp;                                .build();</b>
+&nbsp;
+<b class="nc">&nbsp;                return ResponseEntity.ok(response);</b>
+&nbsp;        }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-10-08 15:15</div>
+</div>
+</body>
+</html>

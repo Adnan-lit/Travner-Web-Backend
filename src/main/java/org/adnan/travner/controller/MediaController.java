@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.MediaDTO;
 import org.adnan.travner.service.MediaService;
-import org.bson.types.ObjectId;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +20,7 @@ import java.util.List;
  */
 @RestController
 @CrossOrigin(origins = "*", maxAge = 3600)
-@RequestMapping("posts/{postId}/media")
+@RequestMapping("/api/media")
 @RequiredArgsConstructor
 @Slf4j
 public class MediaController {
@@ -29,47 +28,20 @@ public class MediaController {
     private final MediaService mediaService;
 
     /**
-     * Get all media for a specific post
-     * 
-     * @param postId The ID of the post
-     * @return List of media associated with the post
-     */
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<MediaDTO>>> getMediaForPost(@PathVariable String postId) {
-        try {
-            List<MediaDTO> media = mediaService.getMediaForPost(postId);
-            return ResponseEntity.ok(ApiResponse.success(media));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve media: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Get a specific media file for download
-     */
-    @GetMapping("/{mediaId}")
-    public ResponseEntity<InputStreamResource> getMediaFile(@PathVariable String mediaId) {
-        try {
-            return mediaService.getMediaFile(mediaId);
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
-     * Upload a new media file to GridFS
-     * 
+     * General media upload endpoint for products, posts, profiles, etc.
+     *
      * @param authentication User authentication
-     * @param postId         The ID of the post
-     * @param file           The file to upload
+     * @param file The file to upload
+     * @param type Upload type (product, post, profile, etc.)
+     * @param entityId Optional entity ID (productId, postId, etc.)
      * @return Media details with access URL
      */
     @PostMapping("/upload")
     public ResponseEntity<ApiResponse<MediaDTO>> uploadMedia(
             Authentication authentication,
-            @PathVariable String postId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "type", defaultValue = "general") String type,
+            @RequestParam(value = "entityId", required = false) String entityId) {
 
         // Check authentication
         if (authentication == null) {
@@ -84,27 +56,59 @@ public class MediaController {
         }
 
         try {
-            // Validate post ID format
-            try {
-                new ObjectId(postId);
-            } catch (IllegalArgumentException e) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(ApiResponse.error("Invalid post ID format"));
-            }
-
-            // Upload the file
-            MediaDTO uploadedMedia = mediaService.uploadMedia(file, authentication.getName(), postId);
+            // Upload the file with type-specific handling
+            MediaDTO uploadedMedia = mediaService.uploadMedia(file, authentication.getName(), type, entityId);
 
             // Return success response
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Media uploaded successfully", uploadedMedia));
         } catch (Exception e) {
-            // Log the error
             log.error("Error uploading media: {}", e.getMessage(), e);
-
-            // Return error response
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to upload media: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get media file by filename for serving
+     */
+    @GetMapping("/files/{filename}")
+    public ResponseEntity<InputStreamResource> getMediaFileByName(@PathVariable String filename) {
+        try {
+            return mediaService.getMediaFileByName(filename);
+        } catch (IOException e) {
+            log.error("Error retrieving media file {}: {}", filename, e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    /**
+     * Get all media for a specific post
+     *
+     * @param postId The ID of the post
+     * @return List of media associated with the post
+     */
+    @GetMapping("/posts/{postId}")
+    public ResponseEntity<ApiResponse<List<MediaDTO>>> getMediaForPost(@PathVariable String postId) {
+        try {
+            List<MediaDTO> media = mediaService.getMediaForPost(postId);
+            return ResponseEntity.ok(ApiResponse.success(media));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve media: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get a specific media file by ID for download
+     */
+    @GetMapping("/{mediaId}")
+    public ResponseEntity<InputStreamResource> getMediaFile(@PathVariable String mediaId) {
+        try {
+            return mediaService.getMediaFile(mediaId);
+        } catch (IOException e) {
+            log.error("Error retrieving media file by ID {}: {}", mediaId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
@@ -129,6 +133,7 @@ public class MediaController {
             mediaService.deleteMedia(mediaId, authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Media deleted successfully", null));
         } catch (RuntimeException e) {
+            log.error("Error deleting media {}: {}", mediaId, e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Failed to delete media: " + e.getMessage()));
         }

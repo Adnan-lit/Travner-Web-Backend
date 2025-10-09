@@ -1,0 +1,112 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ProductRequest</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.adnan.travner.dto</a>
+</div>
+
+<h1>Coverage Summary for Class: ProductRequest (org.adnan.travner.dto)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">ProductRequest</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.dto;
+&nbsp;
+&nbsp;import lombok.Data;
+&nbsp;import lombok.NoArgsConstructor;
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;
+&nbsp;import jakarta.validation.constraints.*;
+&nbsp;import java.math.BigDecimal;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@Data
+&nbsp;@NoArgsConstructor
+&nbsp;@AllArgsConstructor
+&nbsp;public class ProductRequest {
+&nbsp;
+&nbsp;    @NotBlank(message = &quot;Product name is required&quot;)
+&nbsp;    @Size(min = 3, max = 100, message = &quot;Product name must be between 3 and 100 characters&quot;)
+&nbsp;    private String name;
+&nbsp;
+&nbsp;    @NotBlank(message = &quot;Product description is required&quot;)
+&nbsp;    @Size(min = 10, max = 1000, message = &quot;Product description must be between 10 and 1000 characters&quot;)
+&nbsp;    private String description;
+&nbsp;
+&nbsp;    @NotNull(message = &quot;Price is required&quot;)
+&nbsp;    @DecimalMin(value = &quot;0.01&quot;, message = &quot;Price must be greater than 0&quot;)
+&nbsp;    @Digits(integer = 10, fraction = 2, message = &quot;Invalid price format&quot;)
+&nbsp;    private BigDecimal price;
+&nbsp;
+&nbsp;    @NotBlank(message = &quot;Category is required&quot;)
+&nbsp;    @Size(max = 50, message = &quot;Category name cannot exceed 50 characters&quot;)
+&nbsp;    private String category;
+&nbsp;
+&nbsp;    private List&lt;String&gt; images;
+&nbsp;
+&nbsp;    @NotNull(message = &quot;Stock quantity is required&quot;)
+&nbsp;    @Min(value = 0, message = &quot;Stock quantity cannot be negative&quot;)
+&nbsp;    private Integer stockQuantity;
+&nbsp;
+&nbsp;    @NotBlank(message = &quot;Location is required&quot;)
+&nbsp;    @Size(max = 100, message = &quot;Location cannot exceed 100 characters&quot;)
+&nbsp;    private String location;
+&nbsp;
+&nbsp;    private List&lt;String&gt; tags;
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-10-08 15:15</div>
+</div>
+</body>
+</html>

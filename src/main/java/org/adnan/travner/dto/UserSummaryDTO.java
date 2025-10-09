@@ -14,4 +14,8 @@ public class UserSummaryDTO {
     private String userName;
     private String firstName;
     private String lastName;
+    private String email;
+    private String bio;
+    private String location;
+    private String profileImageUrl;
 }

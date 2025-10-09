@@ -6,9 +6,11 @@ import org.adnan.travner.dto.PostDTO;
 import org.adnan.travner.dto.PostRequest;
 import org.adnan.travner.dto.UserSummaryDTO;
 import org.adnan.travner.entry.PostEntry;
+import org.adnan.travner.entry.PostVoteEntry;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.CommentRepository;
 import org.adnan.travner.repository.PostRepository;
+import org.adnan.travner.repository.PostVoteRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
@@ -29,6 +31,7 @@ public class PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final PostVoteRepository postVoteRepository;
 
     @Transactional
     public PostDTO createPost(String username, PostRequest postRequest) {
@@ -158,32 +161,84 @@ public class PostService {
         PostEntry post = postOptional.get();
 
         // Check if the user is the author or an admin
-        if (!post.getAuthor().getId().equals(user.getId()) &&
-                (user.getRoles() == null || !user.getRoles().contains("ROLE_ADMIN"))) {
+        boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
+        boolean isAuthor = post.getAuthor().getId().equals(user.getId());
+
+        if (!isAuthor && !isAdmin) {
             throw new RuntimeException("You are not authorized to delete this post");
         }
+
+        // Delete associated votes when deleting post
+        postVoteRepository.findByPostId(new ObjectId(id)).forEach(postVoteRepository::delete);
 
         postRepository.delete(post);
     }
 
+    /**
+     * Admin method to get all posts (including unpublished)
+     */
+    public Page<PostDTO> getAllPosts(Pageable pageable) {
+        return postRepository.findAll(pageable)
+                .map(post -> {
+                    long commentCount = commentRepository.countByPostId(post.getId());
+                    return convertToDTO(post, commentCount);
+                });
+    }
+
+    /**
+     * Get total post count for statistics
+     */
+    public long getPostCount() {
+        return postRepository.count();
+    }
+
+    @Transactional
     public PostDTO updateVote(String id, String username, boolean isUpvote) {
         UserEntry user = userRepository.findByuserName(username);
         if (user == null) {
             throw new RuntimeException("User not found");
         }
 
-        Optional<PostEntry> postOptional = postRepository.findById(new ObjectId(id));
+        ObjectId postId = new ObjectId(id);
+        Optional<PostEntry> postOptional = postRepository.findById(postId);
         if (postOptional.isEmpty()) {
             throw new RuntimeException("Post not found");
         }
 
         PostEntry post = postOptional.get();
+        PostVoteEntry.VoteType newVoteType = isUpvote ? PostVoteEntry.VoteType.UPVOTE : PostVoteEntry.VoteType.DOWNVOTE;
 
-        if (isUpvote) {
-            post.setUpvotes(post.getUpvotes() + 1);
+        // Check if user has already voted
+        Optional<PostVoteEntry> existingVote = postVoteRepository.findByPostIdAndUserId(postId, user.getId());
+
+        if (existingVote.isPresent()) {
+            PostVoteEntry vote = existingVote.get();
+            if (vote.getVoteType() == newVoteType) {
+                // User is trying to vote the same way again - remove the vote (toggle off)
+                postVoteRepository.delete(vote);
+            } else {
+                // User is changing their vote
+                vote.setVoteType(newVoteType);
+                vote.setCreatedAt(LocalDateTime.now());
+                postVoteRepository.save(vote);
+            }
         } else {
-            post.setDownvotes(post.getDownvotes() + 1);
+            // New vote
+            PostVoteEntry newVote = PostVoteEntry.builder()
+                    .postId(postId)
+                    .userId(user.getId())
+                    .voteType(newVoteType)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            postVoteRepository.save(newVote);
         }
+
+        // Update post vote counts
+        long upvotes = postVoteRepository.countByPostIdAndVoteType(postId, PostVoteEntry.VoteType.UPVOTE);
+        long downvotes = postVoteRepository.countByPostIdAndVoteType(postId, PostVoteEntry.VoteType.DOWNVOTE);
+
+        post.setUpvotes((int) upvotes);
+        post.setDownvotes((int) downvotes);
 
         PostEntry updatedPost = postRepository.save(post);
         long commentCount = commentRepository.countByPostId(updatedPost.getId());
@@ -192,12 +247,15 @@ public class PostService {
 
     private PostDTO convertToDTO(PostEntry post, long commentCount) {
         UserEntry author = post.getAuthor();
-        UserSummaryDTO authorDTO = UserSummaryDTO.builder()
-                .id(author.getId().toString())
-                .userName(author.getUserName())
-                .firstName(author.getFirstName())
-                .lastName(author.getLastName())
-                .build();
+        UserSummaryDTO authorDTO = null;
+        if (author != null) {
+            authorDTO = UserSummaryDTO.builder()
+                    .id(author.getId() != null ? author.getId().toString() : null)
+                    .userName(author.getUserName())
+                    .firstName(author.getFirstName())
+                    .lastName(author.getLastName())
+                    .build();
+        }
 
         return PostDTO.builder()
                 .id(post.getId().toString())

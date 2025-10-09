@@ -4,7 +4,6 @@ import lombok.Getter;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +20,8 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @Autowired
+    private PasswordEncoder passwordEncoder; // Fix: Inject the bean instead of static instance
 
     // Simple in-memory storage for password reset tokens
     // In production, this should be stored in Redis or database

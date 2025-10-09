@@ -17,11 +17,14 @@ import java.time.LocalDateTime;
 @Builder
 public class MediaDTO {
     private String id;
-    private String fileName;
-    private String fileUrl; // URL to access the file via the API
-    private String fileType;
-    private long fileSize;
-    private String uploaderId;
-    private String postId;
+    private String filename;        // Fixed: consistent naming
+    private String originalFilename;
+    private String contentType;
+    private Long size;
+    private String uploadedBy;
+    private String type; // post, profile, product, etc.
+    private String entityId; // associated post/product ID
     private LocalDateTime uploadedAt;
+    private String downloadUrl;     // Fixed: was fileUrl, now matches usage
+    private String gridFsId;
 }

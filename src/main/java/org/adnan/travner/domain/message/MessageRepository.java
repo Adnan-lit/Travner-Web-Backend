@@ -64,4 +64,11 @@ public interface MessageRepository extends MongoRepository<Message, ObjectId> {
          */
         @Query("{ 'replyTo': ?0, 'deletedAt': null }")
         List<Message> findRepliesByReplyToAndDeletedAtIsNull(ObjectId messageId);
+
+        /**
+         * Find messages by conversation and timestamp range
+         */
+        @Query("{ 'conversationId': ?0, 'createdAt': { $lte: ?1 }, 'deletedAt': null }")
+        List<Message> findByConversationIdAndCreatedAtLessThanEqualAndDeletedAtIsNull(
+                        ObjectId conversationId, Instant createdAt);
 }

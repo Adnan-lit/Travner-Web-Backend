@@ -12,11 +12,13 @@ Complete API reference for the Travner travel blog and social platform.
 6. [User Management APIs](#user-management-apis)
 7. [Post Management APIs](#post-management-apis)
 8. [Comment APIs](#comment-apis)
-9. [Chat APIs](#chat-apis)
-10. [Admin APIs](#admin-apis)
-11. [Media Management APIs](#media-management-apis)
-12. [WebSocket Chat](#websocket-chat)
-13. [Examples](#examples)
+9. [Market APIs](#market-apis)
+10. [Cart APIs](#cart-apis)
+11. [Chat APIs](#chat-apis)
+12. [Admin APIs](#admin-apis)
+13. [Media Management APIs](#media-management-apis)
+14. [WebSocket Chat](#websocket-chat)
+15. [Examples](#examples)
 
 ---
 
@@ -28,12 +30,20 @@ Travner is a comprehensive travel blog and experience sharing platform that allo
 - Create, share, and discover travel posts
 - Upload and manage media files (images/videos) for posts
 - Interact through comments and voting
+- Browse and purchase travel-related products in the marketplace
+- Manage shopping cart and make purchases
 - Chat in real-time with other travelers
 - Admin users can manage the platform and users
 
 **Base URL**: `http://localhost:8080`  
-**API Documentation**: `http://localhost:8080/swagger-ui.html`  
+**API Documentation**: This document  
 **Health Check**: `http://localhost:8080/actuator/health`
+
+### Technology Stack
+- **Backend**: Spring Boot 3.5.5 with Java 21
+- **Database**: MongoDB with GridFS for file storage
+- **Security**: Spring Security with Basic Authentication
+- **Real-time Communication**: WebSocket for chat functionality
 
 ---
 
@@ -60,7 +70,7 @@ echo -n 'john:password123' | base64
 # Result: am9objpwYXNzd29yZDEyMw==
 
 # Use in requests:
-curl -H "Authorization: Basic am9objpwYXNzd29yZDEyMw==" http://localhost:8080/user/profile
+curl -H "Authorization: Basic am9objpwYXNzd29yZDEyMw==" http://localhost:8080/api/user/profile
 ```
 
 ---
@@ -97,1153 +107,798 @@ All API responses follow this consistent format:
 }
 ```
 
+### Error Response Format
+
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "data": null,
+  "timestamp": "2025-10-08T10:30:00.000Z"
+}
+```
+
 ---
 
 ## Error Handling
 
 ### HTTP Status Codes
 
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request (validation errors)
-- `401` - Unauthorized (authentication required)
-- `403` - Forbidden (insufficient permissions)
-- `404` - Not Found
-- `500` - Internal Server Error
-
-### Error Response Format
-
-```json
-{
-  "success": false,
-  "message": "Detailed error description",
-  "data": null
-}
-```
+- `200 OK` - Request successful
+- `201 Created` - Resource created successfully
+- `400 Bad Request` - Invalid request parameters
+- `401 Unauthorized` - Authentication required
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Resource not found
+- `409 Conflict` - Resource already exists
+- `500 Internal Server Error` - Server error
 
 ---
 
 ## Public APIs
 
-These endpoints do not require authentication.
-
-### User Registration
-
-#### Register New User
-
+### Health Check
+```http
+GET /actuator/health
 ```
-POST /public/create-user
+Check if the application is running.
+
+### Public User Information
+```http
+GET /api/public/user/{username}
 ```
-
-**Request Body:**
-
-```json
-{
-  "userName": "johndoe",
-  "password": "password123",
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john@example.com"
-}
-```
-
-**Response:** `201 Created` on success
-
-#### Check Username Availability
-
-```
-GET /public/check-username/{username}
-```
+Get basic public information about a user.
 
 **Response:**
-
 ```json
 {
-  "message": "Username is available",
-  "available": true
+  "success": true,
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "userName": "john_traveler",
+    "firstName": "John",
+    "lastName": "Doe",
+    "bio": "Travel enthusiast",
+    "location": "New York",
+    "profileImageUrl": "https://example.com/profile.jpg"
+  }
 }
 ```
 
-#### Password Reset Flow
-
+### Check Username Availability
+```http
+GET /api/public/check-username/{username}
 ```
-POST /public/forgot-password
-```
-
-**Request Body:**
-
-```json
-{
-  "username": "johndoe"
-}
-```
-
-```
-POST /public/reset-password
-```
-
-**Request Body:**
-
-```json
-{
-  "token": "reset-token-here",
-  "newPassword": "newpassword123"
-}
-```
-
-#### Create First Admin
-
-```
-POST /public/create-first-admin
-```
-
-**Request Body:**
-
-```json
-{
-  "userName": "admin",
-  "password": "adminpass123",
-  "firstName": "Admin",
-  "lastName": "User",
-  "email": "admin@example.com"
-}
-```
-
-_Note: Only works if no admin users exist in the system._
-
-### Public Profile Access
-
-#### Get Public User Profile
-
-```
-GET /user/public/{username}
-```
+Check if a username is available for registration.
 
 **Response:**
-
 ```json
 {
-  "userName": "johndoe",
-  "firstName": "John",
-  "lastName": "Doe",
-  "bio": "Travel enthusiast",
-  "location": "New York, USA",
-  "profileImageUrl": "/uploads/profile.jpg",
-  "createdAt": "2025-01-15T10:30:00"
+  "success": true,
+  "message": "Username check completed",
+  "data": {
+    "available": true
+  }
 }
-```
-
-### Public Post Access
-
-#### Get All Posts
-
-```
-GET /posts?page=0&size=10&sortBy=createdAt&direction=desc
-```
-
-**Query Parameters:**
-
-- `page` - Page number (default: 0)
-- `size` - Page size (default: 10)
-- `sortBy` - Sort field (default: createdAt)
-- `direction` - Sort direction: asc/desc (default: desc)
-
-#### Get Specific Post
-
-```
-GET /posts/{postId}
-```
-
-#### Get Posts by User
-
-```
-GET /posts/user/{username}?page=0&size=10
-```
-
-#### Search Posts
-
-```
-GET /posts/search?query=paris&page=0&size=10
-```
-
-#### Get Posts by Location
-
-```
-GET /posts/location?location=Paris&page=0&size=10
-```
-
-#### Get Posts by Tags
-
-```
-GET /posts/tags?tags=travel,europe&page=0&size=10
-```
-
-#### Get Post Comments
-
-```
-GET /posts/{postId}/comments?page=0&size=10
 ```
 
 ---
 
 ## User Management APIs
 
-**Authentication Required:** Basic Auth
+### Register New User
+```http
+POST /api/public/register
+Content-Type: application/json
 
-### Profile Management
-
-#### Get Current User Info
-
-```
-GET /user
-```
-
-#### Get User Profile
-
-```
-GET /user/profile
-```
-
-#### Update Full Profile
-
-```
-PUT /user/profile
-```
-
-**Request Body:**
-
-```json
 {
+  "userName": "john_traveler",
+  "password": "securePassword123",
   "firstName": "John",
   "lastName": "Doe",
-  "email": "john.doe@example.com",
-  "bio": "Passionate traveler exploring the world",
+  "email": "john@example.com",
+  "bio": "Travel enthusiast exploring the world",
   "location": "New York, USA"
 }
 ```
 
-#### Partial Profile Update
-
-```
-PATCH /user/profile
-```
-
-**Request Body:** (any subset of profile fields)
-
+**Response:**
 ```json
 {
-  "bio": "Updated bio text",
-  "location": "San Francisco, USA"
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "userName": "john_traveler",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john@example.com",
+    "bio": "Travel enthusiast exploring the world",
+    "location": "New York, USA"
+  }
 }
 ```
 
-#### Change Password
-
+### Get User Profile
+```http
+GET /api/user/profile
+Authorization: Basic <credentials>
 ```
-PUT /user/password
-```
 
-**Request Body:**
-
+**Response:**
 ```json
 {
-  "currentPassword": "oldpassword123",
-  "newPassword": "newpassword123"
+  "success": true,
+  "message": "Profile retrieved successfully",
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "userName": "john_traveler",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john@example.com",
+    "bio": "Travel enthusiast exploring the world",
+    "location": "New York, USA",
+    "profileImageUrl": "https://example.com/profile.jpg"
+  }
 }
 ```
 
-#### Delete Account
+### Update User Profile
+```http
+PUT /api/user/profile
+Authorization: Basic <credentials>
+Content-Type: application/json
 
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "newemail@example.com",
+  "bio": "Updated bio - passionate traveler",
+  "location": "Los Angeles, USA",
+  "profileImageUrl": "https://example.com/new-profile.jpg"
+}
 ```
-DELETE /user
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "data": {
+    "id": "507f1f77bcf86cd799439011",
+    "userName": "john_traveler",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "newemail@example.com",
+    "bio": "Updated bio - passionate traveler",
+    "location": "Los Angeles, USA",
+    "profileImageUrl": "https://example.com/new-profile.jpg"
+  }
+}
+```
+
+### Change Password
+```http
+PUT /api/user/password
+Authorization: Basic <credentials>
+Content-Type: application/json
+
+{
+  "currentPassword": "oldPassword",
+  "newPassword": "newPassword123"
+}
+```
+
+### Delete Account
+```http
+DELETE /api/user/account
+Authorization: Basic <credentials>
 ```
 
 ---
 
 ## Post Management APIs
 
-**Authentication Required:** Basic Auth
+### Create Post
+```http
+POST /api/posts
+Authorization: Basic <credentials>
+Content-Type: application/json
 
-### Post Operations
-
-#### Create New Post
-
-```
-POST /posts
-```
-
-**Request Body:**
-
-```json
 {
-  "title": "Amazing Trip to Tokyo",
-  "content": "Tokyo was incredible! Here's my experience...",
-  "location": "Tokyo, Japan",
-  "tags": ["travel", "japan", "tokyo", "culture"],
+  "title": "Amazing Trip to Paris",
+  "content": "Detailed travel experience...",
+  "location": "Paris, France",
+  "tags": ["travel", "europe", "culture"],
   "published": true
 }
 ```
 
-#### Update Post
-
-```
-PUT /posts/{postId}
-```
-
-**Request Body:** Same as create post
-
-#### Delete Post
-
-```
-DELETE /posts/{postId}
+### Get All Published Posts
+```http
+GET /api/posts?page=0&size=10&sortBy=createdAt&direction=desc
 ```
 
-### Post Interactions
-
-#### Upvote Post
-
-```
-POST /posts/{postId}/upvote
+### Get Post by ID
+```http
+GET /api/posts/{postId}
 ```
 
-#### Downvote Post
+### Update Post
+```http
+PUT /api/posts/{postId}
+Authorization: Basic <credentials>
+Content-Type: application/json
 
+{
+  "title": "Updated Title",
+  "content": "Updated content...",
+  "location": "Updated Location",
+  "tags": ["updated", "tags"],
+  "published": true
+}
 ```
-POST /posts/{postId}/downvote
+
+### Delete Post
+```http
+DELETE /api/posts/{postId}
+Authorization: Basic <credentials>
+```
+
+### Vote on Post
+```http
+POST /api/posts/{postId}/vote
+Authorization: Basic <credentials>
+Content-Type: application/json
+
+{
+  "isUpvote": true
+}
+```
+
+### Search Posts
+```http
+GET /api/posts/search?query=paris&page=0&size=10
+```
+
+### Get Posts by Location
+```http
+GET /api/posts/location/{location}?page=0&size=10
+```
+
+### Get Posts by Tags
+```http
+GET /api/posts/tags?tags=travel,europe&page=0&size=10
+```
+
+### Get User's Posts
+```http
+GET /api/posts/user/{username}?page=0&size=10
 ```
 
 ---
 
 ## Comment APIs
 
-**Authentication Required:** Basic Auth for write operations
+### Add Comment to Post
+```http
+POST /api/comments/posts/{postId}
+Authorization: Basic <credentials>
+Content-Type: application/json
 
-### Comment Operations
-
-#### Create Comment
-
-```
-POST /posts/{postId}/comments
-```
-
-**Request Body:**
-
-```json
 {
-  "content": "Great post! I love Tokyo too.",
+  "content": "Great post! Thanks for sharing.",
   "parentCommentId": null
 }
 ```
 
-#### Update Comment
-
+### Get Comments for Post
+```http
+GET /api/comments/posts/{postId}?page=0&size=10
 ```
-PUT /posts/{postId}/comments/{commentId}
-```
 
-**Request Body:**
+### Update Comment
+```http
+PUT /api/comments/{commentId}
+Authorization: Basic <credentials>
+Content-Type: application/json
 
-```json
 {
   "content": "Updated comment content"
 }
 ```
 
-#### Delete Comment
-
-```
-DELETE /posts/{postId}/comments/{commentId}
-```
-
-### Comment Interactions
-
-#### Upvote Comment
-
-```
-POST /posts/{postId}/comments/{commentId}/upvote
+### Delete Comment
+```http
+DELETE /api/comments/{commentId}
+Authorization: Basic <credentials>
 ```
 
-#### Downvote Comment
+### Vote on Comment
+```http
+POST /api/comments/{commentId}/vote
+Authorization: Basic <credentials>
+Content-Type: application/json
 
+{
+  "isUpvote": true
+}
 ```
-POST /posts/{postId}/comments/{commentId}/downvote
+
+---
+
+## Market APIs
+
+### Get All Products
+```http
+GET /api/market/products?page=0&size=10&sortBy=createdAt&direction=desc
+```
+
+### Get Product by ID
+```http
+GET /api/market/products/{productId}
+```
+
+### Create Product
+```http
+POST /api/market/products
+Authorization: Basic <credentials>
+Content-Type: application/json
+
+{
+  "name": "Travel Backpack",
+  "description": "High-quality travel backpack...",
+  "price": 89.99,
+  "category": "accessories",
+  "stockQuantity": 50,
+  "location": "New York",
+  "tags": ["travel", "backpack", "accessories"],
+  "images": ["image1.jpg", "image2.jpg"]
+}
+```
+
+### Update Product
+```http
+PUT /api/market/products/{productId}
+Authorization: Basic <credentials>
+Content-Type: application/json
+
+{
+  "name": "Updated Product Name",
+  "description": "Updated description...",
+  "price": 99.99,
+  "stockQuantity": 45
+}
+```
+
+### Delete Product
+```http
+DELETE /api/market/products/{productId}
+Authorization: Basic <credentials>
+```
+
+### Search Products
+```http
+GET /api/market/products/search?query=backpack&page=0&size=10
+```
+
+### Get Products by Category
+```http
+GET /api/market/products/category/{category}?page=0&size=10
+```
+
+### Get Products by Location
+```http
+GET /api/market/products/location/{location}?page=0&size=10
+```
+
+### Get Products by Tags
+```http
+GET /api/market/products/tags?tags=travel,accessories&page=0&size=10
+```
+
+### Get Seller's Products
+```http
+GET /api/market/products/seller/{sellerId}?page=0&size=10
+```
+
+---
+
+## Cart APIs
+
+### Get User's Cart
+```http
+GET /api/cart
+Authorization: Basic <credentials>
+```
+
+### Add Item to Cart
+```http
+POST /api/cart/items
+Authorization: Basic <credentials>
+Content-Type: application/json
+
+{
+  "productId": "product123",
+  "quantity": 2
+}
+```
+
+### Update Cart Item Quantity
+```http
+PUT /api/cart/items/{productId}
+Authorization: Basic <credentials>
+Content-Type: application/json
+
+{
+  "quantity": 3
+}
+```
+
+### Remove Item from Cart
+```http
+DELETE /api/cart/items/{productId}
+Authorization: Basic <credentials>
+```
+
+### Clear Cart
+```http
+DELETE /api/cart
+Authorization: Basic <credentials>
+```
+
+### Checkout Cart
+```http
+POST /api/cart/checkout
+Authorization: Basic <credentials>
+Content-Type: application/json
+
+{
+  "shippingAddress": {
+    "street": "123 Main St",
+    "city": "New York",
+    "state": "NY",
+    "zipCode": "10001",
+    "country": "USA"
+  },
+  "paymentMethod": "credit_card"
+}
 ```
 
 ---
 
 ## Chat APIs
 
-**Authentication Required:** Basic Auth
-
-### Conversation Management (DIRECT one-to-one only)
-
-#### Get User Conversations
-
-```
-GET /api/chat/conversations?page=0&size=20
-Authorization: Basic <base64-credentials>
+### Get User's Conversations
+```http
+GET /api/conversations
+Authorization: Basic <credentials>
 ```
 
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Conversations retrieved successfully",
-  "data": {
-    "content": [
-      {
-        "id": "conv123",
-        "type": "DIRECT",
-        "title": "Travel Chat",
-        "memberCount": 2,
-        "lastMessage": {
-          "content": "Hello there!",
-          "senderName": "John Doe",
-          "createdAt": "2025-01-15T14:30:00Z"
-        },
-        "unreadCount": 3,
-        "createdAt": "2025-01-15T14:00:00Z"
-      }
-    ],
-    "pageable": {
-      "pageNumber": 0,
-      "pageSize": 20
-    },
-    "totalElements": 5
-  }
-}
-```
-
-#### Create DIRECT Conversation
-
-```
-POST /api/chat/conversations
-Authorization: Basic <base64-credentials>
+### Start New Conversation
+```http
+POST /api/conversations
+Authorization: Basic <credentials>
 Content-Type: application/json
-```
 
-**Request Body:**
-
-```json
 {
-  "type": "DIRECT",
-  "memberIds": ["otherUser"],
-  "title": null
+  "participantUsername": "other_user"
 }
 ```
 
-**Rules and Field Requirements (DIRECT only):**
-
-- Only DIRECT (one-to-one) conversations are supported.
-- `memberIds`: Required. Must contain exactly one identifier: the other user's username OR ObjectId string.
-- If a DIRECT conversation between the two users already exists, it will be returned (idempotent behavior).
-- `title`: Ignored for DIRECT conversations.
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Conversation created successfully",
-  "data": {
-    "id": "conv123",
-    "type": "DIRECT",
-    "title": "Travel Chat",
-    "members": [
-      {
-        "id": "user123",
-        "userName": "john",
-        "firstName": "John",
-        "lastName": "Doe"
-      }
-    ],
-    "createdAt": "2025-01-15T14:30:00Z"
-  }
-}
+### Get Conversation Messages
+```http
+GET /api/conversations/{conversationId}/messages?page=0&size=20
+Authorization: Basic <credentials>
 ```
 
-#### Get Conversation Details
-
-```
-GET /api/chat/conversations/{conversationId}
-Authorization: Basic <base64-credentials>
-```
-
-**Path Parameters:**
-
-- `conversationId`: Valid ObjectId format required
-
-#### Get or Create DIRECT Conversation (convenience)
-
-```
-GET /api/chat/conversations/direct/{otherUserId}
-Authorization: Basic <base64-credentials>
-```
-
-**Path Parameters:**
-
-- `otherUserId`: The other user's username OR ObjectId string.
-
-Returns an existing DIRECT conversation or creates one if none exists.
-
-Note: Adding/removing members is not supported for DIRECT conversations and will return 400 Bad Request if attempted.
-
-### Message Management
-
-#### Send Message
-
-```
-POST /api/chat/messages
-Authorization: Basic <base64-credentials>
+### Send Message
+```http
+POST /api/conversations/{conversationId}/messages
+Authorization: Basic <credentials>
 Content-Type: application/json
-```
 
-**Request Body:**
-
-```json
 {
-  "conversationId": "64f2e...abc1",
-  "content": "Hello everyone!",
-  "kind": "TEXT",
-  "replyToMessageId": "msg456",
-  "attachments": [
-    {
-      "mediaId": "media123",
-      "caption": "Tokyo sunset photo"
-    }
-  ]
+  "content": "Hello! How are you?"
 }
 ```
 
-**Field Requirements:**
-
-- `conversationId`: Required. Valid ObjectId string
-- `content`: Required if kind is TEXT. Cannot be blank
-- `kind`: Required. Must be "TEXT", "IMAGE", "FILE", or "SYSTEM"
-- `replyToMessageId`: Optional. Valid ObjectId format if provided
-- `attachments`: Optional. Array of attachment objects
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Message sent successfully",
-  "data": {
-    "id": "msg123",
-    "conversationId": "conv123",
-    "senderId": "user123",
-    "senderName": "John Doe",
-    "content": "Hello everyone!",
-    "kind": "TEXT",
-    "attachments": [
-      {
-        "id": "media123",
-        "filename": "Tokyo sunset photo",
-        "url": "media123",
-        "contentType": "application/octet-stream",
-        "size": 0
-      }
-    ],
-    "createdAt": "2025-01-15T14:30:00Z",
-    "readBy": [],
-    "readCount": 0
-  }
-}
-```
-
-#### Get Messages
-
-```
-GET /api/chat/conversations/{conversationId}/messages?page=0&size=50
-Authorization: Basic <base64-credentials>
-```
-
-**Query Parameters:**
-
-- `page`: Page number (default: 0)
-- `size`: Page size (default: 50, max: 100)
-
-**Path Parameters:**
-
-- `conversationId`: Valid ObjectId format required
-
-#### Edit Message
-
-```
-PUT /api/chat/messages/{messageId}
-Authorization: Basic <base64-credentials>
-Content-Type: application/json
-```
-
-**Request Body:**
-
-```json
-{
-  "content": "Updated message text"
-}
-```
-
-**Path Parameters:**
-
-- `messageId`: Valid ObjectId format required
-
-**Field Requirements:**
-
-- `content`: Required. Cannot be blank
-
-#### Delete Message
-
-```
-DELETE /api/chat/messages/{messageId}
-Authorization: Basic <base64-credentials>
-```
-
-**Path Parameters:**
-
-- `messageId`: Valid ObjectId format required
-
-#### Mark Messages as Read
-
-```
-POST /api/chat/messages/read
-Authorization: Basic <base64-credentials>
-Content-Type: application/json
-```
-
-**Request Body:**
-
-```json
-{
-  "conversationId": "conv123",
-  "lastReadMessageId": "msg456"
-}
-```
-
-**Field Requirements:**
-
-- `conversationId`: Required. Valid ObjectId format
-- `lastReadMessageId`: Required. Valid ObjectId format
-
-#### Get Unread Count
-
-```
-GET /api/chat/conversations/{conversationId}/unread-count
-Authorization: Basic <base64-credentials>
-```
-
-**Path Parameters:**
-
-- `conversationId`: Valid ObjectId format required
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Unread count retrieved successfully",
-  "data": {
-    "conversationId": "conv123",
-    "unreadCount": 5
-  }
-}
-```
-
-### Error Responses
-
-#### 400 Bad Request
-
-- Invalid ObjectId format for IDs
-- Missing required fields
-- Invalid field values (e.g., unsupported message kind)
-
-```json
-{
-  "success": false,
-  "message": "Invalid ID format: invalid-id",
-  "timestamp": "2025-01-15T14:30:00Z"
-}
-```
-
-#### 401 Unauthorized
-
-- Missing or invalid Basic Authentication header
-
-```json
-{
-  "success": false,
-  "message": "Authentication required",
-  "timestamp": "2025-01-15T14:30:00Z"
-}
-```
-
-#### 404 Not Found
-
-- Conversation or message not found
-
-```json
-{
-  "success": false,
-  "message": "Conversation not found",
-  "timestamp": "2025-01-15T14:30:00Z"
-}
-```
-
-```
-
-#### Edit Message
-
-```
-
-PUT /api/chat/messages/{messageId}?content=Updated message text
-
-```
-
-#### Delete Message
-
-```
-
-DELETE /api/chat/messages/{messageId}
-
-```
-
-#### Mark Messages as Read
-
-```
-
-POST /api/chat/messages/read
-
-````
-
-**Request Body:**
-
-```json
-{
-  "conversationId": "conv123",
-  "lastReadMessageId": "msg456"
-}
-````
-
-#### Get Unread Count
-
-```
-GET /api/chat/conversations/{conversationId}/unread-count
+### Mark Message as Read
+```http
+PUT /api/messages/{messageId}/read
+Authorization: Basic <credentials>
 ```
 
 ---
 
 ## Admin APIs
 
-**Authentication Required:** Basic Auth with ADMIN role
+**Note: All admin endpoints require ADMIN role**
 
 ### User Management
 
 #### Get All Users
-
-```
-GET /admin/users
-```
-
-#### Get Specific User
-
-```
-GET /admin/users/{username}
+```http
+GET /api/admin/users?page=0&size=20&sortBy=createdAt&direction=desc
+Authorization: Basic <admin-credentials>
 ```
 
-#### Delete User
-
+#### Get User by Username
+```http
+GET /api/admin/users/{username}
+Authorization: Basic <admin-credentials>
 ```
-DELETE /admin/users/{username}
+
+#### Create Admin User
+```http
+POST /api/admin/users
+Authorization: Basic <admin-credentials>
+Content-Type: application/json
+
+{
+  "userName": "new_admin",
+  "password": "securePassword123",
+  "firstName": "Admin",
+  "lastName": "User",
+  "email": "admin@example.com"
+}
 ```
 
 #### Update User Roles
+```http
+PUT /api/admin/users/{username}/roles
+Authorization: Basic <admin-credentials>
+Content-Type: application/json
 
-```
-PUT /admin/users/{username}/roles
-```
-
-**Request Body:**
-
-```json
 {
   "roles": ["USER", "ADMIN"]
 }
 ```
 
 #### Set User Status
+```http
+PUT /api/admin/users/{username}/status
+Authorization: Basic <admin-credentials>
+Content-Type: application/json
 
-```
-PUT /admin/users/{username}/status
-```
-
-**Request Body:**
-
-```json
 {
-  "active": true
+  "active": false
 }
 ```
 
-#### Get System Statistics
-
-```
-GET /admin/stats
-```
-
-**Response:**
-
-```json
-{
-  "totalUsers": 150,
-  "adminUsers": 3,
-  "regularUsers": 147,
-  "timestamp": 1640995200000
-}
-```
-
-#### Create Admin User
-
-```
-POST /admin/users
-```
-
-**Request Body:**
-
-```json
-{
-  "userName": "newadmin",
-  "password": "adminpass123",
-  "firstName": "New",
-  "lastName": "Admin",
-  "email": "newadmin@example.com"
-}
+#### Delete User
+```http
+DELETE /api/admin/users/{username}
+Authorization: Basic <admin-credentials>
 ```
 
 #### Reset User Password
+```http
+PUT /api/admin/users/{username}/password
+Authorization: Basic <admin-credentials>
+Content-Type: application/json
 
-```
-PUT /admin/users/{username}/password
-```
-
-**Request Body:**
-
-```json
 {
-  "password": "newpassword123"
+  "password": "newPassword123"
 }
 ```
 
 #### Promote User to Admin
-
-```
-POST /admin/users/{username}/promote
-```
-
-**Response:**
-
-```json
-{
-  "message": "User promoted to admin successfully"
-}
+```http
+POST /api/admin/users/{username}/promote
+Authorization: Basic <admin-credentials>
 ```
 
 #### Get Users by Role
-
-```
-GET /admin/users/role/{role}
-```
-
-**Example:**
-
-```
-GET /admin/users/role/ADMIN
+```http
+GET /api/admin/users/role/{role}
+Authorization: Basic <admin-credentials>
 ```
 
-**Response:** List of users with the specified role
+### Content Management
+
+#### Get All Posts (including unpublished)
+```http
+GET /api/admin/posts?page=0&size=20&sortBy=createdAt&direction=desc
+Authorization: Basic <admin-credentials>
+```
+
+#### Delete Any Post
+```http
+DELETE /api/admin/posts/{postId}
+Authorization: Basic <admin-credentials>
+```
+
+#### Get All Products
+```http
+GET /api/admin/products?page=0&size=20&sortBy=createdAt&direction=desc
+Authorization: Basic <admin-credentials>
+```
+
+#### Delete Any Product
+```http
+DELETE /api/admin/products/{productId}
+Authorization: Basic <admin-credentials>
+```
+
+### Statistics
+
+#### Get System Statistics
+```http
+GET /api/admin/statistics
+Authorization: Basic <admin-credentials>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "users": {
+      "total": 1250,
+      "admins": 5,
+      "regular": 1245,
+      "activeUsers": 1250
+    },
+    "content": {
+      "totalPosts": 850,
+      "totalProducts": 320,
+      "totalComments": 2150,
+      "availableProducts": 298
+    },
+    "timestamp": 1728384600000,
+    "serverTime": "2025-10-08T10:30:00"
+  }
+}
+```
 
 ---
 
 ## Media Management APIs
 
-**Authentication Required:** Basic Auth
+### Upload Media
+```http
+POST /api/media/upload
+Authorization: Basic <credentials>
+Content-Type: multipart/form-data
 
-### Media Operations
-
-#### Get Media for Post
-
-```
-GET /posts/{postId}/media
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "media123",
-      "fileName": "vacation-photo.jpg",
-      "fileUrl": "/posts/post123/media/media123",
-      "fileType": "image/jpeg",
-      "fileSize": 2048576,
-      "uploaderId": "user123",
-      "postId": "post123",
-      "uploadedAt": "2025-01-15T14:30:00"
-    }
-  ]
-}
+file: [binary file]
+type: post (optional, default: general)
+entityId: post123 (optional)
 ```
 
-#### Upload Media File
-
-```
-POST /posts/{postId}/media/upload
-```
-
-**Request:** multipart/form-data
-
-- **file**: The media file to upload
-
-**Supported Formats:** JPEG, PNG, GIF, MP4, AVI (max 20MB)
-
-**Response:** `201 Created`
-
-```json
-{
-  "success": true,
-  "message": "Media uploaded successfully",
-  "data": {
-    "id": "media123",
-    "fileName": "vacation-photo.jpg",
-    "fileUrl": "/posts/post123/media/media123",
-    "fileType": "image/jpeg",
-    "fileSize": 2048576,
-    "uploaderId": "user123",
-    "postId": "post123",
-    "uploadedAt": "2025-01-15T14:30:00"
-  }
-}
+### Get Media File by Filename
+```http
+GET /api/media/files/{filename}
 ```
 
-#### Get Specific Media File
-
-```
-GET /posts/{postId}/media/{mediaId}
-```
-
-**Response:** Binary file download
-
-#### Delete Media File
-
-```
-DELETE /posts/{postId}/media/{mediaId}
+### Get Media for Post
+```http
+GET /api/media/posts/{postId}
 ```
 
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Media deleted successfully"
-}
+### Get Media File by ID
+```http
+GET /api/media/{mediaId}
 ```
 
-_Note: Only the post author can upload or delete media for their posts._
+### Delete Media
+```http
+DELETE /api/media/{mediaId}
+Authorization: Basic <credentials>
+```
 
 ---
 
 ## WebSocket Chat
 
-Real-time messaging via WebSocket connection.
+### Connect to WebSocket
+```javascript
+const socket = new WebSocket('ws://localhost:8080/chat');
 
-### Connection
+// Send message
+socket.send(JSON.stringify({
+  type: 'CHAT',
+  content: 'Hello everyone!',
+  sender: 'username'
+}));
 
+// Receive messages
+socket.onmessage = function(event) {
+  const message = JSON.parse(event.data);
+  console.log('Received:', message);
+};
 ```
-ws://localhost:8080/ws
-```
-
-Authentication is handled during the WebSocket handshake using Basic Auth credentials.
 
 ### Message Types
-
-#### Send Message
-
-```json
-{
-  "type": "SEND_MESSAGE",
-  "conversationId": "conv123",
-  "content": "Hello there!",
-  "kind": "TEXT"
-}
-```
-
-#### Typing Indicator
-
-```json
-{
-  "type": "TYPING",
-  "conversationId": "conv123",
-  "isTyping": true
-}
-```
-
-#### Join Conversation
-
-```json
-{
-  "type": "JOIN_CONVERSATION",
-  "conversationId": "conv123"
-}
-```
-
-### Subscription Endpoints
-
-- `/topic/conversation/{conversationId}` - Receive messages and events for a conversation
-- `/user/queue/notifications` - Receive personal notifications
+- `JOIN` - User joins chat
+- `LEAVE` - User leaves chat  
+- `CHAT` - Regular chat message
 
 ---
 
 ## Examples
 
-### Complete User Registration and First Post
+### Complete User Journey Example
 
-#### 1. Register User
-
+1. **Register a new user:**
 ```bash
-curl -X POST http://localhost:8080/public/create-user \
+curl -X POST http://localhost:8080/api/public/register \
   -H "Content-Type: application/json" \
   -d '{
-    "userName": "traveler123",
-    "password": "mypassword",
-    "firstName": "Jane",
+    "userName": "travel_explorer",
+    "password": "securePass123",
+    "firstName": "Alex",
     "lastName": "Smith",
-    "email": "jane@example.com"
+    "email": "alex@example.com",
+    "bio": "Love exploring new places",
+    "location": "San Francisco"
   }'
 ```
 
-#### 2. Create Post (with Basic Auth)
-
+2. **Create a travel post:**
 ```bash
-curl -X POST http://localhost:8080/posts \
+curl -X POST http://localhost:8080/api/posts \
+  -H "Authorization: Basic dHJhdmVsX2V4cGxvcmVyOnNlY3VyZVBhc3MxMjM=" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Basic dHJhdmVsZXIxMjM6bXlwYXNzd29yZA==" \
   -d '{
-    "title": "My First Travel Post",
-    "content": "Just visited an amazing place...",
-    "location": "Bali, Indonesia",
-    "tags": ["travel", "bali", "vacation"],
+    "title": "Amazing Weekend in Tokyo",
+    "content": "Just returned from an incredible weekend in Tokyo...",
+    "location": "Tokyo, Japan",
+    "tags": ["travel", "japan", "culture", "food"],
     "published": true
   }'
 ```
 
-#### 3. Get User's Posts
-
+3. **Upload photos for the post:**
 ```bash
-curl http://localhost:8080/posts/user/traveler123
+curl -X POST http://localhost:8080/api/media/upload \
+  -H "Authorization: Basic dHJhdmVsX2V4cGxvcmVyOnNlY3VyZVBhc3MxMjM=" \
+  -F "file=@tokyo_photo.jpg" \
+  -F "type=post" \
+  -F "entityId=POST_ID_FROM_STEP_2"
 ```
 
-### Chat Example (DIRECT)
-
-#### 1. Get or Create DIRECT Conversation
-
+4. **Add a product to marketplace:**
 ```bash
-curl -X GET http://localhost:8080/api/chat/conversations/direct/othertraveler \
-  -H "Authorization: Basic dHJhdmVsZXIxMjM6bXlwYXNzd29yZA=="
-```
-
-#### 2. Send Message
-
-```bash
-curl -X POST http://localhost:8080/api/chat/messages \
+curl -X POST http://localhost:8080/api/market/products \
+  -H "Authorization: Basic dHJhdmVsX2V4cGxvcmVyOnNlY3VyZVBhc3MxMjM=" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Basic dHJhdmVsZXIxMjM6bXlwYXNzd29yZA==" \
   -d '{
-    "conversationId": "60b5d9f5e1b2c3d4e5f6g7h8",
-    "content": "Hey! Loved your Bali post!",
-    "kind": "TEXT"
+    "name": "Vintage Tokyo Travel Guide",
+    "description": "Rare vintage guide with insider tips",
+    "price": 29.99,
+    "category": "books",
+    "stockQuantity": 1,
+    "location": "San Francisco",
+    "tags": ["tokyo", "travel", "guide", "vintage"]
   }'
 ```
 
-### Admin Example
-
-#### Promote User to Admin
-
+5. **Get system statistics (admin only):**
 ```bash
-curl -X PUT http://localhost:8080/admin/users/traveler123/roles \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Basic YWRtaW46YWRtaW5wYXNz" \
-  -d '{
-    "roles": ["USER", "ADMIN"]
-  }'
-```
-
-#### Reset User Password
-
-```bash
-curl -X PUT http://localhost:8080/admin/users/traveler123/password \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Basic YWRtaW46YWRtaW5wYXNz" \
-  -d '{
-    "password": "newpassword123"
-  }'
-```
-
-#### Get System Statistics
-
-```bash
-curl -X GET http://localhost:8080/admin/stats \
-  -H "Authorization: Basic YWRtaW46YWRtaW5wYXNz"
-```
-
-### Media Upload Example
-
-#### 1. Upload Media to Post
-
-```bash
-curl -X POST http://localhost:8080/posts/60b5d9f5e1b2c3d4e5f6g7h8/media/upload \
-  -H "Authorization: Basic dHJhdmVsZXIxMjM6bXlwYXNzd29yZA==" \
-  -F "file=@vacation-photo.jpg"
-```
-
-#### 2. Get All Media for Post
-
-```bash
-curl http://localhost:8080/posts/60b5d9f5e1b2c3d4e5f6g7h8/media
-```
-
-#### 3. Download Specific Media File
-
-```bash
-curl http://localhost:8080/posts/60b5d9f5e1b2c3d4e5f6g7h8/media/media123 \
-  --output downloaded-image.jpg
+curl -X GET http://localhost:8080/api/admin/statistics \
+  -H "Authorization: Basic YWRtaW46YWRtaW5QYXNzd29yZA=="
 ```
 
 ---
 
-## Rate Limits
+## Rate Limiting
 
-- Chat messages: 60 per minute per user
-- Typing indicators: 2-second cooldown
-- File uploads: 20MB max file size, 25MB max request size
+Currently, no rate limiting is implemented, but it's recommended for production deployment.
 
----
+## CORS Configuration
 
-## File Uploads
+CORS is configured to allow all origins (`*`) for development. For production, configure specific allowed origins.
 
-File uploads are supported for post media through the Media Management APIs:
+## Security Considerations
 
-```bash
-curl -X POST http://localhost:8080/posts/{postId}/media/upload \
-  -H "Authorization: Basic <credentials>" \
-  -F "file=@image.jpg"
-```
-
-Supported formats: JPEG, PNG, GIF, MP4, AVI (up to 20MB each)
-
-See [Media Management APIs](#media-management-apis) for detailed documentation.
+1. **HTTPS**: Use HTTPS in production
+2. **Password Policy**: Implement strong password requirements
+3. **Session Management**: Consider implementing session tokens for web clients
+4. **Input Validation**: All inputs are validated server-side
+5. **SQL Injection**: Using MongoDB with proper query construction prevents injection attacks
 
 ---
 
-**For additional details and interactive testing, visit the Swagger UI at:** `http://localhost:8080/swagger-ui.html`
+*Last updated: October 8, 2025*

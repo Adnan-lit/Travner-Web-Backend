@@ -1,4 +1,7 @@
 spring:
+  application:
+    name: travner
+
   data:
     mongodb:
       uri: ${MONGODB_URI}
@@ -12,6 +15,8 @@ spring:
 
 server:
   port: ${PORT:8080}
+  servlet:
+    context-path: /
 
 app:
   upload:
@@ -69,3 +74,17 @@ info:
     encoding: "@project.build.sourceEncoding@"
     java:
       version: "@java.version@"
+
+logging:
+  level:
+    org.adnan.travner: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.data.mongodb: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+security:
+  user:
+    name: admin
+    password: admin123
+    roles: ADMIN

@@ -1,6 +1,7 @@
 package org.adnan.travner.controller;
 
-import org.adnan.travner.dto.UserRequest;
+import org.adnan.travner.dto.ApiResponse;
+import org.adnan.travner.dto.UserSummaryDTO;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,212 +10,98 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@CrossOrigin
-@RequestMapping("public")
+@CrossOrigin(origins = "*", maxAge = 3600)
+@RequestMapping("/api/public")
 public class PublicController {
 
     @Autowired
     private UserService userService;
 
-    @PostMapping("create-user")
-    public ResponseEntity<Void> createUser(@Valid @RequestBody UserRequest userRequest) {
-        if (userRequest == null) {
-            return ResponseEntity.badRequest().build();
-        }
+    /**
+     * Register a new user
+     */
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<UserSummaryDTO>> registerUser(@Valid @RequestBody UserEntry userRequest) {
         try {
-            // Convert UserRequest to UserEntry
-            UserEntry user = new UserEntry();
-            user.setUserName(userRequest.getUserName());
-            user.setPassword(userRequest.getPassword());
-            user.setFirstName(userRequest.getFirstName());
-            user.setLastName(userRequest.getLastName());
-            user.setEmail(userRequest.getEmail());
+            if (userRequest == null || userRequest.getUserName() == null || userRequest.getPassword() == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Username and password are required"));
+            }
 
-            userService.saveNewUser(user);
-            return ResponseEntity.status(HttpStatus.CREATED).build();
+            // Check if username is available
+            if (!userService.isUsernameAvailable(userRequest.getUserName())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(ApiResponse.error("Username already exists"));
+            }
+
+            // Create new user
+            userService.saveNewUser(userRequest);
+
+            // Return user info without password
+            UserEntry createdUser = userService.getByUsernameSecure(userRequest.getUserName());
+            UserSummaryDTO userSummary = UserSummaryDTO.builder()
+                    .id(createdUser.getId().toString())
+                    .userName(createdUser.getUserName())
+                    .firstName(createdUser.getFirstName())
+                    .lastName(createdUser.getLastName())
+                    .email(createdUser.getEmail())
+                    .bio(createdUser.getBio())
+                    .location(createdUser.getLocation())
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("User registered successfully", userSummary));
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Registration failed: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get public user information
+     */
+    @GetMapping("/user/{username}")
+    public ResponseEntity<ApiResponse<UserSummaryDTO>> getPublicUserInfo(@PathVariable String username) {
+        try {
+            UserEntry user = userService.getByUsernameSecure(username);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found"));
+            }
+
+            UserSummaryDTO userSummary = UserSummaryDTO.builder()
+                    .id(user.getId().toString())
+                    .userName(user.getUserName())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .bio(user.getBio())
+                    .location(user.getLocation())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success(userSummary));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve user info: " + e.getMessage()));
         }
     }
 
     /**
      * Check username availability
-     * GET /public/check-username/{username}
      */
-    @GetMapping("check-username/{username}")
-    public ResponseEntity<Map<String, Object>> checkUsernameAvailability(@PathVariable String username) {
+    @GetMapping("/check-username/{username}")
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkUsernameAvailability(@PathVariable String username) {
         try {
-            if (username == null || username.trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "Username is required", null));
-            }
-
-            // Validate username format (basic validation)
-            if (!isValidUsername(username)) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "Invalid username format", false));
-            }
-
-            boolean available = userService.isUsernameAvailable(username.trim());
-            String message = available ? "Username is available" : "Username is already taken";
-
-            return ResponseEntity.ok(
-                    createResponse("message", message, available));
+            boolean available = userService.isUsernameAvailable(username);
+            return ResponseEntity.ok(ApiResponse.success("Username check completed",
+                    Map.of("available", available)));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createResponse("error", "Internal server error", null));
+                    .body(ApiResponse.error("Failed to check username: " + e.getMessage()));
         }
-    }
-
-    /**
-     * Request password reset
-     * POST /public/forgot-password
-     */
-    @PostMapping("forgot-password")
-    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody Map<String, String> request) {
-        try {
-            String username = request.get("username");
-            if (username == null || username.trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "Username is required", null));
-            }
-
-            // Generate reset token (this will return null if user doesn't exist, for
-            // security)
-            String token = userService.generatePasswordResetToken(username.trim());
-
-            // Always return success to prevent username enumeration
-            String message = "If the username exists, a password reset token has been generated. " +
-                    "In production, this would be sent via email.";
-
-            Map<String, Object> response = createResponse("message", message, null);
-            if (token != null) {
-                // In production, don't return the token - send it via email instead
-                response.put("resetToken", token); // Only for testing purposes
-            }
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createResponse("error", "Internal server error", null));
-        }
-    }
-
-    /**
-     * Reset password with token
-     * POST /public/reset-password
-     */
-    @PostMapping("reset-password")
-    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody Map<String, String> request) {
-        try {
-            String token = request.get("token");
-            String newPassword = request.get("newPassword");
-
-            if (token == null || token.trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "Reset token is required", null));
-            }
-
-            if (newPassword == null || newPassword.trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "New password is required", null));
-            }
-
-            if (newPassword.length() < 6) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "Password must be at least 6 characters long", null));
-            }
-
-            boolean success = userService.resetPasswordWithToken(token.trim(), newPassword);
-            if (!success) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "Invalid or expired reset token", null));
-            }
-
-            return ResponseEntity.ok(
-                    createResponse("message", "Password reset successfully", null));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createResponse("error", "Internal server error", null));
-        }
-    }
-
-    /**
-     * Create first admin user - Only works if no admin exists
-     * POST /public/create-first-admin
-     * Security: This endpoint is only available when no admin users exist in the
-     * system
-     */
-    @PostMapping("create-first-admin")
-    public ResponseEntity<Map<String, Object>> createFirstAdmin(@RequestBody UserEntry user) {
-        try {
-            if (user == null) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "User data is required", null));
-            }
-
-            if (user.getUserName().trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "Username is required", null));
-            }
-
-            if (user.getPassword().trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "Password is required", null));
-            }
-
-            if (user.getPassword().length() < 6) {
-                return ResponseEntity.badRequest()
-                        .body(createResponse("error", "Password must be at least 6 characters long", null));
-            }
-
-            // Check if any admin users already exist
-            if (!userService.getUsersByRole("ADMIN").isEmpty()) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(createResponse("error", "Admin users already exist. Use regular admin endpoints.", null));
-            }
-
-            // Check if username already exists
-            if (!userService.isUsernameAvailable(user.getUserName().trim())) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(createResponse("error", "Username already exists", null));
-            }
-
-            // Create user with admin roles
-            user.setUserName(user.getUserName().trim());
-            user.setRoles(java.util.List.of("USER", "ADMIN"));
-            userService.saveUser(user); // Use saveUser to preserve roles
-
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(createResponse("message", "First admin user created successfully", null));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createResponse("error", "Internal server error", null));
-        }
-    }
-
-    /**
-     * Helper method to create response maps
-     */
-    private Map<String, Object> createResponse(String messageKey, String message, Boolean available) {
-        Map<String, Object> response = new HashMap<>();
-        response.put(messageKey, message);
-        if (available != null) {
-            response.put("available", available);
-        }
-        return response;
-    }
-
-    /**
-     * Basic username validation
-     */
-    private boolean isValidUsername(String username) {
-        // Username should be 3-50 characters, alphanumeric and underscore only
-        return username != null &&
-                username.matches("^[a-zA-Z0-9_]{3,50}$");
     }
 }

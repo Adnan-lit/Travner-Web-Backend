@@ -1,0 +1,252 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > MediaController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.adnan.travner.controller</a>
+</div>
+
+<h1>Coverage Summary for Class: MediaController (org.adnan.travner.controller)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">MediaController</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    20%
+  </span>
+  <span class="absValue">
+    (1/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    0%
+  </span>
+  <span class="absValue">
+    (0/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    3.4%
+  </span>
+  <span class="absValue">
+    (1/29)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.controller;
+&nbsp;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import lombok.extern.slf4j.Slf4j;
+&nbsp;import org.adnan.travner.dto.ApiResponse;
+&nbsp;import org.adnan.travner.dto.MediaDTO;
+&nbsp;import org.adnan.travner.service.MediaService;
+&nbsp;import org.bson.types.ObjectId;
+&nbsp;import org.springframework.core.io.InputStreamResource;
+&nbsp;import org.springframework.http.HttpStatus;
+&nbsp;import org.springframework.http.ResponseEntity;
+&nbsp;import org.springframework.security.core.Authentication;
+&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;import org.springframework.web.multipart.MultipartFile;
+&nbsp;
+&nbsp;import java.io.IOException;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;/**
+&nbsp; * REST Controller for handling media uploads and retrievals from GridFS
+&nbsp; */
+&nbsp;@RestController
+&nbsp;@CrossOrigin(origins = &quot;*&quot;, maxAge = 3600)
+&nbsp;@RequestMapping(&quot;posts/{postId}/media&quot;)
+&nbsp;@RequiredArgsConstructor
+<b class="fc">&nbsp;@Slf4j</b>
+&nbsp;public class MediaController {
+&nbsp;
+&nbsp;    private final MediaService mediaService;
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get all media for a specific post
+&nbsp;     * 
+&nbsp;     * @param postId The ID of the post
+&nbsp;     * @return List of media associated with the post
+&nbsp;     */
+&nbsp;    @GetMapping
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;MediaDTO&gt;&gt;&gt; getMediaForPost(@PathVariable String postId) {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;MediaDTO&gt; media = mediaService.getMediaForPost(postId);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(ApiResponse.success(media));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
+<b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;Failed to retrieve media: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get a specific media file for download
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/{mediaId}&quot;)
+&nbsp;    public ResponseEntity&lt;InputStreamResource&gt; getMediaFile(@PathVariable String mediaId) {
+&nbsp;        try {
+<b class="nc">&nbsp;            return mediaService.getMediaFile(mediaId);</b>
+&nbsp;        } catch (IOException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Upload a new media file to GridFS
+&nbsp;     * 
+&nbsp;     * @param authentication User authentication
+&nbsp;     * @param postId         The ID of the post
+&nbsp;     * @param file           The file to upload
+&nbsp;     * @return Media details with access URL
+&nbsp;     */
+&nbsp;    @PostMapping(&quot;/upload&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;MediaDTO&gt;&gt; uploadMedia(
+&nbsp;            Authentication authentication,
+&nbsp;            @PathVariable String postId,
+&nbsp;            @RequestParam(&quot;file&quot;) MultipartFile file) {
+&nbsp;
+&nbsp;        // Check authentication
+<b class="nc">&nbsp;        if (authentication == null) {</b>
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)</b>
+<b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;Authentication required&quot;));</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Validate file is not empty
+<b class="nc">&nbsp;        if (file == null || file.isEmpty()) {</b>
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.BAD_REQUEST)</b>
+<b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;No file provided or file is empty&quot;));</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        try {
+&nbsp;            // Validate post ID format
+&nbsp;            try {
+<b class="nc">&nbsp;                new ObjectId(postId);</b>
+&nbsp;            } catch (IllegalArgumentException e) {
+<b class="nc">&nbsp;                return ResponseEntity.status(HttpStatus.BAD_REQUEST)</b>
+<b class="nc">&nbsp;                        .body(ApiResponse.error(&quot;Invalid post ID format&quot;));</b>
+&nbsp;            }
+&nbsp;
+&nbsp;            // Upload the file
+<b class="nc">&nbsp;            MediaDTO uploadedMedia = mediaService.uploadMedia(file, authentication.getName(), postId);</b>
+&nbsp;
+&nbsp;            // Return success response
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.CREATED)</b>
+<b class="nc">&nbsp;                    .body(ApiResponse.success(&quot;Media uploaded successfully&quot;, uploadedMedia));</b>
+&nbsp;        } catch (Exception e) {
+&nbsp;            // Log the error
+<b class="nc">&nbsp;            log.error(&quot;Error uploading media: {}&quot;, e.getMessage(), e);</b>
+&nbsp;
+&nbsp;            // Return error response
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.BAD_REQUEST)</b>
+<b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;Failed to upload media: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Delete a media file from GridFS
+&nbsp;     * 
+&nbsp;     * @param authentication User authentication
+&nbsp;     * @param mediaId        The ID of the media to delete
+&nbsp;     * @return Success message
+&nbsp;     */
+&nbsp;    @DeleteMapping(&quot;/{mediaId}&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;Object&gt;&gt; deleteMedia(
+&nbsp;            Authentication authentication,
+&nbsp;            @PathVariable String mediaId) {
+&nbsp;
+<b class="nc">&nbsp;        if (authentication == null) {</b>
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)</b>
+<b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;Authentication required&quot;));</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        try {
+<b class="nc">&nbsp;            mediaService.deleteMedia(mediaId, authentication.getName());</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(ApiResponse.success(&quot;Media deleted successfully&quot;, null));</b>
+&nbsp;        } catch (RuntimeException e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.FORBIDDEN)</b>
+<b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;Failed to delete media: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-10-08 15:15</div>
+</div>
+</body>
+</html>

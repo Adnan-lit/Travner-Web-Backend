@@ -17,13 +17,13 @@ public class PostDTO {
     private String title;
     private String content;
     private String location;
-    private List<String> mediaUrls;
     private UserSummaryDTO author;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<String> tags;
     private int upvotes;
     private int downvotes;
-    private int commentCount;
+    private long commentCount;
+    private List<String> mediaUrls;
     private boolean published;
 }

@@ -1,0 +1,124 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ConversationMembershipRepository</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.adnan.travner.domain.conversation</a>
+</div>
+
+<h1>Coverage Summary for Class: ConversationMembershipRepository (org.adnan.travner.domain.conversation)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+</tr>
+<tr>
+  <td class="name">ConversationMembershipRepository</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.domain.conversation;
+&nbsp;
+&nbsp;import org.bson.types.ObjectId;
+&nbsp;import org.springframework.data.mongodb.repository.MongoRepository;
+&nbsp;import org.springframework.data.mongodb.repository.Query;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Optional;
+&nbsp;
+&nbsp;/**
+&nbsp; * Repository interface for ConversationMembership entities
+&nbsp; */
+&nbsp;public interface ConversationMembershipRepository extends MongoRepository&lt;ConversationMembership, ObjectId&gt; {
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Find membership by conversation and user
+&nbsp;     */
+&nbsp;    Optional&lt;ConversationMembership&gt; findByConversationIdAndUserId(ObjectId conversationId, ObjectId userId);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Find all memberships for a conversation
+&nbsp;     */
+&nbsp;    List&lt;ConversationMembership&gt; findByConversationId(ObjectId conversationId);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Find all memberships for a user
+&nbsp;     */
+&nbsp;    List&lt;ConversationMembership&gt; findByUserId(ObjectId userId);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Check if user is member of conversation
+&nbsp;     */
+&nbsp;    boolean existsByConversationIdAndUserId(ObjectId conversationId, ObjectId userId);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Find members with specific roles in a conversation
+&nbsp;     */
+&nbsp;    @Query(&quot;{ &#39;conversationId&#39;: ?0, &#39;role&#39;: { $in: ?1 } }&quot;)
+&nbsp;    List&lt;ConversationMembership&gt; findByConversationIdAndRoleIn(ObjectId conversationId,
+&nbsp;            List&lt;ConversationMembership.MemberRole&gt; roles);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Delete all memberships for a conversation
+&nbsp;     */
+&nbsp;    void deleteByConversationId(ObjectId conversationId);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Count members in a conversation
+&nbsp;     */
+&nbsp;    long countByConversationId(ObjectId conversationId);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Delete membership by conversation and user
+&nbsp;     */
+&nbsp;    void deleteByConversationIdAndUserId(ObjectId conversationId, ObjectId userId);
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-10-08 15:15</div>
+</div>
+</body>
+</html>

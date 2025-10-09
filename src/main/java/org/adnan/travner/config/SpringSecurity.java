@@ -4,60 +4,123 @@ import org.adnan.travner.service.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SpringSecurity {
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(request -> request
-                        .requestMatchers("/public/**").permitAll()
-                        .requestMatchers("/ws/**").permitAll() // Allow WebSocket handshake
-                        .requestMatchers("/user/public/**").permitAll() // Allow public profile access
-                        .requestMatchers("/posts").permitAll()
-                        .requestMatchers("/posts/search").permitAll()
-                        .requestMatchers("/posts/location").permitAll()
-                        .requestMatchers("/posts/tags").permitAll()
-                        .requestMatchers("/posts/{id}").permitAll()
-                        .requestMatchers("/posts/{postId}/comments").permitAll()
-                        .requestMatchers("/posts/{postId}/comments/{id}").permitAll()
-                        .requestMatchers("/posts/{postId}/media/{mediaId}").permitAll() // Allow media file access
-                        .requestMatchers("/actuator/health").permitAll() // Allow health checks
-                        .requestMatchers("/debug/**").hasRole("ADMIN") // Secure debug endpoints
-                        .requestMatchers("/api/chat/**").authenticated() // Chat endpoints require authentication
-                        .requestMatchers("/user/**").authenticated()
-                        .requestMatchers("/api/users/**").authenticated()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .anyRequest().authenticated())
+                        // Allow CORS preflight requests globally
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Public endpoints - no authentication required
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+
+                        // WebSocket endpoints
+                        .requestMatchers("/ws/**", "/chat/**").permitAll()
+
+                        // Public content access (read-only) - GET requests only
+                        .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/", "/api/posts/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/comments/posts/**").permitAll()
+
+                        // Public marketplace access (read-only) - GET requests only
+                        .requestMatchers(HttpMethod.GET, "/api/market/products").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/market/products/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/market/products/category/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/market/products/location/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/market/products/tags").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/market/products/seller/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/market/products/{id}").permitAll()
+
+                        // Public media access - GET requests only
+                        .requestMatchers(HttpMethod.GET, "/api/media/files/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/media/posts/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/media/{id}").permitAll()
+
+                        // Admin endpoints - require ADMIN role
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/debug/**").hasRole("ADMIN")
+
+                        // Post management - require authentication for write operations
+                        .requestMatchers(HttpMethod.POST, "/api/posts").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/posts/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/posts/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/posts/*/upvote").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/posts/*/downvote").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/posts/*/vote").hasAnyRole("USER", "ADMIN")
+
+                        // Comment management - require authentication for write operations
+                        .requestMatchers(HttpMethod.POST, "/api/comments/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/comments/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/comments/**").hasAnyRole("USER", "ADMIN")
+
+                        // Market management - require authentication for write operations
+                        .requestMatchers(HttpMethod.POST, "/api/market/products").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/market/products/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/market/products/**").hasAnyRole("USER", "ADMIN")
+
+                        // Authenticated user endpoints - require authentication
+                        .requestMatchers("/api/user/**").authenticated()
+                        .requestMatchers("/api/cart/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/conversations/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/messages/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/media/upload").hasAnyRole("USER", "ADMIN")
+
+                        // All other requests require authentication
+                        .anyRequest().authenticated()
+                )
                 .httpBasic(Customizer.withDefaults())
-                .csrf(AbstractHttpConfigurer::disable);
+                .userDetailsService(userDetailsService)
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"success\":false,\"message\":\"Authentication required\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(403);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"success\":false,\"message\":\"Access denied\"}");
+                        })
+                );
+
         return http.build();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
-        authBuilder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
-        return authBuilder.build();
+        AuthenticationManagerBuilder authenticationManagerBuilder =
+                http.getSharedObject(AuthenticationManagerBuilder.class);
+        authenticationManagerBuilder
+                .userDetailsService(userDetailsService)
+                .passwordEncoder(passwordEncoder);
+        return authenticationManagerBuilder.build();
     }
 }

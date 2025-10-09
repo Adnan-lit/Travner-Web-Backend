@@ -198,6 +198,13 @@ public class CommentService {
         return convertToDTO(updatedComment, replyDTOs);
     }
 
+    /**
+     * Get total count of comments for statistics
+     */
+    public long getCommentCount() {
+        return commentRepository.count();
+    }
+
     private CommentDTO convertToDTO(CommentEntry comment, List<CommentDTO> replies) {
         UserEntry author = comment.getAuthor();
         UserSummaryDTO authorDTO = UserSummaryDTO.builder()

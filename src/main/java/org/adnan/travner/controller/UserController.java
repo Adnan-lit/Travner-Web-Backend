@@ -1,253 +1,171 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.dto.ApiResponse;
+import org.adnan.travner.dto.UserSummaryDTO;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping({ "/user", "/api/users" })
+@CrossOrigin(origins = "*", maxAge = 3600)
+@RequestMapping("/api/user")
 public class UserController {
 
     @Autowired
     private UserService userService;
 
-    private String getAuthenticatedUsername() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            return null;
-        }
-        return auth.getName();
-    }
-
-    @GetMapping
-    public ResponseEntity<Object> login() {
-        String username = getAuthenticatedUsername();
-        if (username == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-        UserEntry user = userService.getByUsernameSecure(username);
-        if (user == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-        return new ResponseEntity<>(user, HttpStatus.OK);
-    }
-
-    @DeleteMapping
-    public ResponseEntity<Object> deleteUser() {
-        String username = getAuthenticatedUsername();
-        if (username == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-        UserEntry user = userService.getByUsername(username);
-        if (user == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-        boolean deleted = userService.deleteUser(user);
-        if (!deleted) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
-
     /**
-     * Get user profile
-     * GET /user/profile
+     * Get current user profile
      */
     @GetMapping("/profile")
-    public ResponseEntity<Object> getProfile() {
-        String username = getAuthenticatedUsername();
-        if (username == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<ApiResponse<UserSummaryDTO>> getUserProfile(Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
+            }
+
+            String username = authentication.getName();
+            UserEntry user = userService.getByUsernameSecure(username);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found"));
+            }
+
+            UserSummaryDTO userSummary = UserSummaryDTO.builder()
+                    .id(user.getId().toString())
+                    .userName(user.getUserName())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .email(user.getEmail())
+                    .bio(user.getBio())
+                    .location(user.getLocation())
+                    .profileImageUrl(user.getProfileImageUrl())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", userSummary));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve profile: " + e.getMessage()));
         }
-        UserEntry user = userService.getByUsernameSecure(username);
-        if (user == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-        return new ResponseEntity<>(user, HttpStatus.OK);
     }
 
     /**
-     * Update user profile (full update)
-     * PUT /user/profile
+     * Update user profile
      */
     @PutMapping("/profile")
-    public ResponseEntity<Map<String, String>> updateProfile(@RequestBody Map<String, String> profileData) {
-        String username = getAuthenticatedUsername();
-        if (username == null) {
-            return new ResponseEntity<>(createResponse("error", "Authentication required"), HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<ApiResponse<UserSummaryDTO>> updateUserProfile(
+            Authentication authentication,
+            @RequestBody Map<String, Object> updates) {
         try {
-            String firstName = profileData.get("firstName");
-            String lastName = profileData.get("lastName");
-            String email = profileData.get("email");
-            String bio = profileData.get("bio");
-            String location = profileData.get("location");
-
-            // Validate email format if provided
-            if (email != null && !email.trim().isEmpty() && !isValidEmail(email)) {
-                return new ResponseEntity<>(createResponse("error", "Invalid email format"), HttpStatus.BAD_REQUEST);
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
             }
 
-            boolean updated = userService.updateUserProfileEnhanced(username, firstName, lastName, email, bio,
-                    location);
-            if (!updated) {
-                return new ResponseEntity<>(createResponse("error", "Failed to update profile"),
-                        HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-
-            return new ResponseEntity<>(createResponse("message", "Profile updated successfully"), HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Partially update user profile
-     * PATCH /user/profile
-     */
-    @PatchMapping("/profile")
-    public ResponseEntity<Map<String, String>> updateProfilePartial(@RequestBody Map<String, Object> updates) {
-        String username = getAuthenticatedUsername();
-        if (username == null) {
-            return new ResponseEntity<>(createResponse("error", "Authentication required"), HttpStatus.UNAUTHORIZED);
-        }
-
-        try {
-            // Validate email if present
-            if (updates.containsKey("email")) {
-                Object emailObj = updates.get("email");
-                if (emailObj instanceof String email && !email.trim().isEmpty() && !isValidEmail(email)) {
-                    return new ResponseEntity<>(createResponse("error", "Invalid email format"),
-                            HttpStatus.BAD_REQUEST);
-                }
-            }
-
-            // Prevent updating sensitive fields
-            updates.remove("password");
-            updates.remove("userName");
-            updates.remove("roles");
-            updates.remove("id");
-
-            if (updates.isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "No valid fields to update"),
-                        HttpStatus.BAD_REQUEST);
-            }
-
+            String username = authentication.getName();
             boolean updated = userService.updateUserPartial(username, updates);
+
             if (!updated) {
-                return new ResponseEntity<>(createResponse("error", "Failed to update profile"),
-                        HttpStatus.INTERNAL_SERVER_ERROR);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found or update failed"));
             }
 
-            return new ResponseEntity<>(createResponse("message", "Profile updated successfully"), HttpStatus.OK);
+            // Return updated user profile
+            UserEntry user = userService.getByUsernameSecure(username);
+            UserSummaryDTO userSummary = UserSummaryDTO.builder()
+                    .id(user.getId().toString())
+                    .userName(user.getUserName())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .email(user.getEmail())
+                    .bio(user.getBio())
+                    .location(user.getLocation())
+                    .profileImageUrl(user.getProfileImageUrl())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", userSummary));
+
         } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to update profile: " + e.getMessage()));
         }
     }
 
     /**
      * Change user password
-     * PUT /user/password
      */
     @PutMapping("/password")
-    public ResponseEntity<Map<String, String>> changePassword(@RequestBody Map<String, String> passwordData) {
-        String username = getAuthenticatedUsername();
-        if (username == null) {
-            return new ResponseEntity<>(createResponse("error", "Authentication required"), HttpStatus.UNAUTHORIZED);
-        }
-
+    public ResponseEntity<ApiResponse<Object>> changePassword(
+            Authentication authentication,
+            @RequestBody Map<String, String> passwordData) {
         try {
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
+            }
+
+            String username = authentication.getName();
             String currentPassword = passwordData.get("currentPassword");
             String newPassword = passwordData.get("newPassword");
 
-            // Validate input
-            if (currentPassword == null || currentPassword.trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Current password is required"),
-                        HttpStatus.BAD_REQUEST);
+            if (currentPassword == null || newPassword == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Current password and new password are required"));
             }
 
-            if (newPassword == null || newPassword.trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "New password is required"),
-                        HttpStatus.BAD_REQUEST);
-            }
-
-            // Follow password security requirements: minimum 6 characters
             if (newPassword.length() < 6) {
-                return new ResponseEntity<>(createResponse("error", "Password must be at least 6 characters long"),
-                        HttpStatus.BAD_REQUEST);
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("New password must be at least 6 characters long"));
             }
 
             boolean changed = userService.changeUserPassword(username, currentPassword, newPassword);
+
             if (!changed) {
-                return new ResponseEntity<>(
-                        createResponse("error", "Current password is incorrect or failed to update password"),
-                        HttpStatus.BAD_REQUEST);
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Current password is incorrect"));
             }
 
-            return new ResponseEntity<>(createResponse("message", "Password changed successfully"), HttpStatus.OK);
+            return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
+
         } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to change password: " + e.getMessage()));
         }
     }
 
     /**
-     * Get public user profile by username
-     * GET /user/public/{username}
+     * Delete user account
      */
-    @GetMapping("/public/{username}")
-    public ResponseEntity<Object> getPublicProfile(@PathVariable String username) {
+    @DeleteMapping("/account")
+    public ResponseEntity<ApiResponse<Object>> deleteUserAccount(Authentication authentication) {
         try {
-            if (username == null || username.trim().isEmpty()) {
-                return new ResponseEntity<>(createResponse("error", "Username is required"), HttpStatus.BAD_REQUEST);
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
             }
 
-            UserEntry user = userService.getByUsernameSecure(username.trim());
-            if (user == null) {
-                return new ResponseEntity<>(createResponse("error", "User not found"), HttpStatus.NOT_FOUND);
+            String username = authentication.getName();
+            boolean deleted = userService.deleteUserByUsername(username);
+
+            if (!deleted) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("User not found or deletion failed"));
             }
 
-            // Create public profile response (exclude sensitive data)
-            Map<String, Object> publicProfile = new HashMap<>();
-            publicProfile.put("userName", user.getUserName());
-            publicProfile.put("firstName", user.getFirstName());
-            publicProfile.put("lastName", user.getLastName());
-            publicProfile.put("bio", user.getBio());
-            publicProfile.put("location", user.getLocation());
-            publicProfile.put("profileImageUrl", user.getProfileImageUrl());
-            publicProfile.put("createdAt", user.getCreatedAt());
+            return ResponseEntity.ok(ApiResponse.success("Account deleted successfully", null));
 
-            return new ResponseEntity<>(publicProfile, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(createResponse("error", "Internal server error"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to delete account: " + e.getMessage()));
         }
-    }
-
-    /**
-     * Helper method to create response maps
-     */
-    private Map<String, String> createResponse(String key, String value) {
-        Map<String, String> response = new HashMap<>();
-        response.put(key, value);
-        return response;
-    }
-
-    /**
-     * Basic email validation
-     */
-    private boolean isValidEmail(String email) {
-        return email != null && email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     }
 }

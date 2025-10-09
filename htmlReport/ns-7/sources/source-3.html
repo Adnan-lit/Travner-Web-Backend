@@ -1,0 +1,119 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > MessageResponse</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">org.adnan.travner.dto.chat</a>
+</div>
+
+<h1>Coverage Summary for Class: MessageResponse (org.adnan.travner.dto.chat)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+</tr>
+  <tr>
+    <td class="name">MessageResponse$MessageAttachmentResponse</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.dto.chat;
+&nbsp;
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;import lombok.Builder;
+&nbsp;import lombok.Data;
+&nbsp;import lombok.NoArgsConstructor;
+&nbsp;import org.adnan.travner.domain.message.Message;
+&nbsp;
+&nbsp;import java.time.Instant;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;/**
+&nbsp; * Response DTO for message information
+&nbsp; */
+&nbsp;@Data
+&nbsp;@NoArgsConstructor
+&nbsp;@AllArgsConstructor
+&nbsp;@Builder
+&nbsp;public class MessageResponse {
+&nbsp;
+&nbsp;    private String id;
+&nbsp;    private String conversationId;
+&nbsp;    private String senderId;
+&nbsp;    private String senderName;
+&nbsp;    private Message.MessageKind kind;
+&nbsp;    private String content;
+&nbsp;    private List&lt;MessageAttachmentResponse&gt; attachments;
+&nbsp;    private String replyToMessageId;
+&nbsp;    private MessageResponse replyToMessage; // For displaying the original message in replies
+&nbsp;    private Instant sentAt;
+&nbsp;    private Instant editedAt;
+&nbsp;    private boolean isEdited;
+&nbsp;    private List&lt;String&gt; readByUserIds;
+&nbsp;    private int readCount;
+&nbsp;
+&nbsp;    @Data
+&nbsp;    @NoArgsConstructor
+&nbsp;    @AllArgsConstructor
+&nbsp;    @Builder
+&nbsp;    public static class MessageAttachmentResponse {
+&nbsp;        private String mediaId;
+&nbsp;        private String fileName;
+&nbsp;        private String contentType;
+&nbsp;        private long fileSize;
+&nbsp;        private String downloadUrl;
+&nbsp;        private String caption;
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2025-10-08 15:15</div>
+</div>
+</body>
+</html>
