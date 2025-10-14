@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > MarkMessagesReadRequest</title>
+  <title>Coverage Report > AddMembersRequest</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.dto.chat</a>
 </div>
 
-<h1>Coverage Summary for Class: MarkMessagesReadRequest (org.adnan.travner.dto.chat)</h1>
+<h1>Coverage Summary for Class: AddMembersRequest (org.adnan.travner.dto.chat)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">MarkMessagesReadRequest</td>
+  <td class="name">AddMembersRequest</td>
 </tr>
 
 </table>
@@ -42,25 +42,30 @@ Current scope:     <a href="../../index.html">all classes</a>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.dto.chat;
 &nbsp;
 &nbsp;import jakarta.validation.constraints.NotBlank;
+&nbsp;import jakarta.validation.constraints.NotEmpty;
+&nbsp;import jakarta.validation.constraints.Size;
 &nbsp;import lombok.AllArgsConstructor;
 &nbsp;import lombok.Builder;
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
 &nbsp;
+&nbsp;import java.util.List;
+&nbsp;
 &nbsp;/**
-&nbsp; * Request DTO for marking messages as read
+&nbsp; * Request DTO for adding members to a conversation
 &nbsp; */
 &nbsp;@Data
 &nbsp;@NoArgsConstructor
 &nbsp;@AllArgsConstructor
 &nbsp;@Builder
-&nbsp;public class MarkMessagesReadRequest {
+&nbsp;public class AddMembersRequest {
 &nbsp;
 &nbsp;    @NotBlank(message = &quot;Conversation ID is required&quot;)
 &nbsp;    private String conversationId;
 &nbsp;
-&nbsp;    @NotBlank(message = &quot;Message ID is required&quot;)
-&nbsp;    private String lastReadMessageId;
+&nbsp;    @NotEmpty(message = &quot;At least one user ID is required&quot;)
+&nbsp;    @Size(max = 10, message = &quot;Cannot add more than 10 members at once&quot;)
+&nbsp;    private List&lt;String&gt; userIds;
 &nbsp;}
 </code>
 </pre>
@@ -85,7 +90,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

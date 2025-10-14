@@ -17,7 +17,7 @@ import java.util.Optional;
 
 @RestController
 @CrossOrigin
-@RequestMapping("/api/posts/{postId}/comments")
+@RequestMapping({"/api/posts/{postId}/comments", "/api/comments/posts/{postId}"})
 @RequiredArgsConstructor
 public class CommentController {
 

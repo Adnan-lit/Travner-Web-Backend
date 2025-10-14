@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -138,9 +139,9 @@ public class PostController {
      * @param size     Page size (default 10)
      * @return List of posts from the specified location with pagination metadata
      */
-    @GetMapping("/location")
+    @GetMapping("/location/{location}")
     public ResponseEntity<ApiResponse<List<PostDTO>>> getPostsByLocation(
-            @RequestParam String location,
+            @PathVariable String location,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
@@ -256,6 +257,41 @@ public class PostController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Failed to delete post: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Vote on a post
+     *
+     * @param authentication User authentication
+     * @param id             Post ID
+     * @param voteRequest    Vote request with isUpvote flag
+     * @return Updated post with new vote count
+     */
+    @PostMapping("/{id}/vote")
+    public ResponseEntity<ApiResponse<PostDTO>> voteOnPost(
+            Authentication authentication,
+            @PathVariable String id,
+            @RequestBody Map<String, Boolean> voteRequest) {
+
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Authentication required"));
+        }
+
+        try {
+            Boolean isUpvote = voteRequest.get("isUpvote");
+            if (isUpvote == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("isUpvote field is required"));
+            }
+
+            PostDTO updatedPost = postService.updateVote(id, authentication.getName(), isUpvote);
+            String message = isUpvote ? "Post upvoted successfully" : "Post downvoted successfully";
+            return ResponseEntity.ok(ApiResponse.success(message, updatedPost));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to vote on post: " + e.getMessage()));
         }
     }
 

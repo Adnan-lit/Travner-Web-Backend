@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > MessageRepository</title>
+  <title>Coverage Report > MessageReadStatus</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.domain.message</a>
 </div>
 
-<h1>Coverage Summary for Class: MessageRepository (org.adnan.travner.domain.message)</h1>
+<h1>Coverage Summary for Class: MessageReadStatus (org.adnan.travner.domain.message)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">MessageRepository</td>
+  <td class="name">MessageReadStatus</td>
 </tr>
 
 </table>
@@ -41,70 +41,41 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.domain.message;
 &nbsp;
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;import lombok.Builder;
+&nbsp;import lombok.Data;
+&nbsp;import lombok.NoArgsConstructor;
 &nbsp;import org.bson.types.ObjectId;
-&nbsp;import org.springframework.data.domain.Page;
-&nbsp;import org.springframework.data.domain.Pageable;
-&nbsp;import org.springframework.data.mongodb.repository.MongoRepository;
-&nbsp;import org.springframework.data.mongodb.repository.Query;
+&nbsp;import org.springframework.data.annotation.Id;
+&nbsp;import org.springframework.data.mongodb.core.index.CompoundIndex;
+&nbsp;import org.springframework.data.mongodb.core.mapping.Document;
 &nbsp;
 &nbsp;import java.time.Instant;
-&nbsp;import java.util.List;
-&nbsp;import java.util.Optional;
 &nbsp;
 &nbsp;/**
-&nbsp; * Repository interface for Message entities
+&nbsp; * Tracks which users have read which messages
 &nbsp; */
-&nbsp;public interface MessageRepository extends MongoRepository&lt;Message, ObjectId&gt; {
+&nbsp;@Document(collection = &quot;message_read_status&quot;)
+&nbsp;@CompoundIndex(def = &quot;{&#39;messageId&#39;: 1, &#39;userId&#39;: 1}&quot;, unique = true)
+&nbsp;@CompoundIndex(def = &quot;{&#39;conversationId&#39;: 1, &#39;userId&#39;: 1}&quot;)
+&nbsp;@Data
+&nbsp;@NoArgsConstructor
+&nbsp;@AllArgsConstructor
+&nbsp;@Builder
+&nbsp;public class MessageReadStatus {
 &nbsp;
-&nbsp;        /**
-&nbsp;         * Find messages in a conversation with pagination, sorted by creation time
-&nbsp;         */
-&nbsp;        @Query(&quot;{ &#39;conversationId&#39;: ?0, &#39;deletedAt&#39;: null }&quot;)
-&nbsp;        Page&lt;Message&gt; findByConversationIdAndDeletedAtIsNull(ObjectId conversationId, Pageable pageable);
+&nbsp;    @Id
+&nbsp;    private ObjectId id;
 &nbsp;
-&nbsp;        /**
-&nbsp;         * Find messages created before a specific time (cursor-based pagination)
-&nbsp;         */
-&nbsp;        @Query(&quot;{ &#39;conversationId&#39;: ?0, &#39;createdAt&#39;: { $lt: ?1 }, &#39;deletedAt&#39;: null }&quot;)
-&nbsp;        List&lt;Message&gt; findByConversationIdAndCreatedAtBeforeAndDeletedAtIsNull(
-&nbsp;                        ObjectId conversationId, Instant before, Pageable pageable);
+&nbsp;    private ObjectId messageId;
 &nbsp;
-&nbsp;        /**
-&nbsp;         * Find messages created after a specific time (cursor-based pagination)
-&nbsp;         */
-&nbsp;        @Query(&quot;{ &#39;conversationId&#39;: ?0, &#39;createdAt&#39;: { $gt: ?1 }, &#39;deletedAt&#39;: null }&quot;)
-&nbsp;        List&lt;Message&gt; findByConversationIdAndCreatedAtAfterAndDeletedAtIsNull(
-&nbsp;                        ObjectId conversationId, Instant after, Pageable pageable);
+&nbsp;    private ObjectId conversationId;
 &nbsp;
-&nbsp;        /**
-&nbsp;         * Find the latest message in a conversation
-&nbsp;         */
-&nbsp;        @Query(value = &quot;{ &#39;conversationId&#39;: ?0, &#39;deletedAt&#39;: null }&quot;, sort = &quot;{ &#39;createdAt&#39;: -1 }&quot;)
-&nbsp;        Optional&lt;Message&gt; findLatestByConversationId(ObjectId conversationId);
+&nbsp;    private ObjectId userId;
 &nbsp;
-&nbsp;        /**
-&nbsp;         * Count unread messages for a user in a conversation
-&nbsp;         */
-&nbsp;        @Query(value = &quot;{ &#39;conversationId&#39;: ?0, &#39;createdAt&#39;: { $gt: ?1 }, &#39;deletedAt&#39;: null }&quot;, count = true)
-&nbsp;        long countUnreadMessages(ObjectId conversationId, Instant lastReadAt);
+&nbsp;    private Instant readAt;
 &nbsp;
-&nbsp;        /**
-&nbsp;         * Count total messages in a conversation
-&nbsp;         */
-&nbsp;        @Query(value = &quot;{ &#39;conversationId&#39;: ?0, &#39;deletedAt&#39;: null }&quot;, count = true)
-&nbsp;        long countByConversationIdAndDeletedAtIsNull(ObjectId conversationId);
-&nbsp;
-&nbsp;        /**
-&nbsp;         * Find messages by sender
-&nbsp;         */
-&nbsp;        @Query(&quot;{ &#39;senderId&#39;: ?0, &#39;deletedAt&#39;: null }&quot;)
-&nbsp;        List&lt;Message&gt; findBySenderIdAndDeletedAtIsNull(ObjectId senderId);
-&nbsp;
-&nbsp;        /**
-&nbsp;         * Find message with reply chain
-&nbsp;         */
-&nbsp;        @Query(&quot;{ &#39;replyTo&#39;: ?0, &#39;deletedAt&#39;: null }&quot;)
-&nbsp;        List&lt;Message&gt; findRepliesByReplyToAndDeletedAtIsNull(ObjectId messageId);
+&nbsp;    private Instant createdAt;
 &nbsp;}
 </code>
 </pre>
@@ -129,7 +100,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

@@ -58,13 +58,16 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;@Builder
 &nbsp;public class MediaDTO {
 &nbsp;    private String id;
-&nbsp;    private String fileName;
-&nbsp;    private String fileUrl; // URL to access the file via the API
-&nbsp;    private String fileType;
-&nbsp;    private long fileSize;
-&nbsp;    private String uploaderId;
-&nbsp;    private String postId;
+&nbsp;    private String filename;        // Fixed: consistent naming
+&nbsp;    private String originalFilename;
+&nbsp;    private String contentType;
+&nbsp;    private Long size;
+&nbsp;    private String uploadedBy;
+&nbsp;    private String type; // post, profile, product, etc.
+&nbsp;    private String entityId; // associated post/product ID
 &nbsp;    private LocalDateTime uploadedAt;
+&nbsp;    private String downloadUrl;     // Fixed: was fileUrl, now matches usage
+&nbsp;    private String gridFsId;
 &nbsp;}
 </code>
 </pre>
@@ -89,7 +92,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

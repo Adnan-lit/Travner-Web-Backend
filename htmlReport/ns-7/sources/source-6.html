@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > TypingIndicatorRequest</title>
+  <title>Coverage Report > SendMessageRequest</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,16 +22,19 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.dto.chat</a>
 </div>
 
-<h1>Coverage Summary for Class: TypingIndicatorRequest (org.adnan.travner.dto.chat)</h1>
+<h1>Coverage Summary for Class: SendMessageRequest (org.adnan.travner.dto.chat)</h1>
 
 <table class="coverageStats">
+
 <tr>
   <th class="name">Class</th>
 </tr>
+  <tr>
+    <td class="name">SendMessageRequest$MessageAttachmentRequest</td>
+  </tr>
 <tr>
-  <td class="name">TypingIndicatorRequest</td>
+  <td class="name"><strong>Total</strong></td>
 </tr>
-
 </table>
 
 <br/>
@@ -42,24 +45,50 @@ Current scope:     <a href="../../index.html">all classes</a>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.dto.chat;
 &nbsp;
 &nbsp;import jakarta.validation.constraints.NotBlank;
+&nbsp;import jakarta.validation.constraints.NotNull;
+&nbsp;import jakarta.validation.constraints.Size;
 &nbsp;import lombok.AllArgsConstructor;
 &nbsp;import lombok.Builder;
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
+&nbsp;import org.adnan.travner.domain.message.Message;
+&nbsp;
+&nbsp;import java.util.List;
 &nbsp;
 &nbsp;/**
-&nbsp; * Request DTO for typing indicator events
+&nbsp; * Request DTO for sending a message in a conversation
 &nbsp; */
 &nbsp;@Data
 &nbsp;@NoArgsConstructor
 &nbsp;@AllArgsConstructor
 &nbsp;@Builder
-&nbsp;public class TypingIndicatorRequest {
+&nbsp;public class SendMessageRequest {
 &nbsp;
 &nbsp;    @NotBlank(message = &quot;Conversation ID is required&quot;)
 &nbsp;    private String conversationId;
 &nbsp;
-&nbsp;    private boolean isTyping;
+&nbsp;    @NotNull(message = &quot;Message type is required&quot;)
+&nbsp;    private Message.MessageKind kind;
+&nbsp;
+&nbsp;    @NotBlank(message = &quot;Message content is required&quot;)
+&nbsp;    @Size(max = 2000, message = &quot;Message content cannot exceed 2000 characters&quot;)
+&nbsp;    private String content;
+&nbsp;
+&nbsp;    private List&lt;MessageAttachmentRequest&gt; attachments;
+&nbsp;
+&nbsp;    private String replyToMessageId; // For threaded conversations
+&nbsp;
+&nbsp;    @Data
+&nbsp;    @NoArgsConstructor
+&nbsp;    @AllArgsConstructor
+&nbsp;    @Builder
+&nbsp;    public static class MessageAttachmentRequest {
+&nbsp;        @NotBlank(message = &quot;Media ID is required for attachment&quot;)
+&nbsp;        private String mediaId;
+&nbsp;
+&nbsp;        @Size(max = 200, message = &quot;Caption cannot exceed 200 characters&quot;)
+&nbsp;        private String caption;
+&nbsp;    }
 &nbsp;}
 </code>
 </pre>
@@ -84,7 +113,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

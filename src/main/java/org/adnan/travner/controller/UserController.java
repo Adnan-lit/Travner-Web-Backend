@@ -48,6 +48,7 @@ public class UserController {
                     .bio(user.getBio())
                     .location(user.getLocation())
                     .profileImageUrl(user.getProfileImageUrl())
+                    .roles(user.getRoles())
                     .build();
 
             return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", userSummary));
@@ -90,6 +91,7 @@ public class UserController {
                     .bio(user.getBio())
                     .location(user.getLocation())
                     .profileImageUrl(user.getProfileImageUrl())
+                    .roles(user.getRoles())
                     .build();
 
             return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", userSummary));

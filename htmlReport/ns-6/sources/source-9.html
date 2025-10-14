@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > PostRequest</title>
+  <title>Coverage Report > CartDTO</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,16 +22,19 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.dto</a>
 </div>
 
-<h1>Coverage Summary for Class: PostRequest (org.adnan.travner.dto)</h1>
+<h1>Coverage Summary for Class: CartDTO (org.adnan.travner.dto)</h1>
 
 <table class="coverageStats">
+
 <tr>
   <th class="name">Class</th>
 </tr>
+  <tr>
+    <td class="name">CartDTO$CartItemDTO</td>
+  </tr>
 <tr>
-  <td class="name">PostRequest</td>
+  <td class="name"><strong>Total</strong></td>
 </tr>
-
 </table>
 
 <br/>
@@ -46,33 +49,44 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
 &nbsp;
-&nbsp;import jakarta.validation.constraints.NotBlank;
-&nbsp;import jakarta.validation.constraints.NotNull;
-&nbsp;import jakarta.validation.constraints.Size;
+&nbsp;import java.math.BigDecimal;
+&nbsp;import java.time.LocalDateTime;
 &nbsp;import java.util.List;
 &nbsp;
+&nbsp;/**
+&nbsp; * DTO for cart data transfer
+&nbsp; */
 &nbsp;@Data
+&nbsp;@Builder
 &nbsp;@NoArgsConstructor
 &nbsp;@AllArgsConstructor
-&nbsp;@Builder
-&nbsp;public class PostRequest {
+&nbsp;public class CartDTO {
+&nbsp;    private String id;
+&nbsp;    private String userId;
+&nbsp;    private List&lt;CartItemDTO&gt; items;
+&nbsp;    private BigDecimal totalAmount;
+&nbsp;    private int totalItems;
+&nbsp;    private LocalDateTime createdAt;
+&nbsp;    private LocalDateTime updatedAt;
 &nbsp;
-&nbsp;    @NotBlank(message = &quot;Title is required&quot;)
-&nbsp;    @Size(min = 1, max = 200, message = &quot;Title must be between 1 and 200 characters&quot;)
-&nbsp;    private String title;
-&nbsp;
-&nbsp;    @NotBlank(message = &quot;Content is required&quot;)
-&nbsp;    @Size(min = 10, max = 10000, message = &quot;Content must be between 10 and 10000 characters&quot;)
-&nbsp;    private String content;
-&nbsp;
-&nbsp;    @Size(max = 100, message = &quot;Location must not exceed 100 characters&quot;)
-&nbsp;    private String location;
-&nbsp;
-&nbsp;    @Size(max = 10, message = &quot;Maximum 10 tags allowed&quot;)
-&nbsp;    private List&lt;@Size(max = 50, message = &quot;Each tag must not exceed 50 characters&quot;) String&gt; tags;
-&nbsp;
-&nbsp;    @NotNull(message = &quot;Published status is required&quot;)
-&nbsp;    private boolean published;
+&nbsp;    /**
+&nbsp;     * DTO for individual cart items
+&nbsp;     */
+&nbsp;    @Data
+&nbsp;    @Builder
+&nbsp;    @NoArgsConstructor
+&nbsp;    @AllArgsConstructor
+&nbsp;    public static class CartItemDTO {
+&nbsp;        private String productId;
+&nbsp;        private String productName;
+&nbsp;        private BigDecimal unitPrice;
+&nbsp;        private Integer quantity;
+&nbsp;        private BigDecimal subtotal;
+&nbsp;        private String sellerId;
+&nbsp;        private String sellerName;
+&nbsp;        private String productImage;
+&nbsp;        private LocalDateTime addedAt;
+&nbsp;    }
 &nbsp;}
 </code>
 </pre>
@@ -97,7 +111,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > PostDTO</title>
+  <title>Coverage Report > CommentRequest</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.dto</a>
 </div>
 
-<h1>Coverage Summary for Class: PostDTO (org.adnan.travner.dto)</h1>
+<h1>Coverage Summary for Class: CommentRequest (org.adnan.travner.dto)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">PostDTO</td>
+  <td class="name">CommentRequest</td>
 </tr>
 
 </table>
@@ -46,27 +46,21 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
 &nbsp;
-&nbsp;import java.time.LocalDateTime;
-&nbsp;import java.util.List;
+&nbsp;import jakarta.validation.constraints.NotBlank;
+&nbsp;import jakarta.validation.constraints.Size;
 &nbsp;
 &nbsp;@Data
 &nbsp;@NoArgsConstructor
 &nbsp;@AllArgsConstructor
 &nbsp;@Builder
-&nbsp;public class PostDTO {
-&nbsp;    private String id;
-&nbsp;    private String title;
+&nbsp;public class CommentRequest {
+&nbsp;
+&nbsp;    @NotBlank(message = &quot;Comment content is required&quot;)
+&nbsp;    @Size(min = 1, max = 1000, message = &quot;Comment must be between 1 and 1000 characters&quot;)
 &nbsp;    private String content;
-&nbsp;    private String location;
-&nbsp;    private List&lt;String&gt; mediaUrls;
-&nbsp;    private UserSummaryDTO author;
-&nbsp;    private LocalDateTime createdAt;
-&nbsp;    private LocalDateTime updatedAt;
-&nbsp;    private List&lt;String&gt; tags;
-&nbsp;    private int upvotes;
-&nbsp;    private int downvotes;
-&nbsp;    private int commentCount;
-&nbsp;    private boolean published;
+&nbsp;
+&nbsp;    @Size(max = 24, message = &quot;Invalid parent comment ID format&quot;)
+&nbsp;    private String parentCommentId; // null if it&#39;s a top-level comment
 &nbsp;}
 </code>
 </pre>
@@ -91,7 +85,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ProductRepository</title>
+  <title>Coverage Report > MediaRepository</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.repository</a>
 </div>
 
-<h1>Coverage Summary for Class: ProductRepository (org.adnan.travner.repository)</h1>
+<h1>Coverage Summary for Class: MediaRepository (org.adnan.travner.repository)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">ProductRepository</td>
+  <td class="name">MediaRepository</td>
 </tr>
 
 </table>
@@ -41,55 +41,19 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.repository;
 &nbsp;
-&nbsp;import org.adnan.travner.entry.ProductEntry;
-&nbsp;import org.springframework.data.domain.Page;
-&nbsp;import org.springframework.data.domain.Pageable;
+&nbsp;import org.adnan.travner.entry.MediaEntry;
+&nbsp;import org.bson.types.ObjectId;
 &nbsp;import org.springframework.data.mongodb.repository.MongoRepository;
-&nbsp;import org.springframework.data.mongodb.repository.Query;
-&nbsp;import org.springframework.stereotype.Repository;
 &nbsp;
 &nbsp;import java.util.List;
 &nbsp;
-&nbsp;@Repository
-&nbsp;public interface ProductRepository extends MongoRepository&lt;ProductEntry, String&gt; {
+&nbsp;public interface MediaRepository extends MongoRepository&lt;MediaEntry, ObjectId&gt; {
 &nbsp;
-&nbsp;    /**
-&nbsp;     * Find all available products
-&nbsp;     */
-&nbsp;    Page&lt;ProductEntry&gt; findByIsAvailableTrue(Pageable pageable);
+&nbsp;    List&lt;MediaEntry&gt; findByPostId(ObjectId postId);
 &nbsp;
-&nbsp;    /**
-&nbsp;     * Find products by category
-&nbsp;     */
-&nbsp;    Page&lt;ProductEntry&gt; findByCategoryAndIsAvailableTrue(String category, Pageable pageable);
+&nbsp;    List&lt;MediaEntry&gt; findByUploader_Id(ObjectId uploaderId);
 &nbsp;
-&nbsp;    /**
-&nbsp;     * Find products by seller
-&nbsp;     */
-&nbsp;    Page&lt;ProductEntry&gt; findBySellerIdAndIsAvailableTrue(String sellerId, Pageable pageable);
-&nbsp;
-&nbsp;    /**
-&nbsp;     * Find products by location
-&nbsp;     */
-&nbsp;    Page&lt;ProductEntry&gt; findByLocationContainingIgnoreCaseAndIsAvailableTrue(String location, Pageable pageable);
-&nbsp;
-&nbsp;    /**
-&nbsp;     * Search products by name or description
-&nbsp;     */
-&nbsp;    @Query(&quot;{&#39;$and&#39;: [&quot; +
-&nbsp;            &quot;{&#39;isAvailable&#39;: true}, &quot; +
-&nbsp;            &quot;{&#39;$or&#39;: [&quot; +
-&nbsp;            &quot;{&#39;name&#39;: {&#39;$regex&#39;: ?0, &#39;$options&#39;: &#39;i&#39;}}, &quot; +
-&nbsp;            &quot;{&#39;description&#39;: {&#39;$regex&#39;: ?0, &#39;$options&#39;: &#39;i&#39;}}, &quot; +
-&nbsp;            &quot;{&#39;tags&#39;: {&#39;$regex&#39;: ?0, &#39;$options&#39;: &#39;i&#39;}}&quot; +
-&nbsp;            &quot;]}&quot; +
-&nbsp;            &quot;]}&quot;)
-&nbsp;    Page&lt;ProductEntry&gt; searchProducts(String query, Pageable pageable);
-&nbsp;
-&nbsp;    /**
-&nbsp;     * Find products by tags
-&nbsp;     */
-&nbsp;    Page&lt;ProductEntry&gt; findByTagsInAndIsAvailableTrue(List&lt;String&gt; tags, Pageable pageable);
+&nbsp;    void deleteByPostId(ObjectId postId);
 &nbsp;}
 </code>
 </pre>
@@ -114,7 +78,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

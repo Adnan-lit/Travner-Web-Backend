@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > UserRepository</title>
+  <title>Coverage Report > CommentRepository</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.repository</a>
 </div>
 
-<h1>Coverage Summary for Class: UserRepository (org.adnan.travner.repository)</h1>
+<h1>Coverage Summary for Class: CommentRepository (org.adnan.travner.repository)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">UserRepository</td>
+  <td class="name">CommentRepository</td>
 </tr>
 
 </table>
@@ -41,14 +41,23 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.repository;
 &nbsp;
-&nbsp;import org.adnan.travner.entry.UserEntry;
+&nbsp;import org.adnan.travner.entry.CommentEntry;
 &nbsp;import org.bson.types.ObjectId;
+&nbsp;import org.springframework.data.domain.Page;
+&nbsp;import org.springframework.data.domain.Pageable;
 &nbsp;import org.springframework.data.mongodb.repository.MongoRepository;
 &nbsp;
-&nbsp;public interface UserRepository extends MongoRepository&lt;UserEntry, ObjectId&gt; {
-&nbsp;    UserEntry findByuserName(String userName);
+&nbsp;import java.util.List;
 &nbsp;
-&nbsp;    void deleteByuserName(String userName);
+&nbsp;public interface CommentRepository extends MongoRepository&lt;CommentEntry, ObjectId&gt; {
+&nbsp;
+&nbsp;    Page&lt;CommentEntry&gt; findByPostIdAndParentCommentIdIsNull(ObjectId postId, Pageable pageable);
+&nbsp;
+&nbsp;    List&lt;CommentEntry&gt; findByParentCommentId(ObjectId parentCommentId);
+&nbsp;
+&nbsp;    Page&lt;CommentEntry&gt; findByAuthor_Id(ObjectId authorId, Pageable pageable);
+&nbsp;
+&nbsp;    long countByPostId(ObjectId postId);
 &nbsp;}
 </code>
 </pre>
@@ -73,7 +82,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

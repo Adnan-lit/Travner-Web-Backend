@@ -56,10 +56,10 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    5.9%
+    6.2%
   </span>
   <span class="absValue">
-    (1/17)
+    (1/16)
   </span>
 </td>
 <td class="coverageStat">
@@ -67,15 +67,15 @@ Current scope:     <a href="../../index.html">all classes</a>
     0%
   </span>
   <span class="absValue">
-    (0/28)
+    (0/34)
   </span>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    0.8%
+    0.7%
   </span>
   <span class="absValue">
-    (1/121)
+    (1/145)
   </span>
 </td>
 </tr>
@@ -94,8 +94,10 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;import org.adnan.travner.domain.conversation.ConversationMembershipRepository;
 &nbsp;import org.adnan.travner.domain.message.Message;
 &nbsp;import org.adnan.travner.domain.message.MessageRepository;
+&nbsp;import org.adnan.travner.domain.message.MessageReadStatus;
 &nbsp;import org.adnan.travner.dto.chat.MessageResponse;
 &nbsp;import org.adnan.travner.dto.chat.SendMessageRequest;
+&nbsp;import org.adnan.travner.repository.MessageReadStatusRepository;
 &nbsp;import org.adnan.travner.repository.UserRepository;
 &nbsp;import org.adnan.travner.util.ObjectIdUtil;
 &nbsp;import org.bson.types.ObjectId;
@@ -121,6 +123,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;    private final ConversationMembershipRepository membershipRepository;
 &nbsp;    private final org.adnan.travner.domain.conversation.ConversationRepository conversationRepository;
 &nbsp;    private final UserRepository userRepository;
+&nbsp;    private final MessageReadStatusRepository messageReadStatusRepository;
 &nbsp;
 &nbsp;    /**
 &nbsp;     * Resolve a user identifier that may be either a username or an ObjectId string
@@ -206,7 +209,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;        }
 &nbsp;
 <b class="nc">&nbsp;        Page&lt;Message&gt; messages = messageRepository.findByConversationIdAndDeletedAtIsNull(conversationObjectId,</b>
-&nbsp;                pageable);
+<b class="nc">&nbsp;                pageable);</b>
 &nbsp;
 <b class="nc">&nbsp;        return messages.map(this::mapToResponse);</b>
 &nbsp;    }
@@ -216,7 +219,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;     */
 &nbsp;    public void markMessagesAsRead(String conversationId, String lastReadMessageId, String userId) {
 <b class="nc">&nbsp;        log.debug(&quot;Marking messages as read in conversation: {} up to message: {} for user: {}&quot;,</b>
-&nbsp;                conversationId, lastReadMessageId, userId);
+<b class="nc">&nbsp;                conversationId, lastReadMessageId, userId);</b>
 &nbsp;
 <b class="nc">&nbsp;        ObjectId conversationObjectId = new ObjectId(conversationId);</b>
 <b class="nc">&nbsp;        ObjectId userObjectId = resolveUserId(userId);</b>
@@ -238,6 +241,35 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;                    membershipRepository.save(membership);</b>
 &nbsp;                });
 &nbsp;
+&nbsp;        // Mark individual message as read
+<b class="nc">&nbsp;        if (messageReadStatusRepository.findByMessageIdAndUserId(lastReadMessageObjectId, userObjectId).isEmpty()) {</b>
+<b class="nc">&nbsp;            MessageReadStatus readStatus = MessageReadStatus.builder()</b>
+<b class="nc">&nbsp;                    .messageId(lastReadMessageObjectId)</b>
+<b class="nc">&nbsp;                    .conversationId(conversationObjectId)</b>
+<b class="nc">&nbsp;                    .userId(userObjectId)</b>
+<b class="nc">&nbsp;                    .readAt(Instant.now())</b>
+<b class="nc">&nbsp;                    .createdAt(Instant.now())</b>
+<b class="nc">&nbsp;                    .build();</b>
+<b class="nc">&nbsp;            messageReadStatusRepository.save(readStatus);</b>
+&nbsp;        }
+&nbsp;
+&nbsp;        // Mark all previous messages as read too
+<b class="nc">&nbsp;        List&lt;Message&gt; unreadMessages = messageRepository.findByConversationIdAndCreatedAtLessThanEqualAndDeletedAtIsNull(</b>
+<b class="nc">&nbsp;                conversationObjectId, lastReadMessage.getCreatedAt());</b>
+&nbsp;
+<b class="nc">&nbsp;        for (Message message : unreadMessages) {</b>
+<b class="nc">&nbsp;            if (messageReadStatusRepository.findByMessageIdAndUserId(message.getId(), userObjectId).isEmpty()) {</b>
+<b class="nc">&nbsp;                MessageReadStatus readStatus = MessageReadStatus.builder()</b>
+<b class="nc">&nbsp;                        .messageId(message.getId())</b>
+<b class="nc">&nbsp;                        .conversationId(conversationObjectId)</b>
+<b class="nc">&nbsp;                        .userId(userObjectId)</b>
+<b class="nc">&nbsp;                        .readAt(Instant.now())</b>
+<b class="nc">&nbsp;                        .createdAt(Instant.now())</b>
+<b class="nc">&nbsp;                        .build();</b>
+<b class="nc">&nbsp;                messageReadStatusRepository.save(readStatus);</b>
+&nbsp;            }
+&nbsp;        }
+&nbsp;
 <b class="nc">&nbsp;        log.info(&quot;Marked messages as read for user: {} in conversation: {}&quot;, userId, conversationId);</b>
 &nbsp;    }
 &nbsp;
@@ -249,12 +281,14 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;        ObjectId conversationObjectId = new ObjectId(conversationId);</b>
 <b class="nc">&nbsp;        ObjectId userObjectId = resolveUserId(userId);</b>
 &nbsp;
-<b class="nc">&nbsp;        return membershipRepository.findByConversationIdAndUserId(conversationObjectId, userObjectId)</b>
-<b class="nc">&nbsp;                .map(membership -&gt; {</b>
-<b class="nc">&nbsp;                    Instant lastReadAt = membership.getLastReadAt();</b>
-<b class="nc">&nbsp;                    return messageRepository.countUnreadMessages(conversationObjectId, lastReadAt);</b>
-&nbsp;                })
-<b class="nc">&nbsp;                .orElse(0L);</b>
+&nbsp;        // Count total messages in conversation
+<b class="nc">&nbsp;        long totalMessages = messageRepository.countByConversationIdAndDeletedAtIsNull(conversationObjectId);</b>
+&nbsp;
+&nbsp;        // Count read messages by this user
+<b class="nc">&nbsp;        long readMessages = messageReadStatusRepository.findByConversationIdAndUserId(conversationObjectId, userObjectId).size();</b>
+&nbsp;
+&nbsp;        // Return unread count
+<b class="nc">&nbsp;        return Math.max(0, totalMessages - readMessages);</b>
 &nbsp;    }
 &nbsp;
 &nbsp;    /**
@@ -349,16 +383,14 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;    }
 &nbsp;
 &nbsp;    private List&lt;String&gt; getMessageReadByUserIds(Message message) {
-&nbsp;        // TODO: Implement proper read tracking based on your message read schema
-&nbsp;        // For now, return empty list as read tracking may require additional schema
-<b class="nc">&nbsp;        return List.of();</b>
+<b class="nc">&nbsp;        List&lt;MessageReadStatus&gt; readStatuses = messageReadStatusRepository.findByMessageId(message.getId());</b>
+<b class="nc">&nbsp;        return readStatuses.stream()</b>
+<b class="nc">&nbsp;                .map(status -&gt; status.getUserId().toString())</b>
+<b class="nc">&nbsp;                .collect(Collectors.toList());</b>
 &nbsp;    }
 &nbsp;
 &nbsp;    private int getMessageReadCount(Message message) {
-&nbsp;        // TODO: Implement proper read count calculation based on your read tracking
-&nbsp;        // schema
-&nbsp;        // For now, return 0 as read tracking may require additional schema
-<b class="nc">&nbsp;        return 0;</b>
+<b class="nc">&nbsp;        return (int) messageReadStatusRepository.findByMessageId(message.getId()).size();</b>
 &nbsp;    }
 &nbsp;}
 </code>
@@ -384,7 +416,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

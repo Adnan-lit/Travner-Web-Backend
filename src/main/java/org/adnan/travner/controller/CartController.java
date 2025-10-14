@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * Controller for handling shopping cart operations
  */
@@ -55,8 +57,8 @@ public class CartController {
      * @param request        Add to cart request
      * @return Updated cart
      */
-    @PostMapping("/add")
-    public ResponseEntity<ApiResponse<CartDTO>> addToCart(
+    @PostMapping("/items")
+    public ResponseEntity<ApiResponse<CartDTO>> addItemToCart(
             Authentication authentication,
             @Valid @RequestBody AddToCartRequest request) {
 
@@ -80,16 +82,18 @@ public class CartController {
     }
 
     /**
-     * Update cart item quantity
-     * 
+     * Update cart item quantity by product ID
+     *
      * @param authentication User authentication
-     * @param request        Update cart item request
+     * @param productId      Product ID
+     * @param request        Update quantity request (only quantity field needed)
      * @return Updated cart
      */
-    @PutMapping("/update")
-    public ResponseEntity<ApiResponse<CartDTO>> updateCartItem(
+    @PutMapping("/items/{productId}")
+    public ResponseEntity<ApiResponse<CartDTO>> updateCartItemByProductId(
             Authentication authentication,
-            @Valid @RequestBody UpdateCartItemRequest request) {
+            @PathVariable String productId,
+            @RequestBody Map<String, Integer> requestBody) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -97,6 +101,24 @@ public class CartController {
         }
 
         try {
+            // Extract quantity from request body
+            Integer quantity = requestBody.get("quantity");
+            if (quantity == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("Quantity is required"));
+            }
+
+            if (quantity < 0) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("Quantity must be 0 or greater"));
+            }
+
+            // Create the request object with productId from path variable
+            UpdateCartItemRequest request = UpdateCartItemRequest.builder()
+                    .productId(productId)
+                    .quantity(quantity)
+                    .build();
+
             CartDTO cart = cartService.updateCartItem(authentication.getName(), request);
             return ResponseEntity.ok(ApiResponse.success("Cart item updated successfully", cart));
         } catch (RuntimeException e) {
@@ -111,14 +133,14 @@ public class CartController {
     }
 
     /**
-     * Remove item from cart
-     * 
+     * Remove item from cart by product ID
+     *
      * @param authentication User authentication
      * @param productId      Product ID to remove
      * @return Updated cart
      */
-    @DeleteMapping("/remove/{productId}")
-    public ResponseEntity<ApiResponse<CartDTO>> removeFromCart(
+    @DeleteMapping("/items/{productId}")
+    public ResponseEntity<ApiResponse<CartDTO>> removeItemFromCart(
             Authentication authentication,
             @PathVariable String productId) {
 
@@ -138,6 +160,49 @@ public class CartController {
             log.error("Unexpected error removing item from cart for user: {}", authentication.getName(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to remove item from cart"));
+        }
+    }
+
+    /**
+     * Checkout cart and create order
+     * DEPRECATED: Use POST /api/orders instead for full order creation with shipping details
+     *
+     * @param authentication User authentication
+     * @return Order confirmation
+     */
+    @PostMapping("/checkout")
+    @Deprecated
+    public ResponseEntity<ApiResponse<Object>> checkoutCart(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Authentication required"));
+        }
+
+        try {
+            // Get user's cart
+            CartDTO cart = cartService.getUserCart(authentication.getName());
+
+            if (cart.getTotalItems() == 0) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("Cart is empty"));
+            }
+
+            // This endpoint is deprecated - it just clears cart without creating order
+            // Recommend using POST /api/orders instead
+            cartService.clearCart(authentication.getName());
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Checkout successful. Note: To create a proper order with tracking, use POST /api/orders with shipping details.",
+                    Map.of(
+                        "message", "Cart cleared successfully. Use POST /api/orders to create trackable orders.",
+                        "totalAmount", cart.getTotalAmount(),
+                        "itemCount", cart.getTotalItems()
+                    )
+            ));
+        } catch (Exception e) {
+            log.error("Error during checkout for user: {}", authentication.getName(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to checkout: " + e.getMessage()));
         }
     }
 

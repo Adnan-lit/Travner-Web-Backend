@@ -21,7 +21,8 @@ import org.springframework.web.bind.annotation.*;
  * REST Controller for conversation management
  */
 @RestController
-@RequestMapping("/api/chat/conversations")
+// Allow both legacy and current API paths for backward compatibility
+@RequestMapping({"/api/chat/conversations", "/api/conversations"})
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Conversations", description = "Conversation management APIs")

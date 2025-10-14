@@ -124,9 +124,9 @@ public class MarketController {
      * @param size     Page size (default 10)
      * @return List of products in the specified category with pagination metadata
      */
-    @GetMapping("/products/category")
+    @GetMapping("/products/category/{category}")
     public ResponseEntity<ApiResponse<List<ProductDTO>>> getProductsByCategory(
-            @RequestParam String category,
+            @PathVariable String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 

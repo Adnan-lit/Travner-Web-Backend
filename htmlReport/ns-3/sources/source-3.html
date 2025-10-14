@@ -72,10 +72,10 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    1.7%
+    1.4%
   </span>
   <span class="absValue">
-    (1/60)
+    (1/70)
   </span>
 </td>
 </tr>
@@ -155,7 +155,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;                        // Broadcast to the conversation topic
 <b class="nc">&nbsp;                        messagingTemplate.convertAndSend(</b>
 <b class="nc">&nbsp;                                        &quot;/topic/conversation/&quot; + request.getConversationId(),</b>
-&nbsp;                                        event);
+<b class="nc">&nbsp;                                        event);</b>
 &nbsp;
 &nbsp;                } catch (Exception e) {
 <b class="nc">&nbsp;                        log.error(&quot;Error sending message via WebSocket: {}&quot;, e.getMessage());</b>
@@ -185,7 +185,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;                // Send to all users in the conversation except the sender
 <b class="nc">&nbsp;                messagingTemplate.convertAndSend(</b>
 <b class="nc">&nbsp;                                &quot;/topic/conversation/&quot; + request.getConversationId(),</b>
-&nbsp;                                event);
+<b class="nc">&nbsp;                                event);</b>
 &nbsp;        }
 &nbsp;
 &nbsp;        /**
@@ -224,8 +224,8 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;                // This could be optimized to only send to relevant conversations
 <b class="nc">&nbsp;                messagingTemplate.convertAndSendToUser(</b>
 <b class="nc">&nbsp;                                principal.getName(),</b>
-&nbsp;                                &quot;/queue/presence&quot;,
-&nbsp;                                presenceEvent);
+<b class="nc">&nbsp;                                &quot;/queue/presence&quot;,</b>
+<b class="nc">&nbsp;                                presenceEvent);</b>
 &nbsp;        }
 &nbsp;
 &nbsp;        /**
@@ -244,7 +244,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;                // Send read receipt to conversation
 <b class="nc">&nbsp;                messagingTemplate.convertAndSend(</b>
 <b class="nc">&nbsp;                                &quot;/topic/conversation/&quot; + readEvent.getConversationId(),</b>
-&nbsp;                                readEvent);
+<b class="nc">&nbsp;                                readEvent);</b>
 &nbsp;        }
 &nbsp;
 &nbsp;        /**
@@ -254,9 +254,9 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;                log.debug(&quot;Sending notification to user: {} - type: {}&quot;, userId, event.getType());</b>
 &nbsp;
 <b class="nc">&nbsp;                messagingTemplate.convertAndSendToUser(</b>
-&nbsp;                                userId,
-&nbsp;                                &quot;/queue/notifications&quot;,
-&nbsp;                                event);
+<b class="nc">&nbsp;                                userId,</b>
+<b class="nc">&nbsp;                                &quot;/queue/notifications&quot;,</b>
+<b class="nc">&nbsp;                                event);</b>
 &nbsp;        }
 &nbsp;
 &nbsp;        /**
@@ -266,8 +266,8 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;                log.debug(&quot;Sending event to conversation: {} - type: {}&quot;, conversationId, event.getType());</b>
 &nbsp;
 <b class="nc">&nbsp;                messagingTemplate.convertAndSend(</b>
-&nbsp;                                &quot;/topic/conversation/&quot; + conversationId,
-&nbsp;                                event);
+<b class="nc">&nbsp;                                &quot;/topic/conversation/&quot; + conversationId,</b>
+<b class="nc">&nbsp;                                event);</b>
 &nbsp;        }
 &nbsp;}
 </code>
@@ -293,7 +293,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

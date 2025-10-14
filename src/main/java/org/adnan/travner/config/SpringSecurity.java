@@ -48,6 +48,9 @@ public class SpringSecurity {
 
                         // Public content access (read-only) - GET requests only
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/", "/api/posts/**").permitAll()
+                        // Align with implemented CommentController path
+                        .requestMatchers(HttpMethod.GET, "/api/posts/*/comments/**").permitAll()
+                        // Backward-compat comment path (if present in docs/Postman)
                         .requestMatchers(HttpMethod.GET, "/api/comments/posts/**").permitAll()
 
                         // Public marketplace access (read-only) - GET requests only
@@ -80,6 +83,10 @@ public class SpringSecurity {
                         .requestMatchers(HttpMethod.POST, "/api/comments/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/comments/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/comments/**").hasAnyRole("USER", "ADMIN")
+                        // Also protect implemented path variant
+                        .requestMatchers(HttpMethod.POST, "/api/posts/*/comments/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/posts/*/comments/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/posts/*/comments/**").hasAnyRole("USER", "ADMIN")
 
                         // Market management - require authentication for write operations
                         .requestMatchers(HttpMethod.POST, "/api/market/products").hasAnyRole("USER", "ADMIN")
@@ -89,7 +96,9 @@ public class SpringSecurity {
                         // Authenticated user endpoints - require authentication
                         .requestMatchers("/api/user/**").authenticated()
                         .requestMatchers("/api/cart/**").hasAnyRole("USER", "ADMIN")
+                        // Apply the same rule to both conversation paths
                         .requestMatchers("/api/conversations/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/chat/conversations/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/messages/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/media/upload").hasAnyRole("USER", "ADMIN")
 

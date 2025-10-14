@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ConversationResponse</title>
+  <title>Coverage Report > MarkMessagesReadRequest</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,19 +22,16 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.dto.chat</a>
 </div>
 
-<h1>Coverage Summary for Class: ConversationResponse (org.adnan.travner.dto.chat)</h1>
+<h1>Coverage Summary for Class: MarkMessagesReadRequest (org.adnan.travner.dto.chat)</h1>
 
 <table class="coverageStats">
-
 <tr>
   <th class="name">Class</th>
 </tr>
-  <tr>
-    <td class="name">ConversationResponse$ConversationMemberResponse</td>
-  </tr>
 <tr>
-  <td class="name"><strong>Total</strong></td>
+  <td class="name">MarkMessagesReadRequest</td>
 </tr>
+
 </table>
 
 <br/>
@@ -44,50 +41,26 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.dto.chat;
 &nbsp;
+&nbsp;import jakarta.validation.constraints.NotBlank;
 &nbsp;import lombok.AllArgsConstructor;
 &nbsp;import lombok.Builder;
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
-&nbsp;import org.adnan.travner.domain.conversation.Conversation;
-&nbsp;import org.adnan.travner.domain.conversation.ConversationMembership;
-&nbsp;
-&nbsp;import java.time.Instant;
-&nbsp;import java.util.List;
 &nbsp;
 &nbsp;/**
-&nbsp; * Response DTO for conversation information
+&nbsp; * Request DTO for marking messages as read
 &nbsp; */
 &nbsp;@Data
 &nbsp;@NoArgsConstructor
 &nbsp;@AllArgsConstructor
 &nbsp;@Builder
-&nbsp;public class ConversationResponse {
+&nbsp;public class MarkMessagesReadRequest {
 &nbsp;
-&nbsp;    private String id;
-&nbsp;    private Conversation.ConversationType type;
-&nbsp;    private String title;
-&nbsp;    private List&lt;ConversationMemberResponse&gt; members;
-&nbsp;    private String ownerId;
-&nbsp;    private List&lt;String&gt; adminIds;
-&nbsp;    private Instant createdAt;
-&nbsp;    private Instant lastMessageAt;
-&nbsp;    private boolean isArchived;
-&nbsp;    private long unreadCount;
+&nbsp;    @NotBlank(message = &quot;Conversation ID is required&quot;)
+&nbsp;    private String conversationId;
 &nbsp;
-&nbsp;    @Data
-&nbsp;    @NoArgsConstructor
-&nbsp;    @AllArgsConstructor
-&nbsp;    @Builder
-&nbsp;    public static class ConversationMemberResponse {
-&nbsp;        private String userId;
-&nbsp;        private String userName;
-&nbsp;        private String firstName;
-&nbsp;        private String lastName;
-&nbsp;        private ConversationMembership.MemberRole role;
-&nbsp;        private Instant lastReadAt;
-&nbsp;        private boolean muted;
-&nbsp;        private Instant joinedAt;
-&nbsp;    }
+&nbsp;    @NotBlank(message = &quot;Message ID is required&quot;)
+&nbsp;    private String lastReadMessageId;
 &nbsp;}
 </code>
 </pre>
@@ -112,7 +85,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

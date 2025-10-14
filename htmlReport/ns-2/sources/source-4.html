@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > SpringSecurity</title>
+  <title>Coverage Report > SecurityConfig</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,7 +22,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.config</a>
 </div>
 
-<h1>Coverage Summary for Class: SpringSecurity (org.adnan.travner.config)</h1>
+<h1>Coverage Summary for Class: SecurityConfig (org.adnan.travner.config)</h1>
 
 <table class="coverageStats">
 
@@ -38,13 +38,13 @@ Current scope:     <a href="../../index.html">all classes</a>
 </th>
 </tr>
 <tr>
-  <td class="name">SpringSecurity</td>
+  <td class="name">SecurityConfig</td>
 <td class="coverageStat">
   <span class="percent">
     100%
   </span>
   <span class="absValue">
-    (5/5)
+    (2/2)
   </span>
 </td>
 <td class="coverageStat">
@@ -52,18 +52,18 @@ Current scope:     <a href="../../index.html">all classes</a>
     100%
   </span>
   <span class="absValue">
-    (37/37)
+    (2/2)
   </span>
 </td>
 </tr>
   <tr>
-    <td class="name">SpringSecurity$$SpringCGLIB$$0</td>
+    <td class="name">SecurityConfig$$SpringCGLIB$$0</td>
   </tr>
   <tr>
-    <td class="name">SpringSecurity$$SpringCGLIB$$FastClass$$0</td>
+    <td class="name">SecurityConfig$$SpringCGLIB$$FastClass$$0</td>
   </tr>
   <tr>
-    <td class="name">SpringSecurity$$SpringCGLIB$$FastClass$$1</td>
+    <td class="name">SecurityConfig$$SpringCGLIB$$FastClass$$1</td>
   </tr>
 <tr>
   <td class="name"><strong>Total</strong></td>
@@ -72,7 +72,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     100%
   </span>
   <span class="absValue">
-    (5/5)
+    (2/2)
   </span>
 </td>
 <td class="coverageStat">
@@ -80,7 +80,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     100%
   </span>
   <span class="absValue">
-    (37/37)
+    (2/2)
   </span>
 </td>
 </tr>
@@ -93,73 +93,22 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.config;
 &nbsp;
-&nbsp;import org.adnan.travner.service.UserDetailsServiceImpl;
-&nbsp;import org.springframework.beans.factory.annotation.Autowired;
 &nbsp;import org.springframework.context.annotation.Bean;
 &nbsp;import org.springframework.context.annotation.Configuration;
-&nbsp;import org.springframework.security.authentication.AuthenticationManager;
-&nbsp;import org.springframework.security.config.Customizer;
-&nbsp;import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-&nbsp;import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-&nbsp;import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-&nbsp;import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 &nbsp;import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 &nbsp;import org.springframework.security.crypto.password.PasswordEncoder;
-&nbsp;import org.springframework.security.web.SecurityFilterChain;
 &nbsp;
+&nbsp;/**
+&nbsp; * Separate configuration class for security beans to avoid circular dependencies.
+&nbsp; * This ensures PasswordEncoder can be injected into UserService without creating
+&nbsp; * a circular reference with SpringSecurity.
+&nbsp; */
 &nbsp;@Configuration
-&nbsp;@EnableWebSecurity
-<b class="fc">&nbsp;public class SpringSecurity {</b>
-&nbsp;
-&nbsp;    @Autowired
-&nbsp;    private UserDetailsServiceImpl userDetailsService;
-&nbsp;
-&nbsp;    @Bean
-&nbsp;    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-<b class="fc">&nbsp;        http</b>
-<b class="fc">&nbsp;                .cors(Customizer.withDefaults())</b>
-<b class="fc">&nbsp;                .authorizeHttpRequests(request -&gt; request</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/public/**&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/ws/**&quot;).permitAll() // Allow WebSocket handshake</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/user/public/**&quot;).permitAll() // Allow public profile access</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/posts&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/posts/search&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/posts/location&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/posts/tags&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/posts/{id}&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/posts/{postId}/comments&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/posts/{postId}/comments/{id}&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/posts/{postId}/media/{mediaId}&quot;).permitAll() // Allow media file access</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/market/products&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/market/products/search&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/market/products/category&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/market/products/location&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/market/products/tags&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/market/products/{id}&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/market/products/seller/{sellerId}&quot;).permitAll()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/cart/**&quot;).authenticated() // Cart endpoints require authentication</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/actuator/health&quot;).permitAll() // Allow health checks</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/debug/**&quot;).hasRole(&quot;ADMIN&quot;) // Secure debug endpoints</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/api/chat/**&quot;).authenticated() // Chat endpoints require authentication</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/user/**&quot;).authenticated()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/api/users/**&quot;).authenticated()</b>
-<b class="fc">&nbsp;                        .requestMatchers(&quot;/admin/**&quot;).hasRole(&quot;ADMIN&quot;)</b>
-<b class="fc">&nbsp;                        .anyRequest().authenticated())</b>
-<b class="fc">&nbsp;                .httpBasic(Customizer.withDefaults())</b>
-<b class="fc">&nbsp;                .csrf(AbstractHttpConfigurer::disable);</b>
-<b class="fc">&nbsp;        return http.build();</b>
-&nbsp;    }
+<b class="fc">&nbsp;public class SecurityConfig {</b>
 &nbsp;
 &nbsp;    @Bean
 &nbsp;    public PasswordEncoder passwordEncoder() {
-<b class="fc">&nbsp;        return new BCryptPasswordEncoder();</b>
-&nbsp;    }
-&nbsp;
-&nbsp;    @Bean
-&nbsp;    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-<b class="fc">&nbsp;        AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);</b>
-<b class="fc">&nbsp;        authBuilder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());</b>
-<b class="fc">&nbsp;        return authBuilder.build();</b>
+<b class="fc">&nbsp;        return new BCryptPasswordEncoder(12); // Stronger hashing rounds</b>
 &nbsp;    }
 &nbsp;}
 </code>
@@ -185,7 +134,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

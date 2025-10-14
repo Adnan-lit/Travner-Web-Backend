@@ -52,7 +52,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     0%
   </span>
   <span class="absValue">
-    (0/33)
+    (0/34)
   </span>
 </td>
 </tr>
@@ -74,7 +74,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     0%
   </span>
   <span class="absValue">
-    (0/33)
+    (0/34)
   </span>
 </td>
 </tr>
@@ -144,6 +144,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;        return ApiResponse.&lt;T&gt;builder()</b>
 <b class="nc">&nbsp;                .success(false)</b>
 <b class="nc">&nbsp;                .message(message)</b>
+<b class="nc">&nbsp;                .data(null)</b>
 <b class="nc">&nbsp;                .build();</b>
 &nbsp;    }
 &nbsp;
@@ -155,8 +156,9 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;                .build();</b>
 &nbsp;    }
 &nbsp;
+&nbsp;    // Factory method for paginated responses
 &nbsp;    public static &lt;T&gt; ApiResponse&lt;List&lt;T&gt;&gt; fromPage(Page&lt;T&gt; page) {
-<b class="nc">&nbsp;        PaginationMeta meta = PaginationMeta.builder()</b>
+<b class="nc">&nbsp;        PaginationMeta pagination = PaginationMeta.builder()</b>
 <b class="nc">&nbsp;                .page(page.getNumber())</b>
 <b class="nc">&nbsp;                .size(page.getSize())</b>
 <b class="nc">&nbsp;                .totalElements(page.getTotalElements())</b>
@@ -167,9 +169,9 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;
 <b class="nc">&nbsp;        return ApiResponse.&lt;List&lt;T&gt;&gt;builder()</b>
 <b class="nc">&nbsp;                .success(true)</b>
-<b class="nc">&nbsp;                .message(&quot;Success&quot;)</b>
+<b class="nc">&nbsp;                .message(&quot;Data retrieved successfully&quot;)</b>
 <b class="nc">&nbsp;                .data(page.getContent())</b>
-<b class="nc">&nbsp;                .pagination(meta)</b>
+<b class="nc">&nbsp;                .pagination(pagination)</b>
 <b class="nc">&nbsp;                .build();</b>
 &nbsp;    }
 &nbsp;}
@@ -196,7 +198,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

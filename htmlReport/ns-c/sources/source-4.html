@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > CartRepository</title>
+  <title>Coverage Report > ProductRepository</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.repository</a>
 </div>
 
-<h1>Coverage Summary for Class: CartRepository (org.adnan.travner.repository)</h1>
+<h1>Coverage Summary for Class: ProductRepository (org.adnan.travner.repository)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">CartRepository</td>
+  <td class="name">ProductRepository</td>
 </tr>
 
 </table>
@@ -41,32 +41,62 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.repository;
 &nbsp;
-&nbsp;import org.adnan.travner.entry.CartEntry;
+&nbsp;import org.adnan.travner.entry.ProductEntry;
+&nbsp;import org.springframework.data.domain.Page;
+&nbsp;import org.springframework.data.domain.Pageable;
 &nbsp;import org.springframework.data.mongodb.repository.MongoRepository;
+&nbsp;import org.springframework.data.mongodb.repository.Query;
 &nbsp;import org.springframework.stereotype.Repository;
 &nbsp;
-&nbsp;import java.util.Optional;
+&nbsp;import java.util.Collection;
+&nbsp;import java.util.List;
 &nbsp;
-&nbsp;/**
-&nbsp; * Repository interface for Cart operations
-&nbsp; */
 &nbsp;@Repository
-&nbsp;public interface CartRepository extends MongoRepository&lt;CartEntry, String&gt; {
+&nbsp;public interface ProductRepository extends MongoRepository&lt;ProductEntry, String&gt; {
 &nbsp;
 &nbsp;    /**
-&nbsp;     * Find cart by user ID
+&nbsp;     * Find all available products
 &nbsp;     */
-&nbsp;    Optional&lt;CartEntry&gt; findByUserId(String userId);
+&nbsp;    Page&lt;ProductEntry&gt; findByIsAvailableTrue(Pageable pageable);
 &nbsp;
 &nbsp;    /**
-&nbsp;     * Check if cart exists for user
+&nbsp;     * Find products by category
 &nbsp;     */
-&nbsp;    boolean existsByUserId(String userId);
+&nbsp;    Page&lt;ProductEntry&gt; findByCategoryAndIsAvailableTrue(String category, Pageable pageable);
 &nbsp;
 &nbsp;    /**
-&nbsp;     * Delete cart by user ID
+&nbsp;     * Find products by seller
 &nbsp;     */
-&nbsp;    void deleteByUserId(String userId);
+&nbsp;    Page&lt;ProductEntry&gt; findBySellerIdAndIsAvailableTrue(String sellerId, Pageable pageable);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Find products by location
+&nbsp;     */
+&nbsp;    Page&lt;ProductEntry&gt; findByLocationContainingIgnoreCaseAndIsAvailableTrue(String location, Pageable pageable);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Search products by name or description
+&nbsp;     */
+&nbsp;    @Query(&quot;{&#39;$and&#39;: [&quot; +
+&nbsp;            &quot;{&#39;isAvailable&#39;: true}, &quot; +
+&nbsp;            &quot;{&#39;$or&#39;: [&quot; +
+&nbsp;            &quot;{&#39;name&#39;: {&#39;$regex&#39;: ?0, &#39;$options&#39;: &#39;i&#39;}}, &quot; +
+&nbsp;            &quot;{&#39;description&#39;: {&#39;$regex&#39;: ?0, &#39;$options&#39;: &#39;i&#39;}}, &quot; +
+&nbsp;            &quot;{&#39;tags&#39;: {&#39;$regex&#39;: ?0, &#39;$options&#39;: &#39;i&#39;}}&quot; +
+&nbsp;            &quot;]}&quot; +
+&nbsp;            &quot;]}&quot;)
+&nbsp;    Page&lt;ProductEntry&gt; searchProducts(String query, Pageable pageable);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Find products by tags
+&nbsp;     */
+&nbsp;    Page&lt;ProductEntry&gt; findByTagsInAndIsAvailableTrue(Collection&lt;String&gt; tags, Pageable pageable);
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Count all available products
+&nbsp;     */
+&nbsp;    long countByIsAvailableTrue();
+&nbsp;
 &nbsp;}
 </code>
 </pre>
@@ -91,7 +121,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

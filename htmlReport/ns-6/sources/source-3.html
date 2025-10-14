@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > ProductRequest</title>
+  <title>Coverage Report > CommentDTO</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.dto</a>
 </div>
 
-<h1>Coverage Summary for Class: ProductRequest (org.adnan.travner.dto)</h1>
+<h1>Coverage Summary for Class: CommentDTO (org.adnan.travner.dto)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">ProductRequest</td>
+  <td class="name">CommentDTO</td>
 </tr>
 
 </table>
@@ -41,47 +41,28 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.dto;
 &nbsp;
+&nbsp;import lombok.AllArgsConstructor;
+&nbsp;import lombok.Builder;
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
-&nbsp;import lombok.AllArgsConstructor;
 &nbsp;
-&nbsp;import jakarta.validation.constraints.*;
-&nbsp;import java.math.BigDecimal;
+&nbsp;import java.time.LocalDateTime;
 &nbsp;import java.util.List;
 &nbsp;
 &nbsp;@Data
 &nbsp;@NoArgsConstructor
 &nbsp;@AllArgsConstructor
-&nbsp;public class ProductRequest {
-&nbsp;
-&nbsp;    @NotBlank(message = &quot;Product name is required&quot;)
-&nbsp;    @Size(min = 3, max = 100, message = &quot;Product name must be between 3 and 100 characters&quot;)
-&nbsp;    private String name;
-&nbsp;
-&nbsp;    @NotBlank(message = &quot;Product description is required&quot;)
-&nbsp;    @Size(min = 10, max = 1000, message = &quot;Product description must be between 10 and 1000 characters&quot;)
-&nbsp;    private String description;
-&nbsp;
-&nbsp;    @NotNull(message = &quot;Price is required&quot;)
-&nbsp;    @DecimalMin(value = &quot;0.01&quot;, message = &quot;Price must be greater than 0&quot;)
-&nbsp;    @Digits(integer = 10, fraction = 2, message = &quot;Invalid price format&quot;)
-&nbsp;    private BigDecimal price;
-&nbsp;
-&nbsp;    @NotBlank(message = &quot;Category is required&quot;)
-&nbsp;    @Size(max = 50, message = &quot;Category name cannot exceed 50 characters&quot;)
-&nbsp;    private String category;
-&nbsp;
-&nbsp;    private List&lt;String&gt; images;
-&nbsp;
-&nbsp;    @NotNull(message = &quot;Stock quantity is required&quot;)
-&nbsp;    @Min(value = 0, message = &quot;Stock quantity cannot be negative&quot;)
-&nbsp;    private Integer stockQuantity;
-&nbsp;
-&nbsp;    @NotBlank(message = &quot;Location is required&quot;)
-&nbsp;    @Size(max = 100, message = &quot;Location cannot exceed 100 characters&quot;)
-&nbsp;    private String location;
-&nbsp;
-&nbsp;    private List&lt;String&gt; tags;
+&nbsp;@Builder
+&nbsp;public class CommentDTO {
+&nbsp;    private String id;
+&nbsp;    private String content;
+&nbsp;    private UserSummaryDTO author;
+&nbsp;    private String postId;
+&nbsp;    private LocalDateTime createdAt;
+&nbsp;    private int upvotes;
+&nbsp;    private int downvotes;
+&nbsp;    private List&lt;CommentDTO&gt; replies;
+&nbsp;    private String parentCommentId;
 &nbsp;}
 </code>
 </pre>
@@ -106,7 +87,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

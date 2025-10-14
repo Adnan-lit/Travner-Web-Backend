@@ -56,10 +56,10 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    10%
+    9.1%
   </span>
   <span class="absValue">
-    (1/10)
+    (1/11)
   </span>
 </td>
 <td class="coverageStat">
@@ -75,7 +75,7 @@ Current scope:     <a href="../../index.html">all classes</a>
     0.9%
   </span>
   <span class="absValue">
-    (1/115)
+    (1/117)
   </span>
 </td>
 </tr>
@@ -169,7 +169,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;
 &nbsp;    public Page&lt;CommentDTO&gt; getPostComments(String postId, Pageable pageable) {
 <b class="nc">&nbsp;        Page&lt;CommentEntry&gt; comments = commentRepository.findByPostIdAndParentCommentIdIsNull(</b>
-&nbsp;                new ObjectId(postId), pageable);
+<b class="nc">&nbsp;                new ObjectId(postId), pageable);</b>
 &nbsp;
 <b class="nc">&nbsp;        return comments.map(comment -&gt; {</b>
 <b class="nc">&nbsp;            List&lt;CommentEntry&gt; replies = commentRepository.findByParentCommentId(comment.getId());</b>
@@ -287,6 +287,13 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;        return convertToDTO(updatedComment, replyDTOs);</b>
 &nbsp;    }
 &nbsp;
+&nbsp;    /**
+&nbsp;     * Get total count of comments for statistics
+&nbsp;     */
+&nbsp;    public long getCommentCount() {
+<b class="nc">&nbsp;        return commentRepository.count();</b>
+&nbsp;    }
+&nbsp;
 &nbsp;    private CommentDTO convertToDTO(CommentEntry comment, List&lt;CommentDTO&gt; replies) {
 <b class="nc">&nbsp;        UserEntry author = comment.getAuthor();</b>
 <b class="nc">&nbsp;        UserSummaryDTO authorDTO = UserSummaryDTO.builder()</b>
@@ -332,7 +339,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

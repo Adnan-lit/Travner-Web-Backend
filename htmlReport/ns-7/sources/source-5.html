@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > AddMembersRequest</title>
+  <title>Coverage Report > TypingIndicatorRequest</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.dto.chat</a>
 </div>
 
-<h1>Coverage Summary for Class: AddMembersRequest (org.adnan.travner.dto.chat)</h1>
+<h1>Coverage Summary for Class: TypingIndicatorRequest (org.adnan.travner.dto.chat)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">AddMembersRequest</td>
+  <td class="name">TypingIndicatorRequest</td>
 </tr>
 
 </table>
@@ -42,30 +42,24 @@ Current scope:     <a href="../../index.html">all classes</a>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.dto.chat;
 &nbsp;
 &nbsp;import jakarta.validation.constraints.NotBlank;
-&nbsp;import jakarta.validation.constraints.NotEmpty;
-&nbsp;import jakarta.validation.constraints.Size;
 &nbsp;import lombok.AllArgsConstructor;
 &nbsp;import lombok.Builder;
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
 &nbsp;
-&nbsp;import java.util.List;
-&nbsp;
 &nbsp;/**
-&nbsp; * Request DTO for adding members to a conversation
+&nbsp; * Request DTO for typing indicator events
 &nbsp; */
 &nbsp;@Data
 &nbsp;@NoArgsConstructor
 &nbsp;@AllArgsConstructor
 &nbsp;@Builder
-&nbsp;public class AddMembersRequest {
+&nbsp;public class TypingIndicatorRequest {
 &nbsp;
 &nbsp;    @NotBlank(message = &quot;Conversation ID is required&quot;)
 &nbsp;    private String conversationId;
 &nbsp;
-&nbsp;    @NotEmpty(message = &quot;At least one user ID is required&quot;)
-&nbsp;    @Size(max = 10, message = &quot;Cannot add more than 10 members at once&quot;)
-&nbsp;    private List&lt;String&gt; userIds;
+&nbsp;    private boolean isTyping;
 &nbsp;}
 </code>
 </pre>
@@ -90,7 +84,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

@@ -452,8 +452,8 @@
 								"exec": [
 									"if (pm.response.code === 201) {",
 									"    const response = pm.response.json();",
-									"    if (response.data && response.data.id) {",
-									"        pm.environment.set('test_comment_id', response.data.id);",
+									"    if (response.id) {",
+									"        pm.environment.set('test_comment_id', response.id);",
 									"    }",
 									"}"
 								]
@@ -486,9 +486,9 @@
 							"raw": "{\n  \"content\": \"Great post! Thanks for sharing your Paris experience. I'm planning a trip there next month!\",\n  \"parentCommentId\": null\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/comments/posts/{{test_post_id}}",
+							"raw": "{{base_url}}/api/posts/{{test_post_id}}/comments",
 							"host": ["{{base_url}}"],
-							"path": ["api", "comments", "posts", "{{test_post_id}}"]
+							"path": ["api", "posts", "{{test_post_id}}", "comments"]
 						}
 					}
 				},
@@ -498,9 +498,9 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/comments/posts/{{test_post_id}}?page=0&size=10",
+							"raw": "{{base_url}}/api/posts/{{test_post_id}}/comments?page=0&size=10",
 							"host": ["{{base_url}}"],
-							"path": ["api", "comments", "posts", "{{test_post_id}}"],
+							"path": ["api", "posts", "{{test_post_id}}", "comments"],
 							"query": [
 								{
 									"key": "page",
@@ -542,9 +542,9 @@
 							"raw": "{\n  \"content\": \"Updated comment: Great post! Thanks for sharing your Paris experience. I'm definitely planning a trip there next month after reading this!\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/comments/{{test_comment_id}}",
+							"raw": "{{base_url}}/api/posts/{{test_post_id}}/comments/{{test_comment_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["api", "comments", "{{test_comment_id}}"]
+							"path": ["api", "posts", "{{test_post_id}}", "comments", "{{test_comment_id}}"]
 						}
 					}
 				},
@@ -565,20 +565,61 @@
 							]
 						},
 						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"isUpvote\": true\n}"
-						},
+						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/comments/{{test_comment_id}}/vote",
+							"raw": "{{base_url}}/api/posts/{{test_post_id}}/comments/{{test_comment_id}}/upvote",
 							"host": ["{{base_url}}"],
-							"path": ["api", "comments", "{{test_comment_id}}", "vote"]
+							"path": ["api", "posts", "{{test_post_id}}", "comments", "{{test_comment_id}}", "upvote"]
+						}
+					}
+				},
+				{
+					"name": "Vote on Comment (Downvote)",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{test_username}}"
+								},
+								{
+									"key": "password",
+									"value": "{{test_password}}"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/posts/{{test_post_id}}/comments/{{test_comment_id}}/downvote",
+							"host": ["{{base_url}}"],
+							"path": ["api", "posts", "{{test_post_id}}", "comments", "{{test_comment_id}}", "downvote"]
+						}
+					}
+				},
+				{
+					"name": "Delete Comment",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{test_username}}"
+								},
+								{
+									"key": "password",
+									"value": "{{test_password}}"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/posts/{{test_post_id}}/comments/{{test_comment_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "posts", "{{test_post_id}}", "comments", "{{test_comment_id}}"]
 						}
 					}
 				}
@@ -1561,9 +1602,9 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/comments/{{test_comment_id}}",
+							"raw": "{{base_url}}/api/posts/{{test_post_id}}/comments/{{test_comment_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["api", "comments", "{{test_comment_id}}"]
+							"path": ["api", "posts", "{{test_post_id}}", "comments", "{{test_comment_id}}"]
 						}
 					}
 				},
@@ -1586,9 +1627,9 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/cart/items/{{test_product_id}}",
+							"raw": "{{base_url}}/api/cart/remove/{{test_product_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["api", "cart", "items", "{{test_product_id}}"]
+							"path": ["api", "cart", "remove", "{{test_product_id}}"]
 						}
 					}
 				},

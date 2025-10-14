@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > MediaRepository</title>
+  <title>Coverage Report > PostVoteRepository</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.repository</a>
 </div>
 
-<h1>Coverage Summary for Class: MediaRepository (org.adnan.travner.repository)</h1>
+<h1>Coverage Summary for Class: PostVoteRepository (org.adnan.travner.repository)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">MediaRepository</td>
+  <td class="name">PostVoteRepository</td>
 </tr>
 
 </table>
@@ -41,19 +41,22 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.repository;
 &nbsp;
-&nbsp;import org.adnan.travner.entry.MediaEntry;
+&nbsp;import org.adnan.travner.entry.PostVoteEntry;
 &nbsp;import org.bson.types.ObjectId;
 &nbsp;import org.springframework.data.mongodb.repository.MongoRepository;
 &nbsp;
 &nbsp;import java.util.List;
+&nbsp;import java.util.Optional;
 &nbsp;
-&nbsp;public interface MediaRepository extends MongoRepository&lt;MediaEntry, ObjectId&gt; {
+&nbsp;public interface PostVoteRepository extends MongoRepository&lt;PostVoteEntry, ObjectId&gt; {
 &nbsp;
-&nbsp;    List&lt;MediaEntry&gt; findByPostId(ObjectId postId);
+&nbsp;    Optional&lt;PostVoteEntry&gt; findByPostIdAndUserId(ObjectId postId, ObjectId userId);
 &nbsp;
-&nbsp;    List&lt;MediaEntry&gt; findByUploader_Id(ObjectId uploaderId);
+&nbsp;    long countByPostIdAndVoteType(ObjectId postId, PostVoteEntry.VoteType voteType);
 &nbsp;
-&nbsp;    void deleteByPostId(ObjectId postId);
+&nbsp;    List&lt;PostVoteEntry&gt; findByPostId(ObjectId postId);
+&nbsp;
+&nbsp;    void deleteByPostIdAndUserId(ObjectId postId, ObjectId userId);
 &nbsp;}
 </code>
 </pre>
@@ -78,7 +81,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

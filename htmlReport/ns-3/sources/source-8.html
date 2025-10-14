@@ -56,10 +56,10 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    20%
+    16.7%
   </span>
   <span class="absValue">
-    (1/5)
+    (1/6)
   </span>
 </td>
 <td class="coverageStat">
@@ -72,10 +72,10 @@ Current scope:     <a href="../../index.html">all classes</a>
 </td>
 <td class="coverageStat">
   <span class="percent">
-    3.4%
+    3.2%
   </span>
   <span class="absValue">
-    (1/29)
+    (1/31)
   </span>
 </td>
 </tr>
@@ -94,7 +94,6 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;import org.adnan.travner.dto.ApiResponse;
 &nbsp;import org.adnan.travner.dto.MediaDTO;
 &nbsp;import org.adnan.travner.service.MediaService;
-&nbsp;import org.bson.types.ObjectId;
 &nbsp;import org.springframework.core.io.InputStreamResource;
 &nbsp;import org.springframework.http.HttpStatus;
 &nbsp;import org.springframework.http.ResponseEntity;
@@ -110,7 +109,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp; */
 &nbsp;@RestController
 &nbsp;@CrossOrigin(origins = &quot;*&quot;, maxAge = 3600)
-&nbsp;@RequestMapping(&quot;posts/{postId}/media&quot;)
+&nbsp;@RequestMapping(&quot;/api/media&quot;)
 &nbsp;@RequiredArgsConstructor
 <b class="fc">&nbsp;@Slf4j</b>
 &nbsp;public class MediaController {
@@ -118,47 +117,20 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;    private final MediaService mediaService;
 &nbsp;
 &nbsp;    /**
-&nbsp;     * Get all media for a specific post
-&nbsp;     * 
-&nbsp;     * @param postId The ID of the post
-&nbsp;     * @return List of media associated with the post
-&nbsp;     */
-&nbsp;    @GetMapping
-&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;MediaDTO&gt;&gt;&gt; getMediaForPost(@PathVariable String postId) {
-&nbsp;        try {
-<b class="nc">&nbsp;            List&lt;MediaDTO&gt; media = mediaService.getMediaForPost(postId);</b>
-<b class="nc">&nbsp;            return ResponseEntity.ok(ApiResponse.success(media));</b>
-&nbsp;        } catch (Exception e) {
-<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
-<b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;Failed to retrieve media: &quot; + e.getMessage()));</b>
-&nbsp;        }
-&nbsp;    }
-&nbsp;
-&nbsp;    /**
-&nbsp;     * Get a specific media file for download
-&nbsp;     */
-&nbsp;    @GetMapping(&quot;/{mediaId}&quot;)
-&nbsp;    public ResponseEntity&lt;InputStreamResource&gt; getMediaFile(@PathVariable String mediaId) {
-&nbsp;        try {
-<b class="nc">&nbsp;            return mediaService.getMediaFile(mediaId);</b>
-&nbsp;        } catch (IOException e) {
-<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();</b>
-&nbsp;        }
-&nbsp;    }
-&nbsp;
-&nbsp;    /**
-&nbsp;     * Upload a new media file to GridFS
-&nbsp;     * 
+&nbsp;     * General media upload endpoint for products, posts, profiles, etc.
+&nbsp;     *
 &nbsp;     * @param authentication User authentication
-&nbsp;     * @param postId         The ID of the post
-&nbsp;     * @param file           The file to upload
+&nbsp;     * @param file The file to upload
+&nbsp;     * @param type Upload type (product, post, profile, etc.)
+&nbsp;     * @param entityId Optional entity ID (productId, postId, etc.)
 &nbsp;     * @return Media details with access URL
 &nbsp;     */
 &nbsp;    @PostMapping(&quot;/upload&quot;)
 &nbsp;    public ResponseEntity&lt;ApiResponse&lt;MediaDTO&gt;&gt; uploadMedia(
 &nbsp;            Authentication authentication,
-&nbsp;            @PathVariable String postId,
-&nbsp;            @RequestParam(&quot;file&quot;) MultipartFile file) {
+&nbsp;            @RequestParam(&quot;file&quot;) MultipartFile file,
+&nbsp;            @RequestParam(value = &quot;type&quot;, defaultValue = &quot;general&quot;) String type,
+&nbsp;            @RequestParam(value = &quot;entityId&quot;, required = false) String entityId) {
 &nbsp;
 &nbsp;        // Check authentication
 <b class="nc">&nbsp;        if (authentication == null) {</b>
@@ -173,27 +145,59 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;        }
 &nbsp;
 &nbsp;        try {
-&nbsp;            // Validate post ID format
-&nbsp;            try {
-<b class="nc">&nbsp;                new ObjectId(postId);</b>
-&nbsp;            } catch (IllegalArgumentException e) {
-<b class="nc">&nbsp;                return ResponseEntity.status(HttpStatus.BAD_REQUEST)</b>
-<b class="nc">&nbsp;                        .body(ApiResponse.error(&quot;Invalid post ID format&quot;));</b>
-&nbsp;            }
-&nbsp;
-&nbsp;            // Upload the file
-<b class="nc">&nbsp;            MediaDTO uploadedMedia = mediaService.uploadMedia(file, authentication.getName(), postId);</b>
+&nbsp;            // Upload the file with type-specific handling
+<b class="nc">&nbsp;            MediaDTO uploadedMedia = mediaService.uploadMedia(file, authentication.getName(), type, entityId);</b>
 &nbsp;
 &nbsp;            // Return success response
 <b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.CREATED)</b>
 <b class="nc">&nbsp;                    .body(ApiResponse.success(&quot;Media uploaded successfully&quot;, uploadedMedia));</b>
 &nbsp;        } catch (Exception e) {
-&nbsp;            // Log the error
 <b class="nc">&nbsp;            log.error(&quot;Error uploading media: {}&quot;, e.getMessage(), e);</b>
-&nbsp;
-&nbsp;            // Return error response
-<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.BAD_REQUEST)</b>
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
 <b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;Failed to upload media: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get media file by filename for serving
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/files/{filename}&quot;)
+&nbsp;    public ResponseEntity&lt;InputStreamResource&gt; getMediaFileByName(@PathVariable String filename) {
+&nbsp;        try {
+<b class="nc">&nbsp;            return mediaService.getMediaFileByName(filename);</b>
+&nbsp;        } catch (IOException e) {
+<b class="nc">&nbsp;            log.error(&quot;Error retrieving media file {}: {}&quot;, filename, e.getMessage());</b>
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get all media for a specific post
+&nbsp;     *
+&nbsp;     * @param postId The ID of the post
+&nbsp;     * @return List of media associated with the post
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/posts/{postId}&quot;)
+&nbsp;    public ResponseEntity&lt;ApiResponse&lt;List&lt;MediaDTO&gt;&gt;&gt; getMediaForPost(@PathVariable String postId) {
+&nbsp;        try {
+<b class="nc">&nbsp;            List&lt;MediaDTO&gt; media = mediaService.getMediaForPost(postId);</b>
+<b class="nc">&nbsp;            return ResponseEntity.ok(ApiResponse.success(media));</b>
+&nbsp;        } catch (Exception e) {
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
+<b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;Failed to retrieve media: &quot; + e.getMessage()));</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    /**
+&nbsp;     * Get a specific media file by ID for download
+&nbsp;     */
+&nbsp;    @GetMapping(&quot;/{mediaId}&quot;)
+&nbsp;    public ResponseEntity&lt;InputStreamResource&gt; getMediaFile(@PathVariable String mediaId) {
+&nbsp;        try {
+<b class="nc">&nbsp;            return mediaService.getMediaFile(mediaId);</b>
+&nbsp;        } catch (IOException e) {
+<b class="nc">&nbsp;            log.error(&quot;Error retrieving media file by ID {}: {}&quot;, mediaId, e.getMessage());</b>
+<b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();</b>
 &nbsp;        }
 &nbsp;    }
 &nbsp;
@@ -218,6 +222,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 <b class="nc">&nbsp;            mediaService.deleteMedia(mediaId, authentication.getName());</b>
 <b class="nc">&nbsp;            return ResponseEntity.ok(ApiResponse.success(&quot;Media deleted successfully&quot;, null));</b>
 &nbsp;        } catch (RuntimeException e) {
+<b class="nc">&nbsp;            log.error(&quot;Error deleting media {}: {}&quot;, mediaId, e.getMessage());</b>
 <b class="nc">&nbsp;            return ResponseEntity.status(HttpStatus.FORBIDDEN)</b>
 <b class="nc">&nbsp;                    .body(ApiResponse.error(&quot;Failed to delete media: &quot; + e.getMessage()));</b>
 &nbsp;        }
@@ -246,7 +251,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

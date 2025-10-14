@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > UpdateCartItemRequest</title>
+  <title>Coverage Report > UserRequest</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,14 +22,14 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.dto</a>
 </div>
 
-<h1>Coverage Summary for Class: UpdateCartItemRequest (org.adnan.travner.dto)</h1>
+<h1>Coverage Summary for Class: UserRequest (org.adnan.travner.dto)</h1>
 
 <table class="coverageStats">
 <tr>
   <th class="name">Class</th>
 </tr>
 <tr>
-  <td class="name">UpdateCartItemRequest</td>
+  <td class="name">UserRequest</td>
 </tr>
 
 </table>
@@ -41,29 +41,44 @@ Current scope:     <a href="../../index.html">all classes</a>
 <pre>
 <code class="sourceCode" id="sourceCode">&nbsp;package org.adnan.travner.dto;
 &nbsp;
-&nbsp;import jakarta.validation.constraints.Min;
-&nbsp;import jakarta.validation.constraints.NotBlank;
-&nbsp;import jakarta.validation.constraints.NotNull;
 &nbsp;import lombok.AllArgsConstructor;
 &nbsp;import lombok.Builder;
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
 &nbsp;
-&nbsp;/**
-&nbsp; * Request DTO for updating cart item quantity
-&nbsp; */
+&nbsp;import jakarta.validation.constraints.Email;
+&nbsp;import jakarta.validation.constraints.NotBlank;
+&nbsp;import jakarta.validation.constraints.Pattern;
+&nbsp;import jakarta.validation.constraints.Size;
+&nbsp;
 &nbsp;@Data
-&nbsp;@Builder
 &nbsp;@NoArgsConstructor
 &nbsp;@AllArgsConstructor
-&nbsp;public class UpdateCartItemRequest {
+&nbsp;@Builder
+&nbsp;public class UserRequest {
 &nbsp;
-&nbsp;    @NotBlank(message = &quot;Product ID is required&quot;)
-&nbsp;    private String productId;
+&nbsp;    @NotBlank(message = &quot;Username is required&quot;)
+&nbsp;    @Size(min = 3, max = 20, message = &quot;Username must be between 3 and 20 characters&quot;)
+&nbsp;    @Pattern(regexp = &quot;^[a-zA-Z0-9_]+$&quot;, message = &quot;Username can only contain letters, numbers, and underscores&quot;)
+&nbsp;    private String userName;
 &nbsp;
-&nbsp;    @NotNull(message = &quot;Quantity is required&quot;)
-&nbsp;    @Min(value = 0, message = &quot;Quantity must be 0 or greater (0 removes the item)&quot;)
-&nbsp;    private Integer quantity;
+&nbsp;    @NotBlank(message = &quot;Password is required&quot;)
+&nbsp;    @Size(min = 8, max = 100, message = &quot;Password must be between 8 and 100 characters&quot;)
+&nbsp;    @Pattern(regexp = &quot;^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$&quot;, message = &quot;Password must contain at least one lowercase letter, one uppercase letter, and one digit&quot;)
+&nbsp;    private String password;
+&nbsp;
+&nbsp;    @NotBlank(message = &quot;First name is required&quot;)
+&nbsp;    @Size(min = 1, max = 50, message = &quot;First name must be between 1 and 50 characters&quot;)
+&nbsp;    private String firstName;
+&nbsp;
+&nbsp;    @NotBlank(message = &quot;Last name is required&quot;)
+&nbsp;    @Size(min = 1, max = 50, message = &quot;Last name must be between 1 and 50 characters&quot;)
+&nbsp;    private String lastName;
+&nbsp;
+&nbsp;    @NotBlank(message = &quot;Email is required&quot;)
+&nbsp;    @Email(message = &quot;Please provide a valid email address&quot;)
+&nbsp;    @Size(max = 100, message = &quot;Email must not exceed 100 characters&quot;)
+&nbsp;    private String email;
 &nbsp;}
 </code>
 </pre>
@@ -88,7 +103,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

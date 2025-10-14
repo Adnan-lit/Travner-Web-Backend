@@ -50,6 +50,7 @@ public class PublicController {
                     .email(createdUser.getEmail())
                     .bio(createdUser.getBio())
                     .location(createdUser.getLocation())
+                    .roles(createdUser.getRoles())
                     .build();
 
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -80,6 +81,7 @@ public class PublicController {
                     .lastName(user.getLastName())
                     .bio(user.getBio())
                     .location(user.getLocation())
+                    .roles(user.getRoles())
                     .build();
 
             return ResponseEntity.ok(ApiResponse.success(userSummary));

@@ -5,7 +5,7 @@
 <html id="htmlId">
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
-  <title>Coverage Report > MessageResponse</title>
+  <title>Coverage Report > CreateConversationRequest</title>
   <style type="text/css">
     @import "../../css/coverage.css";
     @import "../../css/idea.min.css";
@@ -22,19 +22,16 @@ Current scope:     <a href="../../index.html">all classes</a>
     <a href="../index.html">org.adnan.travner.dto.chat</a>
 </div>
 
-<h1>Coverage Summary for Class: MessageResponse (org.adnan.travner.dto.chat)</h1>
+<h1>Coverage Summary for Class: CreateConversationRequest (org.adnan.travner.dto.chat)</h1>
 
 <table class="coverageStats">
-
 <tr>
   <th class="name">Class</th>
 </tr>
-  <tr>
-    <td class="name">MessageResponse$MessageAttachmentResponse</td>
-  </tr>
 <tr>
-  <td class="name"><strong>Total</strong></td>
+  <td class="name">CreateConversationRequest</td>
 </tr>
+
 </table>
 
 <br/>
@@ -48,47 +45,30 @@ Current scope:     <a href="../../index.html">all classes</a>
 &nbsp;import lombok.Builder;
 &nbsp;import lombok.Data;
 &nbsp;import lombok.NoArgsConstructor;
-&nbsp;import org.adnan.travner.domain.message.Message;
+&nbsp;import org.adnan.travner.domain.conversation.Conversation;
 &nbsp;
-&nbsp;import java.time.Instant;
+&nbsp;import jakarta.validation.constraints.NotNull;
+&nbsp;import jakarta.validation.constraints.Size;
 &nbsp;import java.util.List;
 &nbsp;
 &nbsp;/**
-&nbsp; * Response DTO for message information
+&nbsp; * Request DTO for creating a new conversation
 &nbsp; */
 &nbsp;@Data
 &nbsp;@NoArgsConstructor
 &nbsp;@AllArgsConstructor
 &nbsp;@Builder
-&nbsp;public class MessageResponse {
+&nbsp;public class CreateConversationRequest {
 &nbsp;
-&nbsp;    private String id;
-&nbsp;    private String conversationId;
-&nbsp;    private String senderId;
-&nbsp;    private String senderName;
-&nbsp;    private Message.MessageKind kind;
-&nbsp;    private String content;
-&nbsp;    private List&lt;MessageAttachmentResponse&gt; attachments;
-&nbsp;    private String replyToMessageId;
-&nbsp;    private MessageResponse replyToMessage; // For displaying the original message in replies
-&nbsp;    private Instant sentAt;
-&nbsp;    private Instant editedAt;
-&nbsp;    private boolean isEdited;
-&nbsp;    private List&lt;String&gt; readByUserIds;
-&nbsp;    private int readCount;
+&nbsp;    @NotNull(message = &quot;Conversation type is required&quot;)
+&nbsp;    private Conversation.ConversationType type;
 &nbsp;
-&nbsp;    @Data
-&nbsp;    @NoArgsConstructor
-&nbsp;    @AllArgsConstructor
-&nbsp;    @Builder
-&nbsp;    public static class MessageAttachmentResponse {
-&nbsp;        private String mediaId;
-&nbsp;        private String fileName;
-&nbsp;        private String contentType;
-&nbsp;        private long fileSize;
-&nbsp;        private String downloadUrl;
-&nbsp;        private String caption;
-&nbsp;    }
+&nbsp;    @NotNull(message = &quot;Member IDs are required&quot;)
+&nbsp;    @Size(min = 1, max = 50, message = &quot;Conversation must have between 1 and 50 members&quot;)
+&nbsp;    private List&lt;String&gt; memberIds;
+&nbsp;
+&nbsp;    @Size(max = 100, message = &quot;Title must not exceed 100 characters&quot;)
+&nbsp;    private String title; // Required for GROUP conversations
 &nbsp;}
 </code>
 </pre>
@@ -113,7 +93,7 @@ Current scope:     <a href="../../index.html">all classes</a>
 
 <div class="footer">
     
-    <div style="float:right;">generated on 2025-10-08 15:15</div>
+    <div style="float:right;">generated on 2025-10-09 15:10</div>
 </div>
 </body>
 </html>

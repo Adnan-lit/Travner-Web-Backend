@@ -49,7 +49,15 @@ Travner is a comprehensive travel blog and experience sharing platform that allo
 
 ## Authentication
 
-**ALL protected endpoints use Basic Authentication consistently.**
+**Travner uses HTTP Basic Authentication for all protected endpoints.**
+
+Unlike token-based authentication systems, there is no separate login/signin endpoint. Instead, you include your credentials with every request using the Authorization header.
+
+### How Authentication Works
+
+1. **Register** a new account using `/api/public/register`
+2. **Authenticate** by including your username and password in the `Authorization` header for protected endpoints
+3. The server validates credentials on each request
 
 ```
 Authorization: Basic <base64-encoded-credentials>
@@ -62,15 +70,89 @@ Where `<base64-encoded-credentials>` is the Base64 encoding of `username:passwor
 - **USER**: Standard user role, can manage own content
 - **ADMIN**: Administrative role, can manage all users and content
 
-### Example
+### Authentication Example
 
 ```bash
+# Step 1: Register a new user
+curl -X POST http://localhost:8080/api/public/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userName": "john",
+    "password": "password123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john@example.com"
+  }'
+
+# Step 2: Create Base64 credentials
 # For username 'john' and password 'password123'
 echo -n 'john:password123' | base64
 # Result: am9objpwYXNzd29yZDEyMw==
 
-# Use in requests:
-curl -H "Authorization: Basic am9objpwYXNzd29yZDEyMw==" http://localhost:8080/api/user/profile
+# Step 3: Use credentials in protected requests
+curl -H "Authorization: Basic am9objpwYXNzd29yZDEyMw==" \
+  http://localhost:8080/api/user/profile
+```
+
+### Authentication in Different Clients
+
+#### JavaScript/Fetch API
+```javascript
+const username = 'john';
+const password = 'password123';
+const credentials = btoa(`${username}:${password}`);
+
+fetch('http://localhost:8080/api/user/profile', {
+  headers: {
+    'Authorization': `Basic ${credentials}`
+  }
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+#### Postman
+1. Go to the **Authorization** tab
+2. Select **Basic Auth** from the Type dropdown
+3. Enter your **Username** and **Password**
+4. Postman will automatically encode and send the credentials
+
+#### cURL
+```bash
+# Option 1: Using -u flag (automatic encoding)
+curl -u john:password123 http://localhost:8080/api/user/profile
+
+# Option 2: Manual header (requires pre-encoded credentials)
+curl -H "Authorization: Basic am9objpwYXNzd29yZDEyMw==" \
+  http://localhost:8080/api/user/profile
+```
+
+### Important Notes
+
+- **No session tokens**: Each request must include credentials
+- **HTTPS recommended**: Always use HTTPS in production to protect credentials
+- **No separate login endpoint**: Authentication happens automatically with each request
+- **No logout needed**: Simply stop sending credentials
+- **Password security**: Passwords are securely hashed using BCrypt in the database
+
+### Authentication Errors
+
+**401 Unauthorized** - Invalid credentials or missing Authorization header
+```json
+{
+  "success": false,
+  "message": "Authentication required",
+  "timestamp": "2025-10-12T10:30:00.000Z"
+}
+```
+
+**403 Forbidden** - Valid credentials but insufficient permissions
+```json
+{
+  "success": false,
+  "message": "Access denied",
+  "timestamp": "2025-10-12T10:30:00.000Z"
+}
 ```
 
 ---
@@ -314,14 +396,94 @@ Content-Type: application/json
 }
 ```
 
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Post created successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1a1",
+    "title": "Amazing Trip to Paris",
+    "content": "Detailed travel experience...",
+    "location": "Paris, France",
+    "tags": ["travel", "europe", "culture"],
+    "authorId": "507f1f77bcf86cd799439011",
+    "authorUsername": "john_traveler",
+    "published": true,
+    "upvotes": 0,
+    "downvotes": 0,
+    "createdAt": "2025-10-11T10:30:00.000Z",
+    "updatedAt": "2025-10-11T10:30:00.000Z"
+  }
+}
+```
+
 ### Get All Published Posts
 ```http
 GET /api/posts?page=0&size=10&sortBy=createdAt&direction=desc
 ```
 
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
+- `sortBy` (optional, default: createdAt) - Field to sort by
+- `direction` (optional, default: desc) - Sort direction (asc or desc)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Posts retrieved successfully",
+  "data": [
+    {
+      "id": "60d5ec49f1b2c8b1f8e4e1a1",
+      "title": "Amazing Trip to Paris",
+      "content": "Detailed travel experience...",
+      "location": "Paris, France",
+      "tags": ["travel", "europe", "culture"],
+      "authorUsername": "john_traveler",
+      "upvotes": 15,
+      "downvotes": 2,
+      "commentCount": 8,
+      "createdAt": "2025-10-11T10:30:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 0,
+    "size": 10,
+    "totalElements": 150,
+    "totalPages": 15,
+    "first": true,
+    "last": false
+  }
+}
+```
+
 ### Get Post by ID
 ```http
 GET /api/posts/{postId}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1a1",
+    "title": "Amazing Trip to Paris",
+    "content": "Detailed travel experience...",
+    "location": "Paris, France",
+    "tags": ["travel", "europe", "culture"],
+    "authorId": "507f1f77bcf86cd799439011",
+    "authorUsername": "john_traveler",
+    "published": true,
+    "upvotes": 15,
+    "downvotes": 2,
+    "commentCount": 8,
+    "createdAt": "2025-10-11T10:30:00.000Z",
+    "updatedAt": "2025-10-11T10:30:00.000Z"
+  }
+}
 ```
 
 ### Update Post
@@ -339,13 +501,17 @@ Content-Type: application/json
 }
 ```
 
+**Note:** Only the post author can update their own posts.
+
 ### Delete Post
 ```http
 DELETE /api/posts/{postId}
 Authorization: Basic <credentials>
 ```
 
-### Vote on Post
+**Note:** Only the post author can delete their own posts (admins can delete any post via admin endpoint).
+
+### Vote on Post (Unified Endpoint)
 ```http
 POST /api/posts/{postId}/vote
 Authorization: Basic <credentials>
@@ -356,9 +522,66 @@ Content-Type: application/json
 }
 ```
 
+**Request Body:**
+- `isUpvote` (required, boolean) - `true` for upvote, `false` for downvote
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Post upvoted successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1a1",
+    "title": "Amazing Trip to Paris",
+    "upvotes": 16,
+    "downvotes": 2
+  }
+}
+```
+
+### Upvote Post (Alternative Endpoint)
+```http
+POST /api/posts/{postId}/upvote
+Authorization: Basic <credentials>
+```
+
+### Downvote Post (Alternative Endpoint)
+```http
+POST /api/posts/{postId}/downvote
+Authorization: Basic <credentials>
+```
+
 ### Search Posts
 ```http
 GET /api/posts/search?query=paris&page=0&size=10
+```
+
+**Query Parameters:**
+- `query` (required) - Search term (searches in title, content, location, and tags)
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Posts found",
+  "data": [
+    {
+      "id": "60d5ec49f1b2c8b1f8e4e1a1",
+      "title": "Amazing Trip to Paris",
+      "content": "Travel experience in Paris...",
+      "location": "Paris, France",
+      "tags": ["travel", "europe", "culture"]
+    }
+  ],
+  "pagination": {
+    "page": 0,
+    "size": 10,
+    "totalElements": 25,
+    "totalPages": 3
+  }
+}
 ```
 
 ### Get Posts by Location
@@ -366,15 +589,41 @@ GET /api/posts/search?query=paris&page=0&size=10
 GET /api/posts/location/{location}?page=0&size=10
 ```
 
+**Path Parameters:**
+- `location` (required) - Location name (can be partial match, e.g., "Paris" matches "Paris, France")
+
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
+
+**Example:**
+```bash
+curl http://localhost:8080/api/posts/location/Paris?page=0&size=10
+```
+
 ### Get Posts by Tags
 ```http
 GET /api/posts/tags?tags=travel,europe&page=0&size=10
 ```
 
+**Query Parameters:**
+- `tags` (required) - Comma-separated list of tags
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
+
+**Note:** Returns posts that have ANY of the specified tags.
+
 ### Get User's Posts
 ```http
 GET /api/posts/user/{username}?page=0&size=10
 ```
+
+**Path Parameters:**
+- `username` (required) - Username of the post author
+
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
 
 ---
 
@@ -434,9 +683,69 @@ Content-Type: application/json
 GET /api/market/products?page=0&size=10&sortBy=createdAt&direction=desc
 ```
 
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
+- `sortBy` (optional, default: createdAt) - Field to sort by (createdAt, price, name)
+- `direction` (optional, default: desc) - Sort direction (asc or desc)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Products retrieved successfully",
+  "data": [
+    {
+      "id": "60d5ec49f1b2c8b1f8e4e1b1",
+      "name": "Travel Backpack",
+      "description": "High-quality travel backpack...",
+      "price": 89.99,
+      "category": "accessories",
+      "stockQuantity": 50,
+      "location": "New York",
+      "tags": ["travel", "backpack", "accessories"],
+      "images": ["image1.jpg", "image2.jpg"],
+      "sellerId": "507f1f77bcf86cd799439011",
+      "sellerUsername": "john_traveler",
+      "isAvailable": true,
+      "createdAt": "2025-10-11T10:30:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 0,
+    "size": 10,
+    "totalElements": 320,
+    "totalPages": 32
+  }
+}
+```
+
 ### Get Product by ID
 ```http
 GET /api/market/products/{productId}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1b1",
+    "name": "Travel Backpack",
+    "description": "High-quality travel backpack with multiple compartments...",
+    "price": 89.99,
+    "category": "accessories",
+    "stockQuantity": 50,
+    "location": "New York",
+    "tags": ["travel", "backpack", "accessories"],
+    "images": ["image1.jpg", "image2.jpg"],
+    "sellerId": "507f1f77bcf86cd799439011",
+    "sellerUsername": "john_traveler",
+    "isAvailable": true,
+    "createdAt": "2025-10-11T10:30:00.000Z",
+    "updatedAt": "2025-10-11T10:30:00.000Z"
+  }
+}
 ```
 
 ### Create Product
@@ -457,6 +766,23 @@ Content-Type: application/json
 }
 ```
 
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Product created successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1b1",
+    "name": "Travel Backpack",
+    "price": 89.99,
+    "sellerId": "507f1f77bcf86cd799439011",
+    "sellerUsername": "john_traveler",
+    "isAvailable": true,
+    "createdAt": "2025-10-11T10:30:00.000Z"
+  }
+}
+```
+
 ### Update Product
 ```http
 PUT /api/market/products/{productId}
@@ -471,20 +797,41 @@ Content-Type: application/json
 }
 ```
 
+**Note:** Only the product seller can update their own products.
+
 ### Delete Product
 ```http
 DELETE /api/market/products/{productId}
 Authorization: Basic <credentials>
 ```
 
+**Note:** Only the product seller can delete their own products (admins can delete any product via admin endpoint).
+
 ### Search Products
 ```http
 GET /api/market/products/search?query=backpack&page=0&size=10
 ```
 
+**Query Parameters:**
+- `query` (required) - Search term (searches in name, description, category, and tags)
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
+
 ### Get Products by Category
 ```http
 GET /api/market/products/category/{category}?page=0&size=10
+```
+
+**Path Parameters:**
+- `category` (required) - Category name (e.g., "accessories", "books", "gear")
+
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
+
+**Example:**
+```bash
+curl http://localhost:8080/api/market/products/category/accessories?page=0&size=10
 ```
 
 ### Get Products by Location
@@ -492,15 +839,34 @@ GET /api/market/products/category/{category}?page=0&size=10
 GET /api/market/products/location/{location}?page=0&size=10
 ```
 
+**Path Parameters:**
+- `location` (required) - Location name (can be partial match)
+
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
+
 ### Get Products by Tags
 ```http
 GET /api/market/products/tags?tags=travel,accessories&page=0&size=10
 ```
 
+**Query Parameters:**
+- `tags` (required) - Comma-separated list of tags
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
+
 ### Get Seller's Products
 ```http
 GET /api/market/products/seller/{sellerId}?page=0&size=10
 ```
+
+**Path Parameters:**
+- `sellerId` (required) - Seller's user ID or username
+
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 10) - Page size
 
 ---
 
@@ -512,6 +878,35 @@ GET /api/cart
 Authorization: Basic <credentials>
 ```
 
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Cart retrieved successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1c1",
+    "userId": "john_traveler",
+    "items": [
+      {
+        "productId": "60d5ec49f1b2c8b1f8e4e1b1",
+        "productName": "Travel Backpack",
+        "unitPrice": 89.99,
+        "quantity": 2,
+        "subtotal": 179.98,
+        "sellerId": "507f1f77bcf86cd799439011",
+        "sellerName": "seller_username",
+        "productImage": "image1.jpg",
+        "addedAt": "2025-10-11T10:30:00.000Z"
+      }
+    ],
+    "totalAmount": 179.98,
+    "totalItems": 2,
+    "createdAt": "2025-10-11T09:00:00.000Z",
+    "updatedAt": "2025-10-11T10:30:00.000Z"
+  }
+}
+```
+
 ### Add Item to Cart
 ```http
 POST /api/cart/items
@@ -519,10 +914,41 @@ Authorization: Basic <credentials>
 Content-Type: application/json
 
 {
-  "productId": "product123",
+  "productId": "60d5ec49f1b2c8b1f8e4e1b1",
   "quantity": 2
 }
 ```
+
+**Request Body:**
+- `productId` (required, string) - ID of the product to add
+- `quantity` (required, integer) - Quantity to add (must be greater than 0)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Item added to cart successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1c1",
+    "userId": "john_traveler",
+    "items": [
+      {
+        "productId": "60d5ec49f1b2c8b1f8e4e1b1",
+        "productName": "Travel Backpack",
+        "quantity": 2,
+        "subtotal": 179.98
+      }
+    ],
+    "totalAmount": 179.98,
+    "totalItems": 2
+  }
+}
+```
+
+**Error Cases:**
+- Product not found (404)
+- Product not available (400)
+- Insufficient stock (400)
 
 ### Update Cart Item Quantity
 ```http
@@ -535,35 +961,121 @@ Content-Type: application/json
 }
 ```
 
+**Path Parameters:**
+- `productId` (required) - ID of the product in the cart
+
+**Request Body:**
+- `quantity` (required, integer) - New quantity (0 to remove the item, >0 to update)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Cart item updated successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1c1",
+    "userId": "john_traveler",
+    "items": [
+      {
+        "productId": "60d5ec49f1b2c8b1f8e4e1b1",
+        "productName": "Travel Backpack",
+        "quantity": 3,
+        "subtotal": 269.97
+      }
+    ],
+    "totalAmount": 269.97,
+    "totalItems": 3
+  }
+}
+```
+
+**Note:** Setting quantity to 0 removes the item from the cart.
+
 ### Remove Item from Cart
 ```http
 DELETE /api/cart/items/{productId}
 Authorization: Basic <credentials>
 ```
 
+**Path Parameters:**
+- `productId` (required) - ID of the product to remove
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Item removed from cart successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1c1",
+    "userId": "john_traveler",
+    "items": [],
+    "totalAmount": 0.00,
+    "totalItems": 0
+  }
+}
+```
+
 ### Clear Cart
 ```http
-DELETE /api/cart
+DELETE /api/cart/clear
 Authorization: Basic <credentials>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Cart cleared successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1c1",
+    "userId": "john_traveler",
+    "items": [],
+    "totalAmount": 0.00,
+    "totalItems": 0
+  }
+}
+```
+
+### Get Cart Item Count
+```http
+GET /api/cart/count
+Authorization: Basic <credentials>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Cart item count retrieved successfully",
+  "data": 5
+}
 ```
 
 ### Checkout Cart
 ```http
 POST /api/cart/checkout
 Authorization: Basic <credentials>
-Content-Type: application/json
+```
 
+**Response:**
+```json
 {
-  "shippingAddress": {
-    "street": "123 Main St",
-    "city": "New York",
-    "state": "NY",
-    "zipCode": "10001",
-    "country": "USA"
-  },
-  "paymentMethod": "credit_card"
+  "success": true,
+  "message": "Checkout successful",
+  "data": {
+    "message": "Order placed successfully",
+    "totalAmount": 269.97,
+    "itemCount": 3
+  }
 }
 ```
+
+**Error Cases:**
+- Cart is empty (400)
+- Product no longer available (400)
+- Insufficient stock (400)
+
+**Note:** This is a simplified checkout endpoint. In production, you would typically send shipping address and payment information in the request body.
 
 ---
 
@@ -571,8 +1083,41 @@ Content-Type: application/json
 
 ### Get User's Conversations
 ```http
-GET /api/conversations
+GET /api/conversations?page=0&size=20
 Authorization: Basic <credentials>
+```
+
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 20) - Page size
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Conversations retrieved successfully",
+  "data": [
+    {
+      "id": "60d5ec49f1b2c8b1f8e4e1d1",
+      "type": "DIRECT",
+      "name": null,
+      "participants": [
+        {
+          "userId": "507f1f77bcf86cd799439011",
+          "username": "john_traveler"
+        },
+        {
+          "userId": "507f1f77bcf86cd799439012",
+          "username": "jane_explorer"
+        }
+      ],
+      "lastMessage": "Hello! How are you?",
+      "lastMessageAt": "2025-10-11T10:30:00.000Z",
+      "unreadCount": 2,
+      "createdAt": "2025-10-10T09:00:00.000Z"
+    }
+  ]
+}
 ```
 
 ### Start New Conversation
@@ -582,15 +1127,84 @@ Authorization: Basic <credentials>
 Content-Type: application/json
 
 {
-  "participantUsername": "other_user"
+  "type": "DIRECT",
+  "memberIds": ["jane_explorer"]
 }
 ```
+
+**Request Body:**
+- `type` (required, string) - Conversation type: "DIRECT" or "GROUP"
+- `memberIds` (required, array) - Array of usernames or user IDs to add to conversation
+- `name` (optional, string) - Group name (required for GROUP type)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Conversation created successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1d1",
+    "type": "DIRECT",
+    "participants": [
+      {
+        "userId": "507f1f77bcf86cd799439011",
+        "username": "john_traveler"
+      },
+      {
+        "userId": "507f1f77bcf86cd799439012",
+        "username": "jane_explorer"
+      }
+    ],
+    "createdAt": "2025-10-11T10:30:00.000Z"
+  }
+}
+```
+
+**Note:** For DIRECT conversations, if a conversation already exists between the users, it will return the existing conversation instead of creating a new one.
 
 ### Get Conversation Messages
 ```http
 GET /api/conversations/{conversationId}/messages?page=0&size=20
 Authorization: Basic <credentials>
 ```
+
+**Path Parameters:**
+- `conversationId` (required) - ID of the conversation
+
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 20) - Page size
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Messages retrieved successfully",
+  "data": [
+    {
+      "id": "60d5ec49f1b2c8b1f8e4e1e1",
+      "conversationId": "60d5ec49f1b2c8b1f8e4e1d1",
+      "senderId": "507f1f77bcf86cd799439011",
+      "senderUsername": "john_traveler",
+      "kind": "TEXT",
+      "body": "Hello! How are you?",
+      "attachments": [],
+      "replyTo": null,
+      "createdAt": "2025-10-11T10:30:00.000Z",
+      "readBy": [
+        {
+          "userId": "507f1f77bcf86cd799439011",
+          "readAt": "2025-10-11T10:30:00.000Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Error Cases:**
+- Conversation not found (404)
+- User not a member of conversation (403)
 
 ### Send Message
 ```http
@@ -599,14 +1213,63 @@ Authorization: Basic <credentials>
 Content-Type: application/json
 
 {
-  "content": "Hello! How are you?"
+  "content": "Hello! How are you?",
+  "kind": "TEXT",
+  "replyToMessageId": null,
+  "attachments": []
 }
 ```
 
-### Mark Message as Read
+**Path Parameters:**
+- `conversationId` (required) - ID of the conversation
+
+**Request Body:**
+- `content` (required, string) - Message text content
+- `kind` (optional, string, default: "TEXT") - Message type: "TEXT", "IMAGE", "FILE", etc.
+- `replyToMessageId` (optional, string) - ID of message being replied to
+- `attachments` (optional, array) - Array of attachment objects with mediaId and caption
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Message sent successfully",
+  "data": {
+    "id": "60d5ec49f1b2c8b1f8e4e1e1",
+    "conversationId": "60d5ec49f1b2c8b1f8e4e1d1",
+    "senderId": "507f1f77bcf86cd799439011",
+    "senderUsername": "john_traveler",
+    "kind": "TEXT",
+    "body": "Hello! How are you?",
+    "createdAt": "2025-10-11T10:30:00.000Z"
+  }
+}
+```
+
+**Error Cases:**
+- Conversation not found (404)
+- User not a member of conversation (403)
+- Empty message content (400)
+
+### Mark Messages as Read
 ```http
-PUT /api/messages/{messageId}/read
+PUT /api/conversations/{conversationId}/read?lastReadMessageId={messageId}
 Authorization: Basic <credentials>
+```
+
+**Path Parameters:**
+- `conversationId` (required) - ID of the conversation
+
+**Query Parameters:**
+- `lastReadMessageId` (optional) - ID of the last message read (marks all messages up to this one as read)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Messages marked as read",
+  "data": null
+}
 ```
 
 ---
@@ -623,282 +1286,28 @@ GET /api/admin/users?page=0&size=20&sortBy=createdAt&direction=desc
 Authorization: Basic <admin-credentials>
 ```
 
-#### Get User by Username
-```http
-GET /api/admin/users/{username}
-Authorization: Basic <admin-credentials>
-```
-
-#### Create Admin User
-```http
-POST /api/admin/users
-Authorization: Basic <admin-credentials>
-Content-Type: application/json
-
-{
-  "userName": "new_admin",
-  "password": "securePassword123",
-  "firstName": "Admin",
-  "lastName": "User",
-  "email": "admin@example.com"
-}
-```
-
-#### Update User Roles
-```http
-PUT /api/admin/users/{username}/roles
-Authorization: Basic <admin-credentials>
-Content-Type: application/json
-
-{
-  "roles": ["USER", "ADMIN"]
-}
-```
-
-#### Set User Status
-```http
-PUT /api/admin/users/{username}/status
-Authorization: Basic <admin-credentials>
-Content-Type: application/json
-
-{
-  "active": false
-}
-```
-
-#### Delete User
-```http
-DELETE /api/admin/users/{username}
-Authorization: Basic <admin-credentials>
-```
-
-#### Reset User Password
-```http
-PUT /api/admin/users/{username}/password
-Authorization: Basic <admin-credentials>
-Content-Type: application/json
-
-{
-  "password": "newPassword123"
-}
-```
-
-#### Promote User to Admin
-```http
-POST /api/admin/users/{username}/promote
-Authorization: Basic <admin-credentials>
-```
-
-#### Get Users by Role
-```http
-GET /api/admin/users/role/{role}
-Authorization: Basic <admin-credentials>
-```
-
-### Content Management
-
-#### Get All Posts (including unpublished)
-```http
-GET /api/admin/posts?page=0&size=20&sortBy=createdAt&direction=desc
-Authorization: Basic <admin-credentials>
-```
-
-#### Delete Any Post
-```http
-DELETE /api/admin/posts/{postId}
-Authorization: Basic <admin-credentials>
-```
-
-#### Get All Products
-```http
-GET /api/admin/products?page=0&size=20&sortBy=createdAt&direction=desc
-Authorization: Basic <admin-credentials>
-```
-
-#### Delete Any Product
-```http
-DELETE /api/admin/products/{productId}
-Authorization: Basic <admin-credentials>
-```
-
-### Statistics
-
-#### Get System Statistics
-```http
-GET /api/admin/statistics
-Authorization: Basic <admin-credentials>
-```
+**Query Parameters:**
+- `page` (optional, default: 0) - Zero-based page index
+- `size` (optional, default: 20) - Page size
+- `sortBy` (optional, default: createdAt) - Field to sort by
+- `direction` (optional, default: desc) - Sort direction (asc or desc)
 
 **Response:**
 ```json
 {
   "success": true,
-  "data": {
-    "users": {
-      "total": 1250,
-      "admins": 5,
-      "regular": 1245,
-      "activeUsers": 1250
-    },
-    "content": {
-      "totalPosts": 850,
-      "totalProducts": 320,
-      "totalComments": 2150,
-      "availableProducts": 298
-    },
-    "timestamp": 1728384600000,
-    "serverTime": "2025-10-08T10:30:00"
-  }
+  "message": "Users retrieved successfully",
+  "data": [
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "userName": "john_traveler",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john@example.com",
+      "roles": ["USER"],
+      "active": true,
+      "createdAt": "2025-10-01T10:00:00.000Z"
+    }
+  ]
 }
 ```
-
----
-
-## Media Management APIs
-
-### Upload Media
-```http
-POST /api/media/upload
-Authorization: Basic <credentials>
-Content-Type: multipart/form-data
-
-file: [binary file]
-type: post (optional, default: general)
-entityId: post123 (optional)
-```
-
-### Get Media File by Filename
-```http
-GET /api/media/files/{filename}
-```
-
-### Get Media for Post
-```http
-GET /api/media/posts/{postId}
-```
-
-### Get Media File by ID
-```http
-GET /api/media/{mediaId}
-```
-
-### Delete Media
-```http
-DELETE /api/media/{mediaId}
-Authorization: Basic <credentials>
-```
-
----
-
-## WebSocket Chat
-
-### Connect to WebSocket
-```javascript
-const socket = new WebSocket('ws://localhost:8080/chat');
-
-// Send message
-socket.send(JSON.stringify({
-  type: 'CHAT',
-  content: 'Hello everyone!',
-  sender: 'username'
-}));
-
-// Receive messages
-socket.onmessage = function(event) {
-  const message = JSON.parse(event.data);
-  console.log('Received:', message);
-};
-```
-
-### Message Types
-- `JOIN` - User joins chat
-- `LEAVE` - User leaves chat  
-- `CHAT` - Regular chat message
-
----
-
-## Examples
-
-### Complete User Journey Example
-
-1. **Register a new user:**
-```bash
-curl -X POST http://localhost:8080/api/public/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userName": "travel_explorer",
-    "password": "securePass123",
-    "firstName": "Alex",
-    "lastName": "Smith",
-    "email": "alex@example.com",
-    "bio": "Love exploring new places",
-    "location": "San Francisco"
-  }'
-```
-
-2. **Create a travel post:**
-```bash
-curl -X POST http://localhost:8080/api/posts \
-  -H "Authorization: Basic dHJhdmVsX2V4cGxvcmVyOnNlY3VyZVBhc3MxMjM=" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Amazing Weekend in Tokyo",
-    "content": "Just returned from an incredible weekend in Tokyo...",
-    "location": "Tokyo, Japan",
-    "tags": ["travel", "japan", "culture", "food"],
-    "published": true
-  }'
-```
-
-3. **Upload photos for the post:**
-```bash
-curl -X POST http://localhost:8080/api/media/upload \
-  -H "Authorization: Basic dHJhdmVsX2V4cGxvcmVyOnNlY3VyZVBhc3MxMjM=" \
-  -F "file=@tokyo_photo.jpg" \
-  -F "type=post" \
-  -F "entityId=POST_ID_FROM_STEP_2"
-```
-
-4. **Add a product to marketplace:**
-```bash
-curl -X POST http://localhost:8080/api/market/products \
-  -H "Authorization: Basic dHJhdmVsX2V4cGxvcmVyOnNlY3VyZVBhc3MxMjM=" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Vintage Tokyo Travel Guide",
-    "description": "Rare vintage guide with insider tips",
-    "price": 29.99,
-    "category": "books",
-    "stockQuantity": 1,
-    "location": "San Francisco",
-    "tags": ["tokyo", "travel", "guide", "vintage"]
-  }'
-```
-
-5. **Get system statistics (admin only):**
-```bash
-curl -X GET http://localhost:8080/api/admin/statistics \
-  -H "Authorization: Basic YWRtaW46YWRtaW5QYXNzd29yZA=="
-```
-
----
-
-## Rate Limiting
-
-Currently, no rate limiting is implemented, but it's recommended for production deployment.
-
-## CORS Configuration
-
-CORS is configured to allow all origins (`*`) for development. For production, configure specific allowed origins.
-
-## Security Considerations
-
-1. **HTTPS**: Use HTTPS in production
-2. **Password Policy**: Implement strong password requirements
-3. **Session Management**: Consider implementing session tokens for web clients
-4. **Input Validation**: All inputs are validated server-side
-5. **SQL Injection**: Using MongoDB with proper query construction prevents injection attacks
-
----
-
-*Last updated: October 8, 2025*
