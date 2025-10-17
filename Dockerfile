@@ -4,14 +4,14 @@ FROM openjdk:21-jdk-slim
 # Set working directory
 WORKDIR /app
 
-# Install Maven
+# Install Maven and curl for health checks
 RUN apt-get update && \
-    apt-get install -y maven && \
+    apt-get install -y maven curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy Maven wrapper and pom.xml first for better caching
-COPY mvnw mvnw.cmd pom.xml ./
+COPY mvnw pom.xml ./
 
 # Make Maven wrapper executable
 RUN chmod +x ./mvnw

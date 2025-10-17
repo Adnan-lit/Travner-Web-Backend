@@ -1,8 +1,5 @@
-# Maven
+# Maven build output
 target/
-.mvn/
-mvnw
-mvnw.cmd
 
 # IDE
 .idea/
@@ -26,16 +23,11 @@ logs/
 
 # Git
 .git/
-.gitignore
 
 # Documentation
 *.md
 docs/
 
-# Test files
-src/test/
-
-# Build artifacts
-*.jar
+# Build artifacts (but keep the JAR we build)
 *.war
 *.ear
