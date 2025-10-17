@@ -68,19 +68,19 @@ public class OrderService {
 
         // Create shipping address
         OrderEntry.ShippingAddress shippingAddress = OrderEntry.ShippingAddress.builder()
-                .fullName(request.getFullName())
-                .addressLine1(request.getAddressLine1())
-                .addressLine2(request.getAddressLine2())
-                .city(request.getCity())
-                .state(request.getState())
-                .zipCode(request.getZipCode())
-                .country(request.getCountry())
-                .phoneNumber(request.getPhoneNumber())
+                .fullName(request.getShippingAddress().getFullName())
+                .addressLine1(request.getShippingAddress().getAddressLine1())
+                .addressLine2(request.getShippingAddress().getAddressLine2())
+                .city(request.getShippingAddress().getCity())
+                .state(request.getShippingAddress().getState())
+                .zipCode(request.getShippingAddress().getZipCode())
+                .country(request.getShippingAddress().getCountry())
+                .phoneNumber(request.getShippingAddress().getPhoneNumber())
                 .build();
 
         // Create payment info
         OrderEntry.PaymentInfo paymentInfo = OrderEntry.PaymentInfo.builder()
-                .paymentMethod(request.getPaymentMethod())
+                .paymentMethod(request.getPaymentInfo().getPaymentMethod())
                 .paymentStatus(OrderEntry.PaymentStatus.PENDING)
                 .build();
 
@@ -139,7 +139,7 @@ public class OrderService {
             throw new RuntimeException("User not found: " + username);
         }
 
-        OrderEntry order = orderRepository.findByIdAndUserId(orderId, username)
+        OrderEntry order = orderRepository.findByIdAndUserId(new org.bson.types.ObjectId(orderId), username)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
         return convertToDTO(order);
@@ -179,7 +179,7 @@ public class OrderService {
             throw new RuntimeException("User not found: " + username);
         }
 
-        OrderEntry order = orderRepository.findByIdAndUserId(orderId, username)
+        OrderEntry order = orderRepository.findByIdAndUserId(new org.bson.types.ObjectId(orderId), username)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
         // Only allow cancellation for PENDING and CONFIRMED orders
@@ -212,7 +212,7 @@ public class OrderService {
      */
     private OrderDTO convertToDTO(OrderEntry order) {
         return OrderDTO.builder()
-                .id(order.getId())
+                .id(order.getId().toString())
                 .orderNumber(order.getOrderNumber())
                 .userId(order.getUserId())
                 .userEmail(order.getUserEmail())
@@ -227,6 +227,10 @@ public class OrderService {
                 .orderedAt(order.getOrderedAt())
                 .updatedAt(order.getUpdatedAt())
                 .deliveredAt(order.getDeliveredAt())
+                .paidAt(order.getPaidAt())
+                .fulfilledAt(order.getFulfilledAt())
+                .cancelledAt(order.getCancelledAt())
+                .cancelledBy(order.getCancelledBy())
                 .notes(order.getNotes())
                 .build();
     }
@@ -256,6 +260,115 @@ public class OrderService {
                 .country(address.getCountry())
                 .phoneNumber(address.getPhoneNumber())
                 .build();
+    }
+
+    /**
+     * Pay for an order
+     */
+    @Transactional
+    public OrderDTO payOrder(String username, String orderId) {
+        log.debug("Paying order {} for user: {}", orderId, username);
+
+        UserEntry user = userRepository.findByuserName(username);
+        if (user == null) {
+            throw new RuntimeException("User not found: " + username);
+        }
+
+        OrderEntry order = orderRepository.findByIdAndUserId(new org.bson.types.ObjectId(orderId), username)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if (!order.getStatus().equals(OrderEntry.OrderStatus.PENDING)) {
+            throw new RuntimeException("Order cannot be paid. Current status: " + order.getStatus());
+        }
+
+        order.setStatus(OrderEntry.OrderStatus.PAID);
+        order.setPaidAt(java.time.LocalDateTime.now());
+        
+        if (order.getPaymentInfo() != null) {
+            order.getPaymentInfo().setPaymentStatus(OrderEntry.PaymentStatus.COMPLETED);
+            order.getPaymentInfo().setPaidAt(java.time.LocalDateTime.now());
+        }
+
+        orderRepository.save(order);
+        log.info("Order {} paid successfully by user: {}", orderId, username);
+
+        return convertToDTO(order);
+    }
+
+    /**
+     * Fulfill an order (seller action)
+     */
+    @Transactional
+    public OrderDTO fulfillOrder(String username, String orderId) {
+        log.debug("Fulfilling order {} for user: {}", orderId, username);
+
+        UserEntry user = userRepository.findByuserName(username);
+        if (user == null) {
+            throw new RuntimeException("User not found: " + username);
+        }
+
+        OrderEntry order = orderRepository.findById(new org.bson.types.ObjectId(orderId))
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if (!order.getStatus().equals(OrderEntry.OrderStatus.PAID)) {
+            throw new RuntimeException("Order cannot be fulfilled. Current status: " + order.getStatus());
+        }
+
+        order.setStatus(OrderEntry.OrderStatus.FULFILLED);
+        order.setFulfilledAt(java.time.LocalDateTime.now());
+        orderRepository.save(order);
+        
+        log.info("Order {} fulfilled successfully by user: {}", orderId, username);
+        return convertToDTO(order);
+    }
+
+    /**
+     * Get all orders (admin only)
+     */
+    public List<OrderDTO> getAllOrders() {
+        log.debug("Getting all orders");
+
+        List<OrderEntry> orders = orderRepository.findAll();
+        return orders.stream()
+                .map(this::convertToDTO)
+                .toList();
+    }
+
+    /**
+     * Admin cancel order
+     */
+    @Transactional
+    public OrderDTO adminCancelOrder(String adminUsername, String orderId) {
+        log.debug("Admin cancelling order {} by user: {}", orderId, adminUsername);
+
+        UserEntry admin = userRepository.findByuserName(adminUsername);
+        if (admin == null) {
+            throw new RuntimeException("Admin user not found: " + adminUsername);
+        }
+
+        // Check if user is admin
+        if (admin.getRoles() == null || !admin.getRoles().contains("ADMIN")) {
+            throw new RuntimeException("Only administrators can cancel orders");
+        }
+
+        OrderEntry order = orderRepository.findById(new org.bson.types.ObjectId(orderId))
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if (order.getStatus().equals(OrderEntry.OrderStatus.CANCELLED)) {
+            throw new RuntimeException("Order is already cancelled");
+        }
+
+        if (order.getStatus().equals(OrderEntry.OrderStatus.FULFILLED) || order.getStatus().equals(OrderEntry.OrderStatus.DELIVERED)) {
+            throw new RuntimeException("Cannot cancel fulfilled or delivered order");
+        }
+
+        order.setStatus(OrderEntry.OrderStatus.CANCELLED);
+        order.setCancelledAt(java.time.LocalDateTime.now());
+        order.setCancelledBy(adminUsername);
+        orderRepository.save(order);
+        
+        log.info("Order {} cancelled by admin: {}", orderId, adminUsername);
+        return convertToDTO(order);
     }
 
     private OrderDTO.PaymentInfoDTO convertPaymentInfoToDTO(OrderEntry.PaymentInfo paymentInfo) {

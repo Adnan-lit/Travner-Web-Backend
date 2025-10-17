@@ -1,6 +1,7 @@
 package org.adnan.travner.repository;
 
 import org.adnan.travner.entry.ProductEntry;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -11,7 +12,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Repository
-public interface ProductRepository extends MongoRepository<ProductEntry, String> {
+public interface ProductRepository extends MongoRepository<ProductEntry, ObjectId> {
 
     /**
      * Find all available products

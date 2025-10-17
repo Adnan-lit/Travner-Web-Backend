@@ -4,8 +4,26 @@ spring:
 
   data:
     mongodb:
-      uri: ${MONGODB_URI}
+      uri: ${MONGODB_URI:mongodb://localhost:27017}
       database: ${MONGODB_DATABASE:TravnerDB}
+      auto-index-creation: false  # Disable auto-index creation to prevent startup issues
+      # Connection pool settings optimized for production
+      options:
+        max-connections-per-host: ${MONGO_MAX_CONNECTIONS:50}
+        min-connections-per-host: ${MONGO_MIN_CONNECTIONS:5}
+        max-wait-time: ${MONGO_MAX_WAIT_TIME:30000}
+        connect-timeout: ${MONGO_CONNECT_TIMEOUT:10000}
+        socket-timeout: ${MONGO_SOCKET_TIMEOUT:30000}
+        server-selection-timeout: ${MONGO_SERVER_SELECTION_TIMEOUT:30000}
+        # Production-ready settings
+        ssl: true
+        ssl-invalid-hostname-allowed: false
+        retry-writes: true
+        retry-reads: true
+        # Connection resilience
+        max-connection-idle-time: 60000
+        max-connection-life-time: 0
+        heartbeat-frequency: 10000
   servlet:
     multipart:
       max-file-size: 20MB
@@ -22,12 +40,12 @@ app:
   upload:
     dir: ${APP_UPLOAD_DIR:${user.home}/travner-uploads}
 
-  # CORS Configuration
+  # CORS Configuration - Allow all origins
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000,https://travner.vercel.app}
+    allowed-origins: "*"
     allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
     allowed-headers: "*"
-    allow-credentials: true
+    allow-credentials: false
 
   # Chat Configuration
   chat:
@@ -77,14 +95,23 @@ info:
 
 logging:
   level:
-    org.adnan.travner: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.data.mongodb: DEBUG
+    org.adnan.travner: ${LOG_LEVEL:INFO}
+    org.springframework.security: ${SECURITY_LOG_LEVEL:WARN}
+    org.springframework.data.mongodb: ${MONGO_LOG_LEVEL:WARN}
+    org.springframework.web: ${WEB_LOG_LEVEL:WARN}
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_FILE_PATH:logs/travner.log}
+    max-size: 10MB
+    max-history: 30
 
+# Security configuration - use environment variables in production
 security:
   user:
-    name: admin
-    password: admin123
+    name: ${ADMIN_USERNAME:admin}
+    password: ${ADMIN_PASSWORD:admin123}
     roles: ADMIN
+
+
+

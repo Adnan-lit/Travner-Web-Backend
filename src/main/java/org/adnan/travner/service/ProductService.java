@@ -37,7 +37,7 @@ public class ProductService {
      * Get product by ID
      */
     public Optional<ProductDTO> getProductById(String id) {
-        Optional<ProductEntry> product = productRepository.findById(id);
+        Optional<ProductEntry> product = productRepository.findById(new org.bson.types.ObjectId(id));
         return product.map(this::convertToDTO);
     }
 
@@ -83,7 +83,7 @@ public class ProductService {
     }
 
     /**
-     * Create a new product
+     * Create a new product (Admin only)
      */
     @Transactional
     public ProductDTO createProduct(String username, ProductRequest request) {
@@ -91,6 +91,11 @@ public class ProductService {
         UserEntry user = userRepository.findByuserName(username);
         if (user == null) {
             throw new RuntimeException("User not found: " + username);
+        }
+        
+        // Check if user has admin role
+        if (user.getRoles() == null || !user.getRoles().contains("ADMIN")) {
+            throw new RuntimeException("Only administrators can create products");
         }
 
         ProductEntry product = new ProductEntry();
@@ -118,17 +123,21 @@ public class ProductService {
     }
 
     /**
-     * Update an existing product
+     * Update an existing product (Admin only)
      */
     @Transactional
     public ProductDTO updateProduct(String productId, String username, ProductRequest request) {
-        ProductEntry product = productRepository.findById(productId)
+        ProductEntry product = productRepository.findById(new org.bson.types.ObjectId(productId))
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
 
-        // Check if user is the seller
+        // Check if user is admin
         UserEntry user = userRepository.findByuserName(username);
-        if (user == null || !product.getSellerId().equals(user.getId().toString())) {
-            throw new RuntimeException("Unauthorized to update this product");
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+        
+        if (user.getRoles() == null || !user.getRoles().contains("ADMIN")) {
+            throw new RuntimeException("Only administrators can update products");
         }
 
         product.setName(request.getName());
@@ -148,11 +157,11 @@ public class ProductService {
     }
 
     /**
-     * Delete a product (supports admin deletion)
+     * Delete a product (Admin only)
      */
     @Transactional
     public void deleteProduct(String productId, String username) {
-        ProductEntry product = productRepository.findById(productId)
+        ProductEntry product = productRepository.findById(new org.bson.types.ObjectId(productId))
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
 
         UserEntry user = userRepository.findByuserName(username);
@@ -160,12 +169,10 @@ public class ProductService {
             throw new RuntimeException("User not found");
         }
 
-        // Check if user is the seller OR an admin
-        boolean isOwner = product.getSellerId().equals(user.getId().toString());
-        boolean isAdmin = user.getRoles().contains("ADMIN");
-
-        if (!isOwner && !isAdmin) {
-            throw new RuntimeException("Unauthorized to delete this product");
+        // Check if user is admin
+        boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
+        if (!isAdmin) {
+            throw new RuntimeException("Only administrators can delete products");
         }
 
         // Soft delete by marking as unavailable
@@ -195,7 +202,7 @@ public class ProductService {
      */
     private ProductDTO convertToDTO(ProductEntry product) {
         return ProductDTO.builder()
-                .id(product.getId())
+                .id(product.getId().toString())
                 .name(product.getName())
                 .description(product.getDescription())
                 .price(product.getPrice())

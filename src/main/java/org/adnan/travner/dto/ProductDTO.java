@@ -1,14 +1,17 @@
 package org.adnan.travner.dto;
 
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * DTO for product data
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,7 +20,7 @@ public class ProductDTO {
     private String id;
     private String name;
     private String description;
-    private BigDecimal price;  // Fixed: Changed from Double to BigDecimal to match ProductEntry
+    private BigDecimal price;
     private String category;
     private List<String> images;
     private String sellerId;

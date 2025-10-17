@@ -1,26 +1,25 @@
 package org.adnan.travner.dto;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Request DTO for updating cart item quantity
+ * Request DTO for updating cart items
  */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class UpdateCartItemRequest {
-
-    @NotBlank(message = "Product ID is required")
+    
+    @NotNull(message = "Product ID is required")
     private String productId;
-
+    
     @NotNull(message = "Quantity is required")
-    @Min(value = 0, message = "Quantity must be 0 or greater (0 removes the item)")
+    @PositiveOrZero(message = "Quantity must be 0 or positive")
     private Integer quantity;
 }

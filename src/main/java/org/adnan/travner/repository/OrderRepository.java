@@ -1,6 +1,7 @@
 package org.adnan.travner.repository;
 
 import org.adnan.travner.entry.OrderEntry;
+import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,7 +12,7 @@ import java.util.Optional;
  * Repository for Order operations
  */
 @Repository
-public interface OrderRepository extends MongoRepository<OrderEntry, String> {
+public interface OrderRepository extends MongoRepository<OrderEntry, ObjectId> {
 
     /**
      * Find all orders for a user
@@ -26,7 +27,7 @@ public interface OrderRepository extends MongoRepository<OrderEntry, String> {
     /**
      * Find order by ID and user ID
      */
-    Optional<OrderEntry> findByIdAndUserId(String id, String userId);
+    Optional<OrderEntry> findByIdAndUserId(ObjectId id, String userId);
 
     /**
      * Find orders by status for a user

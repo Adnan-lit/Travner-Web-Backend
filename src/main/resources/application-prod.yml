@@ -1,0 +1,116 @@
+spring:
+  application:
+    name: travner
+
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+      database: ${MONGODB_DATABASE:TravnerDB}
+      auto-index-creation: false  # Disable for production stability
+      # Production connection pool settings
+      options:
+        max-connections-per-host: ${MONGO_MAX_CONNECTIONS:50}
+        min-connections-per-host: ${MONGO_MIN_CONNECTIONS:5}
+        max-wait-time: ${MONGO_MAX_WAIT_TIME:30000}
+        connect-timeout: ${MONGO_CONNECT_TIMEOUT:10000}
+        socket-timeout: ${MONGO_SOCKET_TIMEOUT:30000}
+        server-selection-timeout: ${MONGO_SERVER_SELECTION_TIMEOUT:30000}
+        # Production-ready settings
+        ssl: true
+        ssl-invalid-hostname-allowed: false
+        retry-writes: true
+        retry-reads: true
+        # Connection resilience
+        max-connection-idle-time: 60000
+        max-connection-life-time: 0
+        heartbeat-frequency: 10000
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /
+
+app:
+  upload:
+    dir: ${APP_UPLOAD_DIR:/app/uploads}
+
+  # CORS Configuration for production - Allow all origins
+  cors:
+    allowed-origins: "*"
+    allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: false
+
+  # Chat Configuration
+  chat:
+    message:
+      max-length: ${CHAT_MESSAGE_MAX_LENGTH:4000}
+      max-attachments: ${CHAT_MESSAGE_MAX_ATTACHMENTS:5}
+    rate-limit:
+      messages-per-minute: ${CHAT_RATE_LIMIT_MESSAGES:60}
+      typing-cooldown-seconds: ${CHAT_TYPING_COOLDOWN:2}
+    broker:
+      type: ${CHAT_BROKER_TYPE:simple}
+      relay-host: ${CHAT_RELAY_HOST:localhost}
+      relay-port: ${CHAT_RELAY_PORT:61613}
+      relay-login: ${CHAT_RELAY_LOGIN:guest}
+      relay-passcode: ${CHAT_RELAY_PASSCODE:guest}
+
+# Production actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: always
+    info:
+      enabled: true
+  info:
+    env:
+      enabled: false  # Disable in production for security
+    java:
+      enabled: true
+    os:
+      enabled: false  # Disable in production for security
+
+# Application info for actuator
+info:
+  app:
+    name: Travner API
+    description: Travel blog and experience sharing platform
+    version: 1.0.0
+    encoding: "@project.build.sourceEncoding@"
+    java:
+      version: "@java.version@"
+
+# Production logging configuration
+logging:
+  level:
+    org.adnan.travner: ${LOG_LEVEL:WARN}
+    org.springframework.security: ${SECURITY_LOG_LEVEL:WARN}
+    org.springframework.data.mongodb: ${MONGO_LOG_LEVEL:WARN}
+    org.springframework.web: ${WEB_LOG_LEVEL:WARN}
+    org.springframework.boot: WARN
+    org.springframework: WARN
+    root: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_FILE_PATH:/app/logs/travner.log}
+    max-size: 50MB
+    max-history: 7
+
+# Production security configuration
+security:
+  user:
+    name: ${ADMIN_USERNAME}
+    password: ${ADMIN_PASSWORD}
+    roles: ADMIN

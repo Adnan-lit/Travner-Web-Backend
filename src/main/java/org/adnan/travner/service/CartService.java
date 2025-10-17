@@ -220,7 +220,7 @@ public class CartService {
      */
     private CartDTO convertToDTO(CartEntry cart) {
         return CartDTO.builder()
-                .id(cart.getId())
+                .id(cart.getId().toString())
                 .userId(cart.getUserId())
                 .items(cart.getItems().stream()
                         .map(this::convertItemToDTO)

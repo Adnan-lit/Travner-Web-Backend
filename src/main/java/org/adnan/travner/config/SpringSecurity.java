@@ -52,6 +52,11 @@ public class SpringSecurity {
                         .requestMatchers(HttpMethod.GET, "/api/posts/*/comments/**").permitAll()
                         // Backward-compat comment path (if present in docs/Postman)
                         .requestMatchers(HttpMethod.GET, "/api/comments/posts/**").permitAll()
+                        
+                        // Public location-based features (read-only) - GET requests only
+                        .requestMatchers(HttpMethod.GET, "/api/itineraries", "/api/itineraries/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/travel-buddies", "/api/travel-buddies/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/local-guides", "/api/local-guides/**").permitAll()
 
                         // Public marketplace access (read-only) - GET requests only
                         .requestMatchers(HttpMethod.GET, "/api/market/products").permitAll()
@@ -101,6 +106,17 @@ public class SpringSecurity {
                         .requestMatchers("/api/chat/conversations/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/messages/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/media/upload").hasAnyRole("USER", "ADMIN")
+                        
+                        // Location-based features - require authentication for write operations
+                        .requestMatchers(HttpMethod.POST, "/api/itineraries").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/itineraries/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/itineraries/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/travel-buddies").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/travel-buddies/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/travel-buddies/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/local-guides").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/local-guides/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/local-guides/**").hasAnyRole("USER", "ADMIN")
 
                         // All other requests require authentication
                         .anyRequest().authenticated()

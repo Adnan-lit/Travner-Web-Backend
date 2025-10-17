@@ -10,24 +10,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * DTO for cart data transfer
+ * DTO for cart data
  */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class CartDTO {
     private String id;
     private String userId;
     private List<CartItemDTO> items;
     private BigDecimal totalAmount;
-    private int totalItems;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private int totalItems;
 
-    /**
-     * DTO for individual cart items
-     */
     @Data
     @Builder
     @NoArgsConstructor

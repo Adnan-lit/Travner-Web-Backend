@@ -1,44 +1,49 @@
 package org.adnan.travner.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
-import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Request DTO for creating/updating products
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ProductRequest {
-
+    
     @NotBlank(message = "Product name is required")
-    @Size(min = 3, max = 100, message = "Product name must be between 3 and 100 characters")
+    @Size(max = 200, message = "Product name must not exceed 200 characters")
     private String name;
-
-    @NotBlank(message = "Product description is required")
-    @Size(min = 10, max = 1000, message = "Product description must be between 10 and 1000 characters")
+    
+    @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
-
+    
     @NotNull(message = "Price is required")
-    @DecimalMin(value = "0.01", message = "Price must be greater than 0")
-    @Digits(integer = 10, fraction = 2, message = "Invalid price format")
+    @Positive(message = "Price must be positive")
     private BigDecimal price;
-
+    
     @NotBlank(message = "Category is required")
-    @Size(max = 50, message = "Category name cannot exceed 50 characters")
     private String category;
-
+    
     private List<String> images;
-
+    
     @NotNull(message = "Stock quantity is required")
-    @Min(value = 0, message = "Stock quantity cannot be negative")
+    @Positive(message = "Stock quantity must be positive")
     private Integer stockQuantity;
-
-    @NotBlank(message = "Location is required")
-    @Size(max = 100, message = "Location cannot exceed 100 characters")
+    
+    @Builder.Default
+    private Boolean isAvailable = true;
+    
     private String location;
-
     private List<String> tags;
 }

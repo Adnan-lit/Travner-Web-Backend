@@ -81,6 +81,7 @@ public class PublicController {
                     .lastName(user.getLastName())
                     .bio(user.getBio())
                     .location(user.getLocation())
+                    .profileImageUrl(user.getProfileImageUrl())
                     .roles(user.getRoles())
                     .build();
 

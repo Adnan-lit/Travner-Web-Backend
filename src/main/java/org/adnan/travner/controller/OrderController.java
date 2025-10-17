@@ -19,7 +19,7 @@ import java.util.List;
  */
 @RestController
 @CrossOrigin(origins = "*", maxAge = 3600)
-@RequestMapping("/api/orders")
+@RequestMapping("/api/market/orders")
 @RequiredArgsConstructor
 @Slf4j
 public class OrderController {
@@ -169,6 +169,94 @@ public class OrderController {
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             log.error("Unexpected error cancelling order {} for user: {}", orderId, authentication.getName(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to cancel order"));
+        }
+    }
+
+
+    /**
+     * Pay for an order
+     */
+    @PostMapping("/{orderId}/pay")
+    public ResponseEntity<ApiResponse<OrderDTO>> payOrder(
+            Authentication authentication,
+            @PathVariable String orderId) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
+            }
+
+            OrderDTO order = orderService.payOrder(authentication.getName(), orderId);
+            return ResponseEntity.ok(ApiResponse.success("Order paid successfully", order));
+        } catch (Exception e) {
+            log.error("Error paying order {} for user: {}", orderId, authentication.getName(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to pay order"));
+        }
+    }
+
+    /**
+     * Fulfill an order (seller action)
+     */
+    @PostMapping("/{orderId}/fulfill")
+    public ResponseEntity<ApiResponse<OrderDTO>> fulfillOrder(
+            Authentication authentication,
+            @PathVariable String orderId) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
+            }
+
+            OrderDTO order = orderService.fulfillOrder(authentication.getName(), orderId);
+            return ResponseEntity.ok(ApiResponse.success("Order fulfilled successfully", order));
+        } catch (Exception e) {
+            log.error("Error fulfilling order {} for user: {}", orderId, authentication.getName(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to fulfill order"));
+        }
+    }
+
+    /**
+     * Get all orders (admin only)
+     */
+    @GetMapping("/admin")
+    public ResponseEntity<ApiResponse<List<OrderDTO>>> getAllOrders(
+            Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
+            }
+
+            List<OrderDTO> orders = orderService.getAllOrders();
+            return ResponseEntity.ok(ApiResponse.success("Orders retrieved successfully", orders));
+        } catch (Exception e) {
+            log.error("Error retrieving all orders for user: {}", authentication.getName(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve orders"));
+        }
+    }
+
+    /**
+     * Admin cancel order
+     */
+    @PostMapping("/{orderId}/admin-cancel")
+    public ResponseEntity<ApiResponse<OrderDTO>> adminCancelOrder(
+            Authentication authentication,
+            @PathVariable String orderId) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required"));
+            }
+
+            OrderDTO order = orderService.adminCancelOrder(authentication.getName(), orderId);
+            return ResponseEntity.ok(ApiResponse.success("Order cancelled by admin successfully", order));
+        } catch (Exception e) {
+            log.error("Error admin cancelling order {} for user: {}", orderId, authentication.getName(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to cancel order"));
         }

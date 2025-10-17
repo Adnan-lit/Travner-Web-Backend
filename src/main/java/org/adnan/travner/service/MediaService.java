@@ -71,6 +71,7 @@ public class MediaService {
         if ("post".equals(type) && entityId != null) {
             validatePostOwnership(entityId, user);
         }
+        // For product uploads, no additional validation needed beyond authentication
 
         try {
             // Get file metadata and sanitize filename
@@ -92,7 +93,8 @@ public class MediaService {
             metadata.put("uploadedAt", LocalDateTime.now().toString());
 
             // Store file in GridFS
-            ObjectId gridFsId = gridFsTemplate.store(file.getInputStream(), uniqueFilename, file.getContentType(), metadata);
+            ObjectId gridFsId = gridFsTemplate.store(file.getInputStream(), uniqueFilename, file.getContentType(),
+                    metadata);
 
             // Create MediaEntry record
             MediaEntry mediaEntry = MediaEntry.builder()
@@ -108,6 +110,31 @@ public class MediaService {
                     .build();
 
             MediaEntry savedMedia = mediaRepository.save(mediaEntry);
+
+            // If this is a post media, associate it with the post
+            if ("post".equals(type) && entityId != null) {
+                try {
+                    ObjectId postObjectId = new ObjectId(entityId);
+                    savedMedia.setPostId(postObjectId);
+                    mediaRepository.save(savedMedia);
+
+                    // Also update the post's mediaUrls list
+                    Optional<PostEntry> postOptional = postRepository.findById(postObjectId);
+                    if (postOptional.isPresent()) {
+                        PostEntry post = postOptional.get();
+                        String mediaUrl = "/api/media/" + savedMedia.getId();
+
+                        if (post.getMediaUrls() == null) {
+                            post.setMediaUrls(new java.util.ArrayList<>());
+                        }
+
+                        post.getMediaUrls().add(mediaUrl);
+                        postRepository.save(post);
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not associate media with post {}: {}", entityId, e.getMessage());
+                }
+            }
 
             // Return DTO with file URL
             return MediaDTO.builder()
@@ -153,7 +180,8 @@ public class MediaService {
 
         PostEntry post = postOptional.get();
         if (!post.getAuthor().getId().equals(user.getId())) {
-            throw new RuntimeException("You are not authorized to upload media to this post. You must be the post author.");
+            throw new RuntimeException(
+                    "You are not authorized to upload media to this post. You must be the post author.");
         }
     }
 
@@ -193,7 +221,7 @@ public class MediaService {
                 .map(media -> {
                     MediaDTO dto = convertToDTO(media);
                     // Generate URL for accessing the file
-                    dto.setDownloadUrl("/posts/" + postId + "/media/" + media.getId()); // Fix: Change from setFileUrl to setDownloadUrl
+                    dto.setDownloadUrl("/api/media/" + media.getId());
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -218,11 +246,17 @@ public class MediaService {
         GridFsResource resource = gridFsOperations.getResource(gridFSFile);
 
         // Set the appropriate content type
-        MediaType mediaType = MediaType.parseMediaType(media.getContentType()); // Fix: Change from getFileType to getContentType
+        MediaType mediaType = MediaType.parseMediaType(media.getContentType()); // Fix: Change from getFileType to
+                                                                                // getContentType
 
         return ResponseEntity.ok()
                 .contentType(mediaType)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + media.getFilename() + "\"") // Fix: Change from getFileName to getFilename
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + media.getFilename() + "\"") // Fix:
+                                                                                                                 // Change
+                                                                                                                 // from
+                                                                                                                 // getFileName
+                                                                                                                 // to
+                                                                                                                 // getFilename
                 .body(new InputStreamResource(resource.getInputStream()));
     }
 
@@ -260,12 +294,13 @@ public class MediaService {
             // Continue with deletion from database even if GridFS deletion fails
         }
 
-        // Fix: Only try to update post if postId exists (may be null for non-post media)
+        // Fix: Only try to update post if postId exists (may be null for non-post
+        // media)
         if (media.getPostId() != null) {
             Optional<PostEntry> postOptional = postRepository.findById(media.getPostId());
             if (postOptional.isPresent()) {
                 PostEntry post = postOptional.get();
-                String mediaUrl = "/posts/" + post.getId() + "/media/" + media.getId();
+                String mediaUrl = "/api/media/" + media.getId();
                 if (post.getMediaUrls() != null) {
                     post.getMediaUrls().remove(mediaUrl);
                     postRepository.save(post);
@@ -280,6 +315,7 @@ public class MediaService {
         return MediaDTO.builder()
                 .id(media.getId().toString())
                 .filename(media.getFilename()) // Fix: Change from fileName to filename
+                .originalFilename(media.getOriginalFilename())
                 .contentType(media.getContentType()) // Fix: Change from fileType to contentType
                 .size(media.getSize()) // Fix: Change from fileSize to size
                 .uploadedBy(media.getUploadedBy()) // Fix: Use uploadedBy instead of uploaderId

@@ -11,14 +11,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * DTO for order information
+ * DTO for order data
  */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class OrderDTO {
-
     private String id;
     private String orderNumber;
     private String userId;
@@ -32,6 +31,10 @@ public class OrderDTO {
     private LocalDateTime orderedAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deliveredAt;
+    private LocalDateTime paidAt;
+    private LocalDateTime fulfilledAt;
+    private LocalDateTime cancelledAt;
+    private String cancelledBy;
     private String notes;
 
     @Data
@@ -75,4 +78,3 @@ public class OrderDTO {
         private LocalDateTime paidAt;
     }
 }
-

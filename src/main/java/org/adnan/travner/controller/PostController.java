@@ -5,6 +5,8 @@ import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.PostDTO;
 import org.adnan.travner.dto.PostRequest;
 import org.adnan.travner.service.PostService;
+import org.adnan.travner.service.MediaService;
+import org.adnan.travner.dto.MediaDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -29,6 +32,7 @@ import java.util.Optional;
 public class PostController {
 
     private final PostService postService;
+    private final MediaService mediaService;
 
     /**
      * Get all published posts with pagination and sorting
@@ -180,7 +184,7 @@ public class PostController {
     }
 
     /**
-     * Create a new post
+     * Create a new post with optional media files
      * 
      * @param authentication User authentication
      * @param postRequest    Post data
@@ -257,6 +261,65 @@ public class PostController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Failed to delete post: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Upload media files directly associated with a post
+     * 
+     * @param authentication User authentication
+     * @param postId         Post ID
+     * @param files          Media files to upload
+     * @return List of uploaded media details
+     */
+    @PostMapping("/{postId}/media")
+    public ResponseEntity<ApiResponse<List<MediaDTO>>> uploadPostMedia(
+            Authentication authentication,
+            @PathVariable String postId,
+            @RequestParam("files") MultipartFile[] files) {
+
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Authentication required"));
+        }
+
+        if (files == null || files.length == 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("No files provided"));
+        }
+
+        try {
+            // Upload each file and collect results
+            List<MediaDTO> uploadedMedia = new java.util.ArrayList<>();
+            for (MultipartFile file : files) {
+                if (!file.isEmpty()) {
+                    MediaDTO media = mediaService.uploadMedia(file, authentication.getName(), "post", postId);
+                    uploadedMedia.add(media);
+                }
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Media uploaded successfully", uploadedMedia));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to upload media: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all media associated with a post
+     * 
+     * @param postId Post ID
+     * @return List of media associated with the post
+     */
+    @GetMapping("/{postId}/media")
+    public ResponseEntity<ApiResponse<List<MediaDTO>>> getPostMedia(@PathVariable String postId) {
+        try {
+            List<MediaDTO> media = mediaService.getMediaForPost(postId);
+            return ResponseEntity.ok(ApiResponse.success(media));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve media: " + e.getMessage()));
         }
     }
 

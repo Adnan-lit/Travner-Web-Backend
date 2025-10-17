@@ -3,7 +3,11 @@ package org.adnan.travner.entry;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -15,10 +19,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "products")
+@CompoundIndexes({
+    @CompoundIndex(def = "{'category': 1, 'isAvailable': 1, 'createdAt': -1}"),
+    @CompoundIndex(def = "{'location': 1, 'isAvailable': 1, 'createdAt': -1}"),
+    @CompoundIndex(def = "{'tags': 1, 'isAvailable': 1, 'createdAt': -1}"),
+    @CompoundIndex(def = "{'sellerId': 1, 'isAvailable': 1, 'createdAt': -1}")
+})
 public class ProductEntry {
 
     @Id
-    private String id;
+    private ObjectId id;
 
     @Field("name")
     private String name;
@@ -30,12 +40,14 @@ public class ProductEntry {
     private BigDecimal price;
 
     @Field("category")
+    @Indexed
     private String category;
 
     @Field("images")
     private List<String> images;
 
     @Field("seller_id")
+    @Indexed
     private String sellerId;
 
     @Field("seller_username")
@@ -45,12 +57,15 @@ public class ProductEntry {
     private Integer stockQuantity;
 
     @Field("is_available")
+    @Indexed
     private Boolean isAvailable = true;
 
     @Field("location")
+    @Indexed
     private String location;
 
     @Field("tags")
+    @Indexed
     private List<String> tags;
 
     @Field("created_at")

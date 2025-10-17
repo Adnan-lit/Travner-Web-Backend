@@ -32,4 +32,7 @@ public class PostRequest {
 
     @NotNull(message = "Published status is required")
     private boolean published;
+
+    // Added media IDs to associate uploaded media with the post
+    private List<String> mediaIds;
 }

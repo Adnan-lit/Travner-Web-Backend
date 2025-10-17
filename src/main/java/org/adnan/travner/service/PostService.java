@@ -12,6 +12,8 @@ import org.adnan.travner.repository.CommentRepository;
 import org.adnan.travner.repository.PostRepository;
 import org.adnan.travner.repository.PostVoteRepository;
 import org.adnan.travner.repository.UserRepository;
+import org.adnan.travner.entry.MediaEntry;
+import org.adnan.travner.repository.MediaRepository;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +34,7 @@ public class PostService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final PostVoteRepository postVoteRepository;
+    private final MediaRepository mediaRepository;
 
     @Transactional
     public PostDTO createPost(String username, PostRequest postRequest) {
@@ -56,6 +59,15 @@ public class PostService {
                 .build();
 
         PostEntry savedPost = postRepository.save(post);
+
+        // Associate media with the post if media IDs are provided
+        // This is now part of the same transaction
+        if (postRequest.getMediaIds() != null && !postRequest.getMediaIds().isEmpty()) {
+            List<String> mediaUrls = associateMediaWithPost(postRequest.getMediaIds(), savedPost.getId(), user);
+            savedPost.setMediaUrls(mediaUrls);
+            savedPost = postRepository.save(savedPost);
+        }
+
         return convertToDTO(savedPost, 0);
     }
 
@@ -141,6 +153,20 @@ public class PostService {
         post.setUpdatedAt(LocalDateTime.now());
         post.setPublished(postRequest.isPublished());
 
+        // Handle media association for updated post
+        if (postRequest.getMediaIds() != null) {
+            // Clear existing media associations
+            List<MediaEntry> existingMedia = mediaRepository.findByPostId(post.getId());
+            for (MediaEntry media : existingMedia) {
+                media.setPostId(null);
+                mediaRepository.save(media);
+            }
+
+            // Associate new media
+            List<String> mediaUrls = associateMediaWithPost(postRequest.getMediaIds(), post.getId(), user);
+            post.setMediaUrls(mediaUrls);
+        }
+
         PostEntry updatedPost = postRepository.save(post);
         long commentCount = commentRepository.countByPostId(updatedPost.getId());
         return convertToDTO(updatedPost, commentCount);
@@ -166,6 +192,16 @@ public class PostService {
 
         if (!isAuthor && !isAdmin) {
             throw new RuntimeException("You are not authorized to delete this post");
+        }
+
+        // Delete associated media
+        List<MediaEntry> postMedia = mediaRepository.findByPostId(post.getId());
+        for (MediaEntry media : postMedia) {
+            try {
+                mediaRepository.delete(media);
+            } catch (Exception e) {
+                log.error("Error deleting media {}: {}", media.getId(), e.getMessage());
+            }
         }
 
         // Delete associated votes when deleting post
@@ -243,6 +279,45 @@ public class PostService {
         PostEntry updatedPost = postRepository.save(post);
         long commentCount = commentRepository.countByPostId(updatedPost.getId());
         return convertToDTO(updatedPost, commentCount);
+    }
+
+    /**
+     * Associate media with a post and return media URLs
+     */
+    private List<String> associateMediaWithPost(List<String> mediaIds, ObjectId postId, UserEntry user) {
+        List<String> mediaUrls = new ArrayList<>();
+
+        for (String mediaId : mediaIds) {
+            try {
+                Optional<MediaEntry> mediaOptional = mediaRepository.findById(new ObjectId(mediaId));
+                if (mediaOptional.isPresent()) {
+                    MediaEntry media = mediaOptional.get();
+
+                    // Verify that the user owns this media or is an admin
+                    boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
+                    boolean isOwner = media.getUploadedBy().equals(user.getId().toString());
+
+                    if (isOwner || isAdmin) {
+                        // Associate media with the post
+                        media.setPostId(postId);
+                        mediaRepository.save(media);
+
+                        // Generate media URL
+                        String mediaUrl = "/api/media/" + media.getId();
+                        mediaUrls.add(mediaUrl);
+                    } else {
+                        log.warn("User {} is not authorized to associate media {} with post {}",
+                                user.getUserName(), mediaId, postId);
+                    }
+                } else {
+                    log.warn("Media not found with ID: {}", mediaId);
+                }
+            } catch (Exception e) {
+                log.error("Error associating media {} with post {}: {}", mediaId, postId, e.getMessage());
+            }
+        }
+
+        return mediaUrls;
     }
 
     private PostDTO convertToDTO(PostEntry post, long commentCount) {

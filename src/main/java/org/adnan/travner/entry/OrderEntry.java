@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -23,7 +24,7 @@ import java.util.List;
 public class OrderEntry {
 
     @Id
-    private String id;
+    private ObjectId id;
 
     private String orderNumber;
     private String userId;
@@ -43,6 +44,10 @@ public class OrderEntry {
     private LocalDateTime orderedAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deliveredAt;
+    private LocalDateTime paidAt;
+    private LocalDateTime fulfilledAt;
+    private LocalDateTime cancelledAt;
+    private String cancelledBy;
 
     private String notes;
 
@@ -89,8 +94,10 @@ public class OrderEntry {
 
     public enum OrderStatus {
         PENDING,
+        PAID,
         CONFIRMED,
         PROCESSING,
+        FULFILLED,
         SHIPPED,
         DELIVERED,
         CANCELLED,
