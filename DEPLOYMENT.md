@@ -27,8 +27,13 @@
 
 ## Features
 - ✅ Java 21 with OpenJDK
-- ✅ Maven build process
+- ✅ Maven wrapper with all dependencies
 - ✅ Security with non-root user
 - ✅ Health checks
 - ✅ Optimized Docker layers
 - ✅ Clean repository structure
+
+## Fixed Issues
+- ✅ Maven wrapper files properly included
+- ✅ No missing `.mvn` directory errors
+- ✅ Complete Maven wrapper setup

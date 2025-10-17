@@ -12,6 +12,7 @@ RUN apt-get update && \
 
 # Copy Maven wrapper and pom.xml first for better caching
 COPY mvnw pom.xml ./
+COPY .mvn ./.mvn
 
 # Make Maven wrapper executable
 RUN chmod +x ./mvnw
