@@ -1,6 +1,5 @@
 [phases.setup]
 nixPkgs = ['openjdk21', 'maven']
-nixOverlays = ['https://github.com/nix-community/nixpkgs/archive/master.tar.gz']
 
 [phases.install]
 cmds = [
