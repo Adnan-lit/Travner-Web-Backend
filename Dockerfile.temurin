@@ -1,5 +1,5 @@
-# Multi-stage build for production
-FROM openjdk:21-jdk-alpine as builder
+# Multi-stage build for production using Eclipse Temurin
+FROM eclipse-temurin:21-jdk-alpine as builder
 
 # Set working directory
 WORKDIR /app
@@ -23,7 +23,7 @@ COPY src src
 RUN ./mvnw clean package -DskipTests
 
 # Production stage
-FROM openjdk:21-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 # Install necessary packages
 RUN apk add --no-cache \
