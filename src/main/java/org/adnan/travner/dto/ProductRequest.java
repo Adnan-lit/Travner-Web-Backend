@@ -37,6 +37,8 @@ public class ProductRequest {
     
     private List<String> images;
     
+    private List<String> mediaIds;  // IDs of uploaded media files
+    
     @NotNull(message = "Stock quantity is required")
     @Positive(message = "Stock quantity must be positive")
     private Integer stockQuantity;

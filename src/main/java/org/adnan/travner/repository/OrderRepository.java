@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 /**
  * Repository for Order operations
@@ -33,5 +34,10 @@ public interface OrderRepository extends MongoRepository<OrderEntry, ObjectId> {
      * Find orders by status for a user
      */
     List<OrderEntry> findByUserIdAndStatusOrderByOrderedAtDesc(String userId, OrderEntry.OrderStatus status);
+    
+    // Analytics methods
+    long countByUserId(String userId);
+    long countByOrderedAtAfter(LocalDateTime date);
+    List<OrderEntry> findByOrderedAtAfter(LocalDateTime date);
 }
 

@@ -6,9 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.MediaDTO;
 import org.adnan.travner.entry.MediaEntry;
 import org.adnan.travner.entry.PostEntry;
+import org.adnan.travner.entry.ProductEntry;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.MediaRepository;
 import org.adnan.travner.repository.PostRepository;
+import org.adnan.travner.repository.ProductRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.adnan.travner.util.FileValidationUtil;
 import org.bson.types.ObjectId;
@@ -43,6 +45,7 @@ public class MediaService {
     private final MediaRepository mediaRepository;
     private final UserRepository userRepository;
     private final PostRepository postRepository;
+    private final ProductRepository productRepository;
 
     @Autowired
     private GridFsTemplate gridFsTemplate;
@@ -136,6 +139,32 @@ public class MediaService {
                 }
             }
 
+            // If this is a product media, associate it with the product
+            if ("product".equals(type) && entityId != null) {
+                try {
+                    ObjectId productObjectId = new ObjectId(entityId);
+                    savedMedia.setProductId(productObjectId);
+                    mediaRepository.save(savedMedia);
+
+                    // Also update the product's images list
+                    Optional<ProductEntry> productOptional = productRepository.findById(productObjectId);
+                    if (productOptional.isPresent()) {
+                        ProductEntry product = productOptional.get();
+                        String mediaUrl = "/api/media/" + savedMedia.getId();
+
+                        if (product.getImages() == null) {
+                            product.setImages(new java.util.ArrayList<>());
+                        }
+
+                        product.getImages().add(mediaUrl);
+                        productRepository.save(product);
+                        log.info("Associated media {} with product {}", savedMedia.getId(), entityId);
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not associate media with product {}: {}", entityId, e.getMessage());
+                }
+            }
+
             // Return DTO with file URL
             return MediaDTO.builder()
                     .id(savedMedia.getId().toString())
@@ -221,6 +250,25 @@ public class MediaService {
                 .map(media -> {
                     MediaDTO dto = convertToDTO(media);
                     // Generate URL for accessing the file
+                    dto.setDownloadUrl("/api/media/" + media.getId());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get a list of media files for a specific entity
+     */
+    public List<MediaDTO> getMediaForEntity(String entityId, String type) {
+        List<MediaEntry> mediaEntries;
+        if (type != null && !type.trim().isEmpty()) {
+            mediaEntries = mediaRepository.findByEntityIdAndType(entityId, type);
+        } else {
+            mediaEntries = mediaRepository.findByEntityId(entityId);
+        }
+        return mediaEntries.stream()
+                .map(media -> {
+                    MediaDTO dto = convertToDTO(media);
                     dto.setDownloadUrl("/api/media/" + media.getId());
                     return dto;
                 })

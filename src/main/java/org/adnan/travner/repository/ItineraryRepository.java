@@ -47,9 +47,13 @@ public interface ItineraryRepository extends MongoRepository<ItineraryEntry, Obj
     // Find itineraries by city
     Page<ItineraryEntry> findByDestinationCityContainingIgnoreCaseAndIsPublicTrue(String city, Pageable pageable);
     
-    // Count itineraries by author
-    long countByAuthor_Id(ObjectId authorId);
-    
     // Find most popular itineraries (by likes)
     Page<ItineraryEntry> findByIsPublicTrueOrderByLikesDesc(Pageable pageable);
+    
+    // Analytics methods
+    long countByAuthor_Id(ObjectId authorId);
+    List<ItineraryEntry> findByAuthor_IdAndCreatedAtAfter(ObjectId authorId, LocalDateTime date);
+    List<ItineraryEntry> findByCreatedAtAfter(LocalDateTime date);
+    long countByCreatedAtAfter(LocalDateTime date);
+    List<ItineraryEntry> findTop10ByCreatedAtAfterOrderByViewsDesc(LocalDateTime date);
 }

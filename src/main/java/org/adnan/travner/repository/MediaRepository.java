@@ -13,4 +13,8 @@ public interface MediaRepository extends MongoRepository<MediaEntry, ObjectId> {
     List<MediaEntry> findByUploader_Id(ObjectId uploaderId);
 
     void deleteByPostId(ObjectId postId);
+
+    List<MediaEntry> findByEntityId(String entityId);
+
+    List<MediaEntry> findByEntityIdAndType(String entityId, String type);
 }

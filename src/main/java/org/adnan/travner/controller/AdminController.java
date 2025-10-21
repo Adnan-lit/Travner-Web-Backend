@@ -519,4 +519,351 @@ public class AdminController {
                     .body(ApiResponse.error("Failed to cleanup media URLs: " + e.getMessage()));
         }
     }
+
+    // ===========================================
+    // ENHANCED ADMIN FEATURES
+    // ===========================================
+
+    /**
+     * Get comprehensive dashboard data
+     */
+    @GetMapping("/dashboard")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardData(
+            @RequestParam(defaultValue = "week") String timeframe,
+            Authentication authentication) {
+        
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Admin access required"));
+        }
+
+        try {
+            Map<String, Object> dashboard = new HashMap<>();
+            
+            // User statistics
+            long totalUsers = userRepository.count();
+            long activeUsers = mongoTemplate.count(
+                new Query(Criteria.where("active").is(true)), 
+                UserEntry.class
+            );
+            long newUsersThisWeek = mongoTemplate.count(
+                new Query(Criteria.where("createdAt").gte(java.time.LocalDateTime.now().minusWeeks(1))), 
+                UserEntry.class
+            );
+            
+            // Content statistics
+            long totalPosts = postRepository.count();
+            long totalComments = mongoTemplate.count(new Query(), "comments");
+            long totalItineraries = mongoTemplate.count(new Query(), "itineraries");
+            long totalTravelBuddies = mongoTemplate.count(new Query(), "travelBuddies");
+            
+            // Engagement metrics
+            long totalVotes = mongoTemplate.count(new Query(), "postVotes");
+            long totalChatMessages = mongoTemplate.count(new Query(), "chatMessages");
+            
+            // Marketplace statistics
+            long totalProducts = 0;
+            long totalOrders = 0;
+            double totalRevenue = 0.0;
+            
+            try {
+                totalProducts = productService.getProductCount();
+                totalOrders = mongoTemplate.count(new Query(), "orders");
+                // Calculate total revenue from orders
+                List<org.adnan.travner.entry.OrderEntry> orders = mongoTemplate.findAll(org.adnan.travner.entry.OrderEntry.class);
+                totalRevenue = orders.stream()
+                    .filter(order -> "PAID".equals(order.getStatus().toString()))
+                    .mapToDouble(order -> order.getTotalAmount().doubleValue())
+                    .sum();
+            } catch (Exception e) {
+                log.warn("Could not get marketplace statistics: {}", e.getMessage());
+            }
+            
+            dashboard.put("users", Map.of(
+                "total", totalUsers,
+                "active", activeUsers,
+                "newThisWeek", newUsersThisWeek
+            ));
+            
+            dashboard.put("content", Map.of(
+                "posts", totalPosts,
+                "comments", totalComments,
+                "itineraries", totalItineraries,
+                "travelBuddies", totalTravelBuddies
+            ));
+            
+            dashboard.put("engagement", Map.of(
+                "votes", totalVotes,
+                "chatMessages", totalChatMessages
+            ));
+            
+            dashboard.put("marketplace", Map.of(
+                "products", totalProducts,
+                "orders", totalOrders,
+                "revenue", totalRevenue
+            ));
+            
+            return ResponseEntity.ok(ApiResponse.success("Dashboard data retrieved successfully", dashboard));
+            
+        } catch (Exception e) {
+            log.error("Error getting dashboard data: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to get dashboard data: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get user activity logs
+     */
+    @GetMapping("/users/{username}/activity")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserActivity(
+            @PathVariable String username,
+            @RequestParam(defaultValue = "30") int days,
+            Authentication authentication) {
+        
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Admin access required"));
+        }
+
+        try {
+            java.time.LocalDateTime since = java.time.LocalDateTime.now().minusDays(days);
+            
+            // Get user posts
+            long userPosts = mongoTemplate.count(
+                new Query(Criteria.where("userId").is(username).and("createdAt").gte(since)), 
+                "posts"
+            );
+            
+            // Get user comments
+            long userComments = mongoTemplate.count(
+                new Query(Criteria.where("userId").is(username).and("createdAt").gte(since)), 
+                "comments"
+            );
+            
+            // Get user itineraries
+            long userItineraries = mongoTemplate.count(
+                new Query(Criteria.where("userId").is(username).and("createdAt").gte(since)), 
+                "itineraries"
+            );
+            
+            // Get user travel buddies
+            long userTravelBuddies = mongoTemplate.count(
+                new Query(Criteria.where("userId").is(username).and("createdAt").gte(since)), 
+                "travelBuddies"
+            );
+            
+            // Get user chat messages
+            long userChatMessages = mongoTemplate.count(
+                new Query(Criteria.where("userId").is(username).and("createdAt").gte(since)), 
+                "chatMessages"
+            );
+            
+            Map<String, Object> activity = new HashMap<>();
+            activity.put("posts", userPosts);
+            activity.put("comments", userComments);
+            activity.put("itineraries", userItineraries);
+            activity.put("travelBuddies", userTravelBuddies);
+            activity.put("chatMessages", userChatMessages);
+            activity.put("period", days + " days");
+            
+            return ResponseEntity.ok(ApiResponse.success("User activity retrieved successfully", activity));
+            
+        } catch (Exception e) {
+            log.error("Error getting user activity for {}: {}", username, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to get user activity: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get system health status
+     */
+    @GetMapping("/health")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSystemHealth(Authentication authentication) {
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Admin access required"));
+        }
+
+        try {
+            Map<String, Object> health = new HashMap<>();
+            
+            // Database connectivity
+            boolean dbConnected = true;
+            try {
+                userRepository.count();
+            } catch (Exception e) {
+                dbConnected = false;
+                log.error("Database connection failed: {}", e.getMessage());
+            }
+            
+            // Memory usage
+            Runtime runtime = Runtime.getRuntime();
+            long totalMemory = runtime.totalMemory();
+            long freeMemory = runtime.freeMemory();
+            long usedMemory = totalMemory - freeMemory;
+            double memoryUsagePercent = (double) usedMemory / totalMemory * 100;
+            
+            // System info
+            health.put("database", Map.of(
+                "connected", dbConnected,
+                "status", dbConnected ? "healthy" : "unhealthy"
+            ));
+            
+            health.put("memory", Map.of(
+                "total", totalMemory,
+                "used", usedMemory,
+                "free", freeMemory,
+                "usagePercent", Math.round(memoryUsagePercent * 100.0) / 100.0
+            ));
+            
+            health.put("system", Map.of(
+                "uptime", System.currentTimeMillis() - java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime(),
+                "javaVersion", System.getProperty("java.version"),
+                "osName", System.getProperty("os.name"),
+                "osVersion", System.getProperty("os.version")
+            ));
+            
+            return ResponseEntity.ok(ApiResponse.success("System health retrieved successfully", health));
+            
+        } catch (Exception e) {
+            log.error("Error getting system health: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to get system health: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Bulk user operations
+     */
+    @PostMapping("/users/bulk")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> bulkUserOperations(
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+        
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Admin access required"));
+        }
+
+        try {
+            String operation = (String) request.get("operation");
+            @SuppressWarnings("unchecked")
+            List<String> usernames = (List<String>) request.get("usernames");
+            
+            if (usernames == null || usernames.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Usernames are required"));
+            }
+            
+            int successCount = 0;
+            int failureCount = 0;
+            List<String> errors = new java.util.ArrayList<>();
+            
+            for (String username : usernames) {
+                try {
+                    UserEntry user = userRepository.findByuserName(username);
+                    if (user == null) {
+                        errors.add("User " + username + " not found");
+                        failureCount++;
+                        continue;
+                    }
+                    
+                    switch (operation) {
+                        case "activate":
+                            user.setActive(true);
+                            break;
+                        case "deactivate":
+                            user.setActive(false);
+                            break;
+                        case "delete":
+                            if (user.getRoles() != null && user.getRoles().contains("ADMIN")) {
+                                errors.add("Cannot delete admin user " + username);
+                                failureCount++;
+                                continue;
+                            }
+                            userRepository.delete(user);
+                            break;
+                        default:
+                            errors.add("Invalid operation: " + operation);
+                            failureCount++;
+                            continue;
+                    }
+                    
+                    if (!"delete".equals(operation)) {
+                        userRepository.save(user);
+                    }
+                    
+                    successCount++;
+                    
+                } catch (Exception e) {
+                    errors.add("Error processing " + username + ": " + e.getMessage());
+                    failureCount++;
+                }
+            }
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("operation", operation);
+            result.put("totalProcessed", usernames.size());
+            result.put("successCount", successCount);
+            result.put("failureCount", failureCount);
+            result.put("errors", errors);
+            
+            log.info("Admin {} performed bulk operation {} on {} users: {} success, {} failures", 
+                authentication.getName(), operation, usernames.size(), successCount, failureCount);
+            
+            return ResponseEntity.ok(ApiResponse.success("Bulk operation completed", result));
+            
+        } catch (Exception e) {
+            log.error("Error performing bulk user operation: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to perform bulk operation: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get content moderation queue
+     */
+    @GetMapping("/moderation/queue")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getModerationQueue(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication) {
+        
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Admin access required"));
+        }
+
+        try {
+            // Get posts that might need moderation (reported, flagged, etc.)
+            Query query = new Query(Criteria.where("reported").is(true)
+                .orOperator(
+                    Criteria.where("flagged").is(true),
+                    Criteria.where("moderationStatus").exists(false)
+                ));
+            
+            long totalElements = mongoTemplate.count(query, "posts");
+            
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            query.with(pageable);
+            
+            List<org.adnan.travner.entry.PostEntry> posts = mongoTemplate.find(query, org.adnan.travner.entry.PostEntry.class);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", posts);
+            response.put("totalElements", totalElements);
+            response.put("totalPages", (int) Math.ceil((double) totalElements / size));
+            response.put("currentPage", page);
+            response.put("size", size);
+            
+            return ResponseEntity.ok(ApiResponse.success("Moderation queue retrieved successfully", response));
+            
+        } catch (Exception e) {
+            log.error("Error getting moderation queue: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to get moderation queue: " + e.getMessage()));
+        }
+    }
 }

@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: travner-test
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017
+      database: TravnerTestDB
+      auto-index-creation: false
+
+  profiles:
+    active: test
+
+server:
+  port: 0  # Random port for tests
+
+app:
+  upload:
+    dir: ${java.io.tmpdir}/travner-test-uploads
+
+  # CORS Configuration for tests
+  cors:
+    allowed-origins: "*"
+    allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: false
+
+  # Chat Configuration
+  chat:
+    message:
+      max-length: 4000
+      max-attachments: 5
+    rate-limit:
+      messages-per-minute: 60
+      typing-cooldown-seconds: 2
+    broker:
+      type: simple
+
+# Actuator configuration for tests
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+
+# Logging for tests
+logging:
+  level:
+    org.adnan.travner: DEBUG
+    org.springframework.security: WARN
+    org.springframework.data.mongodb: WARN
+    org.springframework.web: WARN
+    org.mongodb.driver: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

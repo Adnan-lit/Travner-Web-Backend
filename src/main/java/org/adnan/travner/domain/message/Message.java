@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
@@ -16,7 +16,6 @@ import java.util.List;
  * Represents a message in a conversation
  */
 @Document(collection = "messages")
-@CompoundIndex(def = "{'conversationId': 1, 'createdAt': 1}")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,23 +25,32 @@ public class Message {
     @Id
     private ObjectId id;
 
+    @Indexed
     private ObjectId conversationId;
 
+    @Indexed
     private ObjectId senderId;
 
-    private String body;
+    private String senderUsername;
 
     private MessageKind kind;
 
-    private List<MessageAttachment> attachments;
+    private String content;
 
-    private ObjectId replyTo; // Reference to another message
+    private List<Attachment> attachments;
+
+    private ObjectId replyToMessageId;
 
     private Instant createdAt;
 
-    private Instant editedAt;
+    @Indexed
+    private Instant updatedAt;
 
-    private Instant deletedAt; // Soft delete
+    private boolean isEdited;
+
+    private Instant deletedAt;
+
+    private List<ReadReceipt> readBy;
 
     public enum MessageKind {
         TEXT, IMAGE, FILE, SYSTEM
@@ -52,11 +60,22 @@ public class Message {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
-    public static class MessageAttachment {
-        private String id;
-        private String url;
+    public static class Attachment {
+        private String mediaId;
+        private String fileName;
         private String contentType;
-        private long size;
-        private String filename;
+        private Long fileSize;
+        private String downloadUrl;
+        private String caption;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ReadReceipt {
+        private ObjectId userId;
+        private String username;
+        private Instant readAt;
     }
 }

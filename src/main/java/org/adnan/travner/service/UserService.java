@@ -1,17 +1,35 @@
 package org.adnan.travner.service;
 
+import lombok.extern.slf4j.Slf4j;
+import org.adnan.travner.dto.user.ProfileUpdateRequest;
+import org.adnan.travner.dto.user.UserStatsDTO;
+import org.adnan.travner.entry.FollowEntry;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.repository.CommentRepository;
+import org.adnan.travner.repository.FollowRepository;
+import org.adnan.travner.repository.PostRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.bson.types.ObjectId;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.adnan.travner.dto.UserSummaryDTO;
 
 @Service
+@Slf4j
 public class UserService {
 
     @Autowired
@@ -19,6 +37,15 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private FollowRepository followRepository;
+    
+    @Autowired
+    private PostRepository postRepository;
+    
+    @Autowired
+    private CommentRepository commentRepository;
 
 
     public List<UserEntry> getAll() {
@@ -109,11 +136,34 @@ public class UserService {
             if (user == null) {
                 return false;
             }
-            userRepository.delete(user);
-            return true;
+            return deleteUser(user);
         } catch (RuntimeException e) {
             return false;
         }
+    }
+
+    public boolean isUsernameAvailable(String username) {
+        return getByUsername(username) == null;
+    }
+
+    public UserEntry getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    public void updateLastLogin(String username) {
+        UserEntry user = getByUsername(username);
+        if (user != null) {
+            user.setLastLoginAt(java.time.LocalDateTime.now());
+            userRepository.save(user);
+        }
+    }
+
+    public Page<UserEntry> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable);
+    }
+
+    public List<UserEntry> searchUsers(String query) {
+        return userRepository.searchUsers(query, Pageable.unpaged()).getContent();
     }
 
     public boolean updateUserRoles(String username, List<String> roles) {
@@ -254,12 +304,6 @@ public class UserService {
         }
     }
 
-    public boolean isUsernameAvailable(String username) {
-        if (username == null || username.trim().isEmpty()) {
-            return false;
-        }
-        return getByUsername(username.trim()) == null;
-    }
 
     public boolean updateUserPartial(String username, java.util.Map<String, Object> updates) {
         try {
@@ -339,29 +383,7 @@ public class UserService {
         }
     }
 
-    // Method to get user by email (for password reset)
-    public UserEntry getUserByEmail(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            return null;
-        }
-        return userRepository.findAll().stream()
-                .filter(user -> email.trim().equalsIgnoreCase(user.getEmail()))
-                .findFirst()
-                .orElse(null);
-    }
 
-    // Update last login time
-    public void updateLastLogin(String username) {
-        try {
-            UserEntry user = getByUsername(username);
-            if (user != null) {
-                user.setLastLoginAt(java.time.LocalDateTime.now());
-                userRepository.save(user);
-            }
-        } catch (RuntimeException e) {
-            // Log error but don't fail authentication
-        }
-    }
 
     // Set user active/inactive status
     public boolean setUserActiveStatus(String username, boolean active) {
@@ -393,5 +415,293 @@ public class UserService {
         } catch (RuntimeException e) {
             return null;
         }
+    }
+
+    // Add getById method that accepts ObjectId directly
+    public UserEntry getById(ObjectId id) {
+        try {
+            if (id == null) {
+                return null;
+            }
+            UserEntry user = userRepository.findById(id).orElse(null);
+            if (user != null) {
+                user.setPassword(""); // Remove password for security
+            }
+            return user;
+        } catch (Exception e) {
+            log.error("Error finding user by ObjectId: {}", id, e);
+            return null;
+        }
+    }
+
+    /**
+     * Search users by username, firstName, or lastName
+     */
+    public Page<UserSummaryDTO> searchUsers(String query, Pageable pageable) {
+        try {
+            Page<UserEntry> users = userRepository.searchUsers(query, pageable);
+            return users.map(this::convertToUserSummaryDTO);
+        } catch (RuntimeException e) {
+            return Page.empty(pageable);
+        }
+    }
+
+    /**
+     * Get user by ID
+     */
+    public UserSummaryDTO getUserById(String userId) {
+        try {
+            UserEntry user = userRepository.findById(new ObjectId(userId)).orElse(null);
+            return user != null ? convertToUserSummaryDTO(user) : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get user by username
+     */
+    public UserSummaryDTO getUserByUsername(String username) {
+        try {
+            UserEntry user = userRepository.findByuserName(username);
+            return user != null ? convertToUserSummaryDTO(user) : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get user's followers
+     */
+    public Page<UserSummaryDTO> getFollowers(String userId, Pageable pageable) {
+        try {
+            ObjectId userObjectId = new ObjectId(userId);
+            Page<FollowEntry> followEntries = followRepository.findByFollowingId(userObjectId, pageable);
+            
+            List<UserSummaryDTO> followers = followEntries.getContent().stream()
+                .map(follow -> {
+                    Optional<UserEntry> follower = userRepository.findById(follow.getFollowerId());
+                    return follower.map(this::convertToUserSummaryDTO).orElse(null);
+                })
+                .filter(user -> user != null)
+                .collect(Collectors.toList());
+            
+            return new PageImpl<>(followers, pageable, followEntries.getTotalElements());
+        } catch (Exception e) {
+            log.error("Error getting followers for user: {}", userId, e);
+            return Page.empty(pageable);
+        }
+    }
+
+    /**
+     * Get user's following
+     */
+    public Page<UserSummaryDTO> getFollowing(String userId, Pageable pageable) {
+        try {
+            ObjectId userObjectId = new ObjectId(userId);
+            Page<FollowEntry> followEntries = followRepository.findByFollowerId(userObjectId, pageable);
+            
+            List<UserSummaryDTO> following = followEntries.getContent().stream()
+                .map(follow -> {
+                    Optional<UserEntry> followedUser = userRepository.findById(follow.getFollowingId());
+                    return followedUser.map(this::convertToUserSummaryDTO).orElse(null);
+                })
+                .filter(user -> user != null)
+                .collect(Collectors.toList());
+            
+            return new PageImpl<>(following, pageable, followEntries.getTotalElements());
+        } catch (Exception e) {
+            log.error("Error getting following for user: {}", userId, e);
+            return Page.empty(pageable);
+        }
+    }
+
+    /**
+     * Follow a user
+     */
+    @Transactional
+    public void followUser(String followerId, String userId) {
+        try {
+            ObjectId followerObjectId = new ObjectId(followerId);
+            ObjectId userObjectId = new ObjectId(userId);
+            
+            // Don't allow self-following
+            if (followerObjectId.equals(userObjectId)) {
+                throw new IllegalArgumentException("Users cannot follow themselves");
+            }
+            
+            // Check if already following
+            if (followRepository.existsByFollowerIdAndFollowingId(followerObjectId, userObjectId)) {
+                log.warn("User {} already follows user {}", followerId, userId);
+                return;
+            }
+            
+            // Verify both users exist
+            if (!userRepository.existsById(followerObjectId) || !userRepository.existsById(userObjectId)) {
+                throw new IllegalArgumentException("One or both users do not exist");
+            }
+            
+            // Create follow relationship
+            FollowEntry followEntry = FollowEntry.builder()
+                .followerId(followerObjectId)
+                .followingId(userObjectId)
+                .createdAt(LocalDateTime.now())
+                .build();
+            
+            followRepository.save(followEntry);
+            log.info("User {} now follows user {}", followerId, userId);
+        } catch (Exception e) {
+            log.error("Error following user: {}", userId, e);
+            throw new RuntimeException("Failed to follow user", e);
+        }
+    }
+
+    /**
+     * Unfollow a user
+     */
+    @Transactional
+    public void unfollowUser(String followerId, String userId) {
+        try {
+            ObjectId followerObjectId = new ObjectId(followerId);
+            ObjectId userObjectId = new ObjectId(userId);
+            
+            followRepository.deleteByFollowerIdAndFollowingId(followerObjectId, userObjectId);
+            log.info("User {} unfollowed user {}", followerId, userId);
+        } catch (Exception e) {
+            log.error("Error unfollowing user: {}", userId, e);
+            throw new RuntimeException("Failed to unfollow user", e);
+        }
+    }
+
+    /**
+     * Check if user follows another user
+     */
+    public boolean isFollowing(String followerId, String userId) {
+        try {
+            ObjectId followerObjectId = new ObjectId(followerId);
+            ObjectId userObjectId = new ObjectId(userId);
+            return followRepository.existsByFollowerIdAndFollowingId(followerObjectId, userObjectId);
+        } catch (Exception e) {
+            log.error("Error checking follow status", e);
+            return false;
+        }
+    }
+
+    /**
+     * Get user statistics
+     */
+    public UserStatsDTO getUserStats(String userId) {
+        try {
+            ObjectId userObjectId = new ObjectId(userId);
+            
+            // Get counts
+            long postsCount = postRepository.countByAuthorId(userObjectId);
+            long followersCount = followRepository.countByFollowingId(userObjectId);
+            long followingCount = followRepository.countByFollowerId(userObjectId);
+            long commentsCount = commentRepository.countByAuthorId(userObjectId);
+            
+            // Get user to get member since date
+            Optional<UserEntry> userOpt = userRepository.findById(userObjectId);
+            String memberSince = userOpt
+                .map(user -> user.getCreatedAt() != null 
+                    ? user.getCreatedAt().format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+                    : "Unknown")
+                .orElse("Unknown");
+            
+            return UserStatsDTO.builder()
+                .postsCount(postsCount)
+                .followersCount(followersCount)
+                .followingCount(followingCount)
+                .commentsCount(commentsCount)
+                .likesReceived(0L) // Can be implemented later
+                .memberSince(memberSince)
+                .build();
+        } catch (Exception e) {
+            log.error("Error getting user stats for user: {}", userId, e);
+            return UserStatsDTO.builder()
+                .postsCount(0)
+                .followersCount(0)
+                .followingCount(0)
+                .commentsCount(0)
+                .likesReceived(0)
+                .memberSince("Unknown")
+                .build();
+        }
+    }
+
+    /**
+     * Update user profile
+     */
+    @Transactional
+    public UserSummaryDTO updateProfile(String username, ProfileUpdateRequest profileData) {
+        try {
+            UserEntry user = userRepository.findByuserName(username);
+            if (user == null) {
+                throw new IllegalArgumentException("User not found: " + username);
+            }
+            
+            // Update fields if provided
+            if (profileData.getFirstName() != null && !profileData.getFirstName().isBlank()) {
+                user.setFirstName(profileData.getFirstName());
+            }
+            if (profileData.getLastName() != null && !profileData.getLastName().isBlank()) {
+                user.setLastName(profileData.getLastName());
+            }
+            if (profileData.getBio() != null) {
+                user.setBio(profileData.getBio());
+            }
+            if (profileData.getLocation() != null) {
+                user.setLocation(profileData.getLocation());
+            }
+            if (profileData.getProfileImageUrl() != null) {
+                user.setProfileImageUrl(profileData.getProfileImageUrl());
+            }
+            
+            UserEntry updatedUser = userRepository.save(user);
+            log.info("Profile updated for user: {}", username);
+            return convertToUserSummaryDTO(updatedUser);
+        } catch (Exception e) {
+            log.error("Error updating profile for user: {}", username, e);
+            throw new RuntimeException("Failed to update profile", e);
+        }
+    }
+
+    /**
+     * Upload profile image
+     * Note: This method expects the image URL to be provided.
+     * Actual file upload should be handled by MediaService
+     */
+    public UserSummaryDTO uploadProfileImage(String username, String imageUrl) {
+        try {
+            UserEntry user = userRepository.findByuserName(username);
+            if (user == null) {
+                throw new IllegalArgumentException("User not found: " + username);
+            }
+            
+            user.setProfileImageUrl(imageUrl);
+            UserEntry updatedUser = userRepository.save(user);
+            log.info("Profile image updated for user: {}", username);
+            return convertToUserSummaryDTO(updatedUser);
+        } catch (Exception e) {
+            log.error("Error uploading profile image for user: {}", username, e);
+            throw new RuntimeException("Failed to upload profile image", e);
+        }
+    }
+
+    /**
+     * Convert UserEntry to UserSummaryDTO
+     */
+    private UserSummaryDTO convertToUserSummaryDTO(UserEntry user) {
+        return UserSummaryDTO.builder()
+                .id(user.getId().toString())
+                .userName(user.getUserName())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .bio(user.getBio())
+                .location(user.getLocation())
+                .profileImageUrl(user.getProfileImageUrl())
+                .roles(user.getRoles())
+                .build();
     }
 }

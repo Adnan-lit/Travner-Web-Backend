@@ -71,4 +71,10 @@ public interface TravelBuddyRepository extends MongoRepository<TravelBuddyEntry,
     // Search buddies by text
     @Query("{'$or': [{'destination': {$regex: ?0, $options: 'i'}}, {'description': {$regex: ?0, $options: 'i'}}, {'interests': {$regex: ?0, $options: 'i'}}], 'status': 'ACTIVE'}")
     Page<TravelBuddyEntry> searchBuddies(String query, Pageable pageable);
+    
+    // Analytics methods
+    long countByRequester_Id(ObjectId requesterId);
+    List<TravelBuddyEntry> findByCreatedAtAfter(LocalDateTime date);
+    long countByCreatedAtAfter(LocalDateTime date);
+    List<TravelBuddyEntry> findTop10ByCreatedAtAfterOrderByCreatedAtDesc(LocalDateTime date);
 }

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Repository
 public interface ProductRepository extends MongoRepository<ProductEntry, ObjectId> {
@@ -56,5 +57,11 @@ public interface ProductRepository extends MongoRepository<ProductEntry, ObjectI
      * Count all available products
      */
     long countByIsAvailableTrue();
+    
+    // Analytics methods
+    long countBySellerId(String sellerId);
+    long countByCreatedAtAfter(LocalDateTime date);
+    long countByCreatedAtAfterAndIsAvailable(LocalDateTime date, Boolean isAvailable);
+    List<ProductEntry> findByCreatedAtAfter(LocalDateTime date);
 
 }

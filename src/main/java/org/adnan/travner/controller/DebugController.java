@@ -17,6 +17,7 @@ import java.util.Map;
 @CrossOrigin
 @RequestMapping("debug")
 @RequiredArgsConstructor
+// Debug controller - Should only be accessible by admins in production
 public class DebugController {
 
     private final PostRepository postRepository;

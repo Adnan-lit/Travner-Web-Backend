@@ -71,4 +71,10 @@ public interface MessageRepository extends MongoRepository<Message, ObjectId> {
         @Query("{ 'conversationId': ?0, 'createdAt': { $lte: ?1 }, 'deletedAt': null }")
         List<Message> findByConversationIdAndCreatedAtLessThanEqualAndDeletedAtIsNull(
                         ObjectId conversationId, Instant createdAt);
+
+        /**
+         * Find messages that haven't been read by a specific user
+         */
+        @Query("{ 'conversationId': ?0, 'deletedAt': null, 'readBy.userId': { $ne: ?1 } }")
+        List<Message> findByConversationIdAndReadByNotContains(ObjectId conversationId, ObjectId userId);
 }

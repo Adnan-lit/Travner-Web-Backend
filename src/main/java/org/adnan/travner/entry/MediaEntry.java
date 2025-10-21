@@ -40,6 +40,7 @@ public class MediaEntry {
     private UserEntry uploader;     // Keep for reference
 
     private ObjectId postId;        // The post this media belongs to
+    private ObjectId productId;     // The product this media belongs to
 
     @CreatedDate
     private LocalDateTime uploadedAt;

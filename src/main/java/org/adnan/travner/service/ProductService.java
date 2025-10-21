@@ -4,16 +4,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ProductDTO;
 import org.adnan.travner.dto.ProductRequest;
+import org.adnan.travner.entry.MediaEntry;
 import org.adnan.travner.entry.ProductEntry;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.repository.MediaRepository;
 import org.adnan.travner.repository.ProductRepository;
 import org.adnan.travner.repository.UserRepository;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +28,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final MediaRepository mediaRepository;
 
     /**
      * Get all available products with pagination
@@ -103,7 +108,16 @@ public class ProductService {
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setCategory(request.getCategory());
-        product.setImages(request.getImages());
+        
+        // Initialize images list
+        List<String> images = new ArrayList<>();
+        
+        // Add existing image URLs if provided
+        if (request.getImages() != null) {
+            images.addAll(request.getImages());
+        }
+        
+        product.setImages(images);
         product.setSellerId(user.getId().toString());
         product.setSellerUsername(user.getUserName());
         product.setStockQuantity(request.getStockQuantity());
@@ -117,6 +131,16 @@ public class ProductService {
         product.setReviewCount(0);
 
         ProductEntry savedProduct = productRepository.save(product);
+
+        // Associate media with the product if media IDs are provided
+        if (request.getMediaIds() != null && !request.getMediaIds().isEmpty()) {
+            List<String> mediaUrls = associateMediaWithProduct(request.getMediaIds(), savedProduct.getId(), user);
+            // Add media URLs to product images
+            images.addAll(mediaUrls);
+            savedProduct.setImages(images);
+            savedProduct = productRepository.save(savedProduct);
+        }
+
         log.info("Product created successfully: {} by user: {}", savedProduct.getId(), username);
 
         return convertToDTO(savedProduct);
@@ -144,13 +168,35 @@ public class ProductService {
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setCategory(request.getCategory());
-        product.setImages(request.getImages());
+        
+        // Handle images - preserve existing if new ones are null
+        List<String> images = product.getImages();
+        if (images == null) {
+            images = new ArrayList<>();
+        }
+        
+        // Update with new images if provided
+        if (request.getImages() != null) {
+            images.clear();
+            images.addAll(request.getImages());
+        }
+        
         product.setStockQuantity(request.getStockQuantity());
         product.setLocation(request.getLocation());
         product.setTags(request.getTags());
         product.setUpdatedAt(LocalDateTime.now());
 
         ProductEntry savedProduct = productRepository.save(product);
+
+        // Associate new media with the product if media IDs are provided
+        if (request.getMediaIds() != null && !request.getMediaIds().isEmpty()) {
+            List<String> mediaUrls = associateMediaWithProduct(request.getMediaIds(), savedProduct.getId(), user);
+            // Add media URLs to product images
+            images.addAll(mediaUrls);
+            savedProduct.setImages(images);
+            savedProduct = productRepository.save(savedProduct);
+        }
+
         log.info("Product updated successfully: {} by user: {}", savedProduct.getId(), username);
 
         return convertToDTO(savedProduct);
@@ -198,16 +244,63 @@ public class ProductService {
     }
 
     /**
+     * Associate media with a product and return media URLs
+     */
+    private List<String> associateMediaWithProduct(List<String> mediaIds, ObjectId productId, UserEntry user) {
+        List<String> mediaUrls = new ArrayList<>();
+
+        for (String mediaId : mediaIds) {
+            try {
+                Optional<MediaEntry> mediaOptional = mediaRepository.findById(new ObjectId(mediaId));
+                if (mediaOptional.isPresent()) {
+                    MediaEntry media = mediaOptional.get();
+
+                    // Verify that the user owns this media or is an admin
+                    boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
+                    boolean isOwner = media.getUploadedBy().equals(user.getUserName());
+
+                    if (isOwner || isAdmin) {
+                        // Associate media with the product
+                        media.setProductId(productId);
+                        mediaRepository.save(media);
+
+                        // Generate media URL
+                        String mediaUrl = "/api/media/" + media.getId();
+                        mediaUrls.add(mediaUrl);
+                        
+                        log.info("Associated media {} with product {}", mediaId, productId);
+                    } else {
+                        log.warn("User {} is not authorized to associate media {} with product {}",
+                                user.getUserName(), mediaId, productId);
+                    }
+                } else {
+                    log.warn("Media not found with ID: {}", mediaId);
+                }
+            } catch (Exception e) {
+                log.error("Error associating media {} with product {}: {}", mediaId, productId, e.getMessage());
+            }
+        }
+
+        return mediaUrls;
+    }
+
+    /**
      * Convert ProductEntry to ProductDTO
      */
     private ProductDTO convertToDTO(ProductEntry product) {
+        // Handle null or empty images - provide placeholder
+        List<String> images = product.getImages();
+        if (images == null || images.isEmpty()) {
+            images = List.of("https://via.placeholder.com/400x300/CCCCCC/666666?text=No+Media");
+        }
+        
         return ProductDTO.builder()
                 .id(product.getId().toString())
                 .name(product.getName())
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .category(product.getCategory())
-                .images(product.getImages())
+                .images(images)
                 .sellerId(product.getSellerId())
                 .sellerUsername(product.getSellerUsername())
                 .stockQuantity(product.getStockQuantity())

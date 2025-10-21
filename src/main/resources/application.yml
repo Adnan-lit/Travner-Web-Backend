@@ -7,23 +7,6 @@ spring:
       uri: ${MONGODB_URI:mongodb://localhost:27017}
       database: ${MONGODB_DATABASE:TravnerDB}
       auto-index-creation: false  # Disable auto-index creation to prevent startup issues
-      # Connection pool settings optimized for production
-      options:
-        max-connections-per-host: ${MONGO_MAX_CONNECTIONS:50}
-        min-connections-per-host: ${MONGO_MIN_CONNECTIONS:5}
-        max-wait-time: ${MONGO_MAX_WAIT_TIME:30000}
-        connect-timeout: ${MONGO_CONNECT_TIMEOUT:10000}
-        socket-timeout: ${MONGO_SOCKET_TIMEOUT:30000}
-        server-selection-timeout: ${MONGO_SERVER_SELECTION_TIMEOUT:30000}
-        # Production-ready settings
-        ssl: true
-        ssl-invalid-hostname-allowed: false
-        retry-writes: true
-        retry-reads: true
-        # Connection resilience
-        max-connection-idle-time: 60000
-        max-connection-life-time: 0
-        heartbeat-frequency: 10000
   servlet:
     multipart:
       max-file-size: 20MB
@@ -61,6 +44,38 @@ app:
       relay-port: ${CHAT_RELAY_PORT:61613}
       relay-login: ${CHAT_RELAY_LOGIN:guest}
       relay-passcode: ${CHAT_RELAY_PASSCODE:guest}
+
+  # AI Configuration
+  ai:
+    openrouter:
+      api-key: ${OPENROUTER_API_KEY:}
+      base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+      timeout: ${AI_TIMEOUT:30000}
+      cache-ttl: ${AI_CACHE_TTL:3600}
+
+  # Payment Configuration
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    currency: ${STRIPE_CURRENCY:usd}
+
+  # Cache Configuration
+  cache:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: ${REDIS_TIMEOUT:2000}
+
+  # Elasticsearch Configuration
+  elasticsearch:
+    host: ${ELASTICSEARCH_HOST:localhost}
+    port: ${ELASTICSEARCH_PORT:9200}
+    username: ${ELASTICSEARCH_USERNAME:}
+    password: ${ELASTICSEARCH_PASSWORD:}
+    index-prefix: ${ELASTICSEARCH_INDEX_PREFIX:travner}
 
 # Actuator configuration for monitoring
 management:

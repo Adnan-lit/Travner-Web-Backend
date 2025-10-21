@@ -100,6 +100,27 @@ public class MediaController {
     }
 
     /**
+     * Get all media for a specific entity
+     *
+     * @param entityId The ID of the entity
+     * @param type Optional type filter (post, product, profile, etc.)
+     * @return List of media associated with the entity
+     */
+    @GetMapping("/entity/{entityId}")
+    public ResponseEntity<ApiResponse<List<MediaDTO>>> getMediaForEntity(
+            @PathVariable String entityId,
+            @RequestParam(required = false) String type) {
+        try {
+            List<MediaDTO> media = mediaService.getMediaForEntity(entityId, type);
+            return ResponseEntity.ok(ApiResponse.success(media));
+        } catch (Exception e) {
+            log.error("Error retrieving media for entity {}: {}", entityId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve media: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Get a specific media file by ID for download
      */
     @GetMapping("/{mediaId}")

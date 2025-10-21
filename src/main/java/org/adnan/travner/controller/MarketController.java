@@ -3,9 +3,14 @@ package org.adnan.travner.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
+import org.adnan.travner.dto.MediaDTO;
 import org.adnan.travner.dto.ProductDTO;
 import org.adnan.travner.dto.ProductRequest;
+import org.adnan.travner.entry.ProductEntry;
+import org.adnan.travner.repository.ProductRepository;
+import org.adnan.travner.service.MediaService;
 import org.adnan.travner.service.ProductService;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -14,8 +19,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,6 +37,8 @@ import java.util.Optional;
 public class MarketController {
 
     private final ProductService productService;
+    private final MediaService mediaService;
+    private final ProductRepository productRepository;
 
     /**
      * Get all available products with pagination and sorting
@@ -297,6 +306,110 @@ public class MarketController {
             log.error("Error deleting product {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Failed to delete product: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Upload media/image for a product
+     * 
+     * @param authentication User authentication
+     * @param productId Product ID
+     * @param file Image/video file
+     * @return Upload result with media URL
+     */
+    @PostMapping("/products/{productId}/upload-media")
+    public ResponseEntity<ApiResponse<MediaDTO>> uploadProductMedia(
+            Authentication authentication,
+            @PathVariable String productId,
+            @RequestParam("file") MultipartFile file) {
+
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Authentication required"));
+        }
+
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("No file provided"));
+        }
+
+        try {
+            // Verify product exists
+            Optional<ProductEntry> productOpt = productRepository.findById(new ObjectId(productId));
+            if (productOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("Product not found"));
+            }
+
+            // Upload media
+            MediaDTO uploadedMedia = mediaService.uploadMedia(file, authentication.getName(), "product", productId);
+
+            // Update product's images list
+            ProductEntry product = productOpt.get();
+            if (product.getImages() == null) {
+                product.setImages(new ArrayList<>());
+            }
+            
+            // Add media URL to product images
+            String mediaUrl = uploadedMedia.getDownloadUrl();
+            product.getImages().add(mediaUrl);
+            product.setUpdatedAt(java.time.LocalDateTime.now());
+            productRepository.save(product);
+
+            log.info("Media uploaded for product {} by user {}", productId, authentication.getName());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Media uploaded successfully", uploadedMedia));
+
+        } catch (Exception e) {
+            log.error("Error uploading media for product {}: {}", productId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to upload media: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete media from a product
+     * 
+     * @param authentication User authentication
+     * @param productId Product ID
+     * @param mediaUrl Media URL to remove
+     * @return Success message
+     */
+    @DeleteMapping("/products/{productId}/media")
+    public ResponseEntity<ApiResponse<Object>> deleteProductMedia(
+            Authentication authentication,
+            @PathVariable String productId,
+            @RequestParam("mediaUrl") String mediaUrl) {
+
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Authentication required"));
+        }
+
+        try {
+            // Verify product exists
+            Optional<ProductEntry> productOpt = productRepository.findById(new ObjectId(productId));
+            if (productOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("Product not found"));
+            }
+
+            ProductEntry product = productOpt.get();
+            
+            // Remove media URL from product
+            if (product.getImages() != null) {
+                product.getImages().remove(mediaUrl);
+                product.setUpdatedAt(java.time.LocalDateTime.now());
+                productRepository.save(product);
+            }
+
+            log.info("Media removed from product {} by user {}", productId, authentication.getName());
+            return ResponseEntity.ok(ApiResponse.success("Media removed from product successfully", null));
+
+        } catch (Exception e) {
+            log.error("Error removing media from product {}: {}", productId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to remove media: " + e.getMessage()));
         }
     }
 }

@@ -43,8 +43,8 @@ public class SpringSecurity {
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
-                        // WebSocket endpoints
-                        .requestMatchers("/ws/**", "/chat/**").permitAll()
+                        // WebSocket endpoints - allow connection but authenticate messages
+                        .requestMatchers("/ws/**").permitAll()
 
                         // Public content access (read-only) - GET requests only
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/", "/api/posts/**").permitAll()
@@ -70,6 +70,7 @@ public class SpringSecurity {
                         // Public media access - GET requests only
                         .requestMatchers(HttpMethod.GET, "/api/media/files/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/media/posts/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/media/entity/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/media/{id}").permitAll()
 
                         // Admin endpoints - require ADMIN role

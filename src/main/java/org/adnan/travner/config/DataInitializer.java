@@ -28,6 +28,12 @@ public class DataInitializer implements CommandLineRunner {
 
     private void initializeDefaultAdminUser() {
         try {
+            // Check if MongoDB is available before proceeding
+            if (!isMongoDbAvailable()) {
+                log.warn("MongoDB is not available. Skipping admin user initialization.");
+                return;
+            }
+            
             // List of admin usernames to promote
             List<String> adminUsernames = List.of("admin", "superadmin");
             
@@ -74,6 +80,17 @@ public class DataInitializer implements CommandLineRunner {
             
         } catch (Exception e) {
             log.error("Failed to initialize admin users: {}", e.getMessage(), e);
+        }
+    }
+    
+    private boolean isMongoDbAvailable() {
+        try {
+            // Try to count users to check if MongoDB is accessible
+            userRepository.count();
+            return true;
+        } catch (Exception e) {
+            log.debug("MongoDB not available: {}", e.getMessage());
+            return false;
         }
     }
 }

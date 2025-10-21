@@ -20,6 +20,7 @@ public class RateLimitingConfig {
 
     /**
      * Check if request is within rate limit
+     * Thread-safe implementation using synchronized blocks
      */
     public boolean isAllowed(String key, int maxRequests, int windowMinutes) {
         LocalDateTime now = LocalDateTime.now();
@@ -27,16 +28,19 @@ public class RateLimitingConfig {
         
         RateLimitEntry entry = rateLimitStore.computeIfAbsent(key, k -> new RateLimitEntry());
         
-        // Remove old requests outside the window
-        entry.requests.removeIf(requestTime -> requestTime.isBefore(windowStart));
-        
-        // Check if under limit
-        if (entry.requests.size() < maxRequests) {
-            entry.requests.add(now);
-            return true;
+        // Synchronize access to the entry's request list
+        synchronized (entry) {
+            // Remove old requests outside the window
+            entry.requests.removeIf(requestTime -> requestTime.isBefore(windowStart));
+            
+            // Check if under limit
+            if (entry.requests.size() < maxRequests) {
+                entry.requests.add(now);
+                return true;
+            }
+            
+            return false;
         }
-        
-        return false;
     }
 
     /**

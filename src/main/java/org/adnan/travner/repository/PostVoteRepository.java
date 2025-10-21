@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 public interface PostVoteRepository extends MongoRepository<PostVoteEntry, ObjectId> {
 
@@ -16,4 +17,8 @@ public interface PostVoteRepository extends MongoRepository<PostVoteEntry, Objec
     List<PostVoteEntry> findByPostId(ObjectId postId);
 
     void deleteByPostIdAndUserId(ObjectId postId, ObjectId userId);
+    
+    // Analytics methods
+    long countByUserId(ObjectId userId);
+    long countByCreatedAtAfter(LocalDateTime date);
 }
