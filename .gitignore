@@ -45,7 +45,9 @@ mongo-data/
 *.key
 
 ### Log Files ###
+logs/
 *.log
+*.log.gz
 hs_err_pid*.log
 
 ### Node.js (if any) ###

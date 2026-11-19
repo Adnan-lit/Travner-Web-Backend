@@ -9,7 +9,7 @@ echo "Creating community posts through API..."
 # For now, we'll use basic auth or create posts without auth if the endpoint allows it
 
 # Read the JSON file and create posts
-echo "Reading posts from create_posts.json..."
+echo "Posts defined inline below (see scripts/create_posts.json for the seed data)."
 
 # Create posts one by one
 curl -X POST http://localhost:8080/api/posts \
