@@ -6,14 +6,14 @@ The application requires the following environment variables to be set:
 
 ### **MongoDB Configuration** (REQUIRED)
 ```
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.5os88dy.mongodb.net/?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-name>.mongodb.net/?retryWrites=true&w=majority
 MONGODB_DATABASE=TravnerDB
 ```
 
 ### **Application Configuration**
 ```
 PORT=8080
-APP_UPLOAD_DIR=D:/Travner V2/uploads
+APP_UPLOAD_DIR=<path-to-upload-directory>
 ```
 
 ### **Stripe Configuration** (Optional - for payments)
@@ -23,11 +23,15 @@ STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 ```
 
-### **Admin Account** (Optional - for admin features)
+### **Bootstrap Admin** (Optional - one-time, only when no admin exists)
 ```
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your_secure_password
+APP_BOOTSTRAP_ADMIN_USERNAME=admin
+APP_BOOTSTRAP_ADMIN_PASSWORD=<generate-a-strong-12+-char-password>
+APP_BOOTSTRAP_ADMIN_EMAIL=admin@travner.local
 ```
+There is no default admin account. Leave these unset to create none. The
+password must contain upper/lower case, a digit and a symbol; it is never
+logged. Rotate it after the first login. See `env.example` for all variables.
 
 ---
 
@@ -66,7 +70,7 @@ Create `src/main/resources/application-local.yml`:
 spring:
   data:
     mongodb:
-      uri: mongodb+srv://username:password@cluster0.5os88dy.mongodb.net/?retryWrites=true&w=majority
+      uri: mongodb+srv://<username>:<password>@<cluster-name>.mongodb.net/?retryWrites=true&w=majority
       database: TravnerDB
 ```
 

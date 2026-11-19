@@ -16,7 +16,7 @@ if (-not $env:MONGODB_URI) {
     Write-Host ""
     
     # Uncomment and add your MongoDB URI here:
-    # $env:MONGODB_URI="mongodb+srv://username:password@cluster0.5os88dy.mongodb.net/?retryWrites=true&w=majority"
+    # $env:MONGODB_URI="mongodb+srv://<username>:<password>@<cluster-name>.mongodb.net/?retryWrites=true&w=majority"
     
     if (-not $env:MONGODB_URI) {
         Write-Host "Press any key to exit..."

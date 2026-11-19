@@ -1,42 +1,19 @@
-# Files Intentionally Removed
+# Intentionally Disabled Files
 
-The following files have been **intentionally removed** or renamed because they depend on optional services (Redis, Elasticsearch) that are disabled for local development:
+Only one file is intentionally disabled in this repository:
 
-## Removed Files:
+| File | Why | How to re-enable |
+|---|---|---|
+| `src/main/java/org/adnan/travner/config/CacheConfig.java.disabled` | Depends on Redis, which is not a declared dependency. Enabling it without Redis breaks startup. | Add the Spring Data Redis dependency, configure a Redis instance, then rename to `CacheConfig.java`. |
 
-1. **`src/main/java/org/adnan/travner/config/CacheConfig.java`**
-   - Depends on: Redis
-   - Reason: Redis dependency is disabled in pom.xml
-   - Backup location: `CacheConfig.java.disabled`
+## AI features are enabled
 
-2. **`src/main/java/org/adnan/travner/service/AIService.java`**
-   - Depends on: WebFlux/Netty
-   - Reason: Netty dependency conflicts
-   - Backup location: `AIService.java.disabled`
+`AIService` and `AIController` are **active, tracked source files** and compile
+as part of the normal build. Older revisions of this document claimed they had
+been removed because of a Netty conflict; that is no longer true. Do not delete
+them.
 
-3. **`src/main/java/org/adnan/travner/controller/AIController.java`**
-   - Depends on: WebFlux/Netty, AIService
-   - Reason: Netty dependency conflicts
-   - Backup location: `AIController.java.disabled`
+## IDE note
 
-## ⚠️ Important for IntelliJ IDEA Users:
-
-If IntelliJ restores these files from local history or git:
-1. **DO NOT** keep them
-2. **DELETE** them again
-3. Or **Reload** the project: File → Reload All from Disk
-
-## To Re-enable These Features:
-
-See `STARTUP_INSTRUCTIONS.md` section "AI Features Temporarily Disabled" for instructions on how to re-enable Redis, Elasticsearch, and AI features.
-
-## Current Status:
-
-✅ Application works perfectly without these files
-✅ All core features are functional
-✅ Backend compiles and runs successfully
-
-
-
-
-
+If IntelliJ restores `CacheConfig.java.disabled` as a compilable `.java` file
+from local history, either delete it again or use **File → Reload All from Disk**.

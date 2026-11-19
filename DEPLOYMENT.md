@@ -32,8 +32,9 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/TravnerDB?retryW
 MONGODB_DATABASE=TravnerDB
 OPENROUTER_API_KEY=sk-or-v1-your-api-key-here
 SPRING_PROFILES_ACTIVE=prod
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=YourStrongPasswordHere123!
+# Optional one-time bootstrap admin (omit both if created via the app)
+APP_BOOTSTRAP_ADMIN_USERNAME=admin
+APP_BOOTSTRAP_ADMIN_PASSWORD=<generate-a-strong-12+-char-password>
 LOG_LEVEL=WARN
 PORT=8080
 ```
@@ -77,8 +78,8 @@ heroku config:set MONGODB_URI="mongodb+srv://username:password@cluster.mongodb.n
 heroku config:set MONGODB_DATABASE=TravnerDB
 heroku config:set OPENROUTER_API_KEY=sk-or-v1-your-api-key-here
 heroku config:set SPRING_PROFILES_ACTIVE=prod
-heroku config:set ADMIN_USERNAME=admin
-heroku config:set ADMIN_PASSWORD=YourStrongPasswordHere123!
+heroku config:set APP_BOOTSTRAP_ADMIN_USERNAME=admin
+heroku config:set APP_BOOTSTRAP_ADMIN_PASSWORD='<generate-a-strong-12+-char-password>'
 heroku config:set LOG_LEVEL=WARN
 ```
 
@@ -118,8 +119,8 @@ docker run -d \
   -e MONGODB_DATABASE=TravnerDB \
   -e OPENROUTER_API_KEY=sk-or-v1-your-api-key-here \
   -e SPRING_PROFILES_ACTIVE=prod \
-  -e ADMIN_USERNAME=admin \
-  -e ADMIN_PASSWORD=YourStrongPassword123! \
+  -e APP_BOOTSTRAP_ADMIN_USERNAME=admin \
+  -e APP_BOOTSTRAP_ADMIN_PASSWORD='<generate-a-strong-12+-char-password>' \
   --name travner-backend \
   travner-backend
 ```
@@ -155,8 +156,8 @@ eb setenv MONGODB_URI="mongodb+srv://..." \
           MONGODB_DATABASE=TravnerDB \
           OPENROUTER_API_KEY=sk-or-v1-... \
           SPRING_PROFILES_ACTIVE=prod \
-          ADMIN_USERNAME=admin \
-          ADMIN_PASSWORD=YourStrongPassword123! \
+          APP_BOOTSTRAP_ADMIN_USERNAME=admin \
+          APP_BOOTSTRAP_ADMIN_PASSWORD='<generate-a-strong-12+-char-password>' \
           LOG_LEVEL=WARN
 ```
 
@@ -287,9 +288,12 @@ Recommended monitoring services:
 
 ## Security Best Practices
 
-1. **Change Default Credentials**
-   - Set strong `ADMIN_PASSWORD`
-   - Use unique `ADMIN_USERNAME`
+1. **Bootstrap Administrator**
+   - There is no default admin account anymore.
+   - To create one on first start, set `APP_BOOTSTRAP_ADMIN_USERNAME`,
+     `APP_BOOTSTRAP_ADMIN_PASSWORD` (12+ chars, upper/lower/digit/symbol) and
+     optionally `APP_BOOTSTRAP_ADMIN_EMAIL`.
+   - Rotate the bootstrap password after the first login; it is never logged.
 
 2. **Enable HTTPS**
    - Most platforms provide this automatically
