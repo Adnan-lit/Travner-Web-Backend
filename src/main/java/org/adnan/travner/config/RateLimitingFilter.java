@@ -24,7 +24,7 @@ import java.io.IOException;
 public class RateLimitingFilter implements Filter {
 
     @Autowired
-    private RateLimitingConfig rateLimitingConfig;
+    private RateLimiter rateLimiter;
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -92,13 +92,13 @@ public class RateLimitingFilter implements Filter {
         
         // Different rate limits for different endpoint types
         if (path.startsWith("/api/public/register")) {
-            return rateLimitingConfig.isLoginAllowed(clientId);
+            return rateLimiter.isLoginAllowed(clientId);
         } else if (path.startsWith("/api/media/upload")) {
-            return rateLimitingConfig.isUploadAllowed(clientId);
+            return rateLimiter.isUploadAllowed(clientId);
         } else if (path.startsWith("/api/chat/") || path.startsWith("/ws/")) {
-            return rateLimitingConfig.isChatAllowed(clientId);
+            return rateLimiter.isChatAllowed(clientId);
         } else {
-            return rateLimitingConfig.isApiAllowed(clientId);
+            return rateLimiter.isApiAllowed(clientId);
         }
     }
 }

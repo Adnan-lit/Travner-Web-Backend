@@ -1,11 +1,14 @@
 package org.adnan.travner.security;
 
+import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.config.SpringSecurity;
 import org.adnan.travner.controller.PostController;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.PostDTO;
+import org.adnan.travner.service.MediaService;
 import org.adnan.travner.service.PostService;
 import org.adnan.travner.service.UserDetailsServiceImpl;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,10 +41,21 @@ class SecurityAnonymousAccessTest {
     private PostService postService;
 
     @MockBean
+    private MediaService mediaService;
+
+    @MockBean
     private UserDetailsServiceImpl userDetailsService;
 
     @MockBean
     private PasswordEncoder passwordEncoder;
+
+    @MockBean
+    private RateLimiter rateLimiter;
+
+    @BeforeEach
+    void allowRequests() {
+        Mockito.when(rateLimiter.isApiAllowed(Mockito.anyString())).thenReturn(true);
+    }
 
     @Test
     void getPosts_shouldAllowAnonymous() throws Exception {

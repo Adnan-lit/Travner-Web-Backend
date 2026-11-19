@@ -1,6 +1,5 @@
 package org.adnan.travner.config;
 
-import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -11,9 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Simple rate limiting configuration using in-memory storage
  * Provides rate limiting for API endpoints and chat functionality
  */
-@Configuration
 @Component
-public class RateLimitingConfig {
+public class RateLimitingConfig implements RateLimiter {
 
     // Simple rate limiting using timestamps
     private final Map<String, RateLimitEntry> rateLimitStore = new ConcurrentHashMap<>();
@@ -22,6 +20,7 @@ public class RateLimitingConfig {
      * Check if request is within rate limit
      * Thread-safe implementation using synchronized blocks
      */
+    @Override
     public boolean isAllowed(String key, int maxRequests, int windowMinutes) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime windowStart = now.minusMinutes(windowMinutes);
@@ -46,6 +45,7 @@ public class RateLimitingConfig {
     /**
      * Get API rate limiting (100 requests per minute)
      */
+    @Override
     public boolean isApiAllowed(String key) {
         return isAllowed("api:" + key, 100, 1);
     }
@@ -53,6 +53,7 @@ public class RateLimitingConfig {
     /**
      * Get chat rate limiting (60 messages per minute)
      */
+    @Override
     public boolean isChatAllowed(String key) {
         return isAllowed("chat:" + key, 60, 1);
     }
@@ -60,6 +61,7 @@ public class RateLimitingConfig {
     /**
      * Get login rate limiting (5 attempts per minute)
      */
+    @Override
     public boolean isLoginAllowed(String key) {
         return isAllowed("login:" + key, 5, 1);
     }
@@ -67,6 +69,7 @@ public class RateLimitingConfig {
     /**
      * Get upload rate limiting (10 uploads per hour)
      */
+    @Override
     public boolean isUploadAllowed(String key) {
         return isAllowed("upload:" + key, 10, 60);
     }

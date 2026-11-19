@@ -1,12 +1,26 @@
 package org.adnan.travner.config;
 
-import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Base test class for integration tests using embedded MongoDB
+ * Base class for integration tests that need MongoDB with transaction support.
+ *
+ * <p>The container starts a single-node replica set, which is required by
+ * {@code @Transactional}. Tests are skipped automatically when Docker is not
+ * available (for example on a developer machine); CI runs them with Docker.</p>
  */
-@TestConfiguration
-public class BaseIntegrationTest {
-    // MongoDB will be auto-configured by Spring Boot with embedded Flapdoodle
-    // when de.flapdoodle.embed.mongo is on the classpath
+@Testcontainers(disabledWithoutDocker = true)
+public abstract class BaseIntegrationTest {
+
+    @Container
+    static final MongoDBContainer MONGODB = new MongoDBContainer("mongo:7.0");
+
+    @DynamicPropertySource
+    static void mongoProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.mongodb.uri", MONGODB::getReplicaSetUrl);
+    }
 }

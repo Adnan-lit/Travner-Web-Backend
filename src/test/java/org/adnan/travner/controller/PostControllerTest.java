@@ -1,10 +1,12 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.dto.PostDTO;
 import org.adnan.travner.dto.PostRequest;
 import org.adnan.travner.service.PostService;
 import org.adnan.travner.service.MediaService;
 import org.adnan.travner.dto.MediaDTO;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -12,6 +14,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -19,6 +22,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -35,6 +39,14 @@ class PostControllerTest {
 
     @MockBean
     private MediaService mediaService;
+
+    @MockBean
+    private RateLimiter rateLimiter;
+
+    @BeforeEach
+    void allowRequests() {
+        when(rateLimiter.isApiAllowed(anyString())).thenReturn(true);
+    }
 
     @Test
     @WithMockUser(username = "testuser")
@@ -59,6 +71,7 @@ class PostControllerTest {
 
         // When & Then
         mockMvc.perform(post("/api/posts")
+                .with(SecurityMockMvcRequestPostProcessors.csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -73,6 +86,7 @@ class PostControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "testuser")
     void testGetPostById() throws Exception {
         // Given
         PostDTO postDTO = PostDTO.builder()

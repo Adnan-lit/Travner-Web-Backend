@@ -25,6 +25,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -120,8 +121,14 @@ class ChatServiceTest {
 
         when(chatConversationRepository.findById("conv1"))
                 .thenReturn(Optional.of(testConversation));
+        // Return the message built by the service (with an assigned id) so the
+        // assertion checks the request content rather than the fixture's content.
         when(chatMessageRepository.save(any(ChatMessage.class)))
-                .thenReturn(testMessage);
+                .thenAnswer(invocation -> {
+                    ChatMessage saved = invocation.getArgument(0);
+                    saved.setId("msg1");
+                    return saved;
+                });
         when(chatConversationRepository.save(any(ChatConversation.class)))
                 .thenReturn(testConversation);
 
@@ -142,7 +149,7 @@ class ChatServiceTest {
         List<ChatConversation> conversations = Arrays.asList(testConversation);
         Page<ChatConversation> conversationPage = new PageImpl<>(conversations);
         
-        when(chatConversationRepository.findByParticipantIdsContainingAndIsActiveTrue("user1", any(Pageable.class)))
+        when(chatConversationRepository.findByParticipantIdsContainingAndIsActiveTrue(eq("user1"), any(Pageable.class)))
                 .thenReturn(conversationPage);
 
         // When
@@ -160,7 +167,7 @@ class ChatServiceTest {
         List<ChatMessage> messages = Arrays.asList(testMessage);
         Page<ChatMessage> messagePage = new PageImpl<>(messages);
         
-        when(chatMessageRepository.findByConversationIdOrderByCreatedAtDesc("conv1", any(Pageable.class)))
+        when(chatMessageRepository.findByConversationIdOrderByCreatedAtDesc(eq("conv1"), any(Pageable.class)))
                 .thenReturn(messagePage);
 
         // When

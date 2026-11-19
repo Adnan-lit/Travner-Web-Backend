@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -324,9 +325,39 @@ class UserServiceTest {
     }
 
     @Test
+    void testResetPasswordWithToken_InvalidToken() {
+        boolean result = userService.resetPasswordWithToken(UUID.randomUUID().toString(), "newpassword123");
+
+        assertFalse(result);
+        verify(passwordEncoder, never()).encode(any());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void testResetPasswordWithToken_IsSingleUse() {
+        when(userRepository.findByuserName("testuser")).thenReturn(testUser);
+        when(passwordEncoder.encode("newpassword123")).thenReturn("$2a$10$newencodedpassword123");
+        String token = userService.generatePasswordResetToken("testuser");
+
+        assertTrue(userService.resetPasswordWithToken(token, "newpassword123"));
+        assertFalse(userService.resetPasswordWithToken(token, "newpassword123"));
+        verify(passwordEncoder, times(1)).encode("newpassword123");
+        verify(userRepository, times(1)).save(testUser);
+    }
+
+    @Test
+    void testResetPasswordWithToken_TooShortPassword() {
+        when(userRepository.findByuserName("testuser")).thenReturn(testUser);
+        String token = userService.generatePasswordResetToken("testuser");
+
+        assertFalse(userService.resetPasswordWithToken(token, "short"));
+        verify(passwordEncoder, never()).encode(any());
+    }
+
+    @Test
     void testGetUserByEmail_Success() {
         // Given
-        when(userRepository.findAll()).thenReturn(List.of(testUser));
+        when(userRepository.findByEmail("test@example.com")).thenReturn(testUser);
 
         // When
         UserEntry result = userService.getUserByEmail("test@example.com");

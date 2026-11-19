@@ -4,8 +4,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017
-      database: TravnerTestDB
+      # URI is supplied by BaseIntegrationTest via @DynamicPropertySource.
       auto-index-creation: false
 
   profiles:

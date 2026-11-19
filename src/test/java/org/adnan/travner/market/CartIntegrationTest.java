@@ -2,6 +2,7 @@ package org.adnan.travner.market;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.adnan.travner.TravnerApplication;
+import org.adnan.travner.config.BaseIntegrationTest;
 import org.adnan.travner.dto.CartDTO;
 import org.adnan.travner.entry.CartEntry;
 import org.adnan.travner.repository.CartRepository;
@@ -30,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(classes = TravnerApplication.class)
 @ActiveProfiles("test")
 @AutoConfigureWebMvc
-class CartIntegrationTest {
+class CartIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private WebApplicationContext context;
