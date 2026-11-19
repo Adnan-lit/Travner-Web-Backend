@@ -14,6 +14,12 @@ server:
   port: 0  # Random port for tests
 
 app:
+  jwt:
+    issuer: ${JWT_ISSUER:https://travner.local}
+    access-token-ttl-seconds: 900
+    refresh-token-ttl-days: 7
+    refresh-cookie-name: travner_refresh
+
   upload:
     dir: ${java.io.tmpdir}/travner-test-uploads
 

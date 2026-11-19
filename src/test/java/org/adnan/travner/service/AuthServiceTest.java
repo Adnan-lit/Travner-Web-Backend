@@ -54,6 +54,7 @@ class AuthServiceTest {
         JwtConfig jwtConfig = new JwtConfig();
         ReflectionTestUtils.setField(jwtConfig, "privateKeyPem", "");
         ReflectionTestUtils.setField(jwtConfig, "publicKeyPem", "");
+        ReflectionTestUtils.setField(jwtConfig, "issuer", "https://travner.local");
         var rsaKey = jwtConfig.jwtRsaKey();
         jwtEncoder = jwtConfig.jwtEncoder(jwtConfig.jwtJwkSource(rsaKey));
         jwtDecoder = jwtConfig.jwtDecoder(rsaKey);

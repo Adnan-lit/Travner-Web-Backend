@@ -159,10 +159,12 @@ public class MediaController {
         } catch (ForbiddenException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Access denied"));
+        } catch (IllegalArgumentException e) {
+            throw e; // malformed ObjectId -> 400 via GlobalExceptionHandler
         } catch (RuntimeException e) {
             log.error("Error deleting media {}: {}", mediaId, e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Failed to delete media: " + e.getMessage()));
+                    .body(ApiResponse.error("Failed to delete media"));
         }
     }
 }

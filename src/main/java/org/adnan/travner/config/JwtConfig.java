@@ -9,8 +9,11 @@ import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
@@ -41,6 +44,9 @@ public class JwtConfig {
 
     @Value("${JWT_PUBLIC_KEY_PEM:}")
     private String publicKeyPem;
+
+    @Value("${app.jwt.issuer:travner}")
+    private String issuer;
 
     @Bean
     public RSAKey jwtRsaKey() throws Exception {
@@ -86,7 +92,12 @@ public class JwtConfig {
 
     @Bean
     public JwtDecoder jwtDecoder(RSAKey rsaKey) throws JOSEException {
-        return NimbusJwtDecoder.withPublicKey(rsaKey.toRSAPublicKey()).build();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(rsaKey.toRSAPublicKey()).build();
+        // Signature plus exp/nbf are the defaults; the issuer must also match or a
+        // token minted for another audience is rejected (P1-06 invalid-token matrix).
+        OAuth2TokenValidator<Jwt> validator = JwtValidators.createDefaultWithIssuer(issuer);
+        decoder.setJwtValidator(validator);
+        return decoder;
     }
 
     private static byte[] decodePem(String pem, String label) {
