@@ -8,6 +8,7 @@ import org.adnan.travner.entry.MediaEntry;
 import org.adnan.travner.entry.PostEntry;
 import org.adnan.travner.entry.ProductEntry;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.repository.MediaRepository;
 import org.adnan.travner.repository.PostRepository;
 import org.adnan.travner.repository.ProductRepository;
@@ -74,7 +75,9 @@ public class MediaService {
         if ("post".equals(type) && entityId != null) {
             validatePostOwnership(entityId, user);
         }
-        // For product uploads, no additional validation needed beyond authentication
+        if ("product".equals(type) && entityId != null) {
+            validateProductOwnership(entityId, user, username);
+        }
 
         try {
             // Get file metadata and sanitize filename
@@ -209,8 +212,21 @@ public class MediaService {
 
         PostEntry post = postOptional.get();
         if (!post.getAuthor().getId().equals(user.getId())) {
-            throw new RuntimeException(
-                    "You are not authorized to upload media to this post. You must be the post author.");
+            throw new ForbiddenException("You are not authorized to upload media to this post");
+        }
+    }
+
+    /** Product media may only be uploaded by the seller or an administrator. */
+    private void validateProductOwnership(String productId, UserEntry user, String username) {
+        ProductEntry product = productRepository.findById(new ObjectId(productId))
+                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + productId));
+
+        boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
+        boolean isSeller = (product.getSellerId() != null
+                && product.getSellerId().equals(user.getId().toHexString()))
+                || username.equals(product.getSellerUsername());
+        if (!isAdmin && !isSeller) {
+            throw new ForbiddenException("Only the product seller or an administrator can upload product media");
         }
     }
 
@@ -329,7 +345,7 @@ public class MediaService {
         // Fix: Compare with uploadedBy string field instead of uploader DBRef
         if (!media.getUploadedBy().equals(user.getId().toString()) &&
                 (user.getRoles() == null || !user.getRoles().contains("ADMIN"))) {
-            throw new RuntimeException("You are not authorized to delete this media");
+            throw new ForbiddenException("You are not authorized to delete this media");
         }
 
         // Delete the file from GridFS

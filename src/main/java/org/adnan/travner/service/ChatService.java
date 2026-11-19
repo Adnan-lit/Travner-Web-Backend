@@ -72,8 +72,9 @@ public class ChatService {
     /**
      * Get messages for a conversation
      */
-    public Page<ChatMessageDTO> getConversationMessages(String conversationId, Pageable pageable) {
+    public Page<ChatMessageDTO> getConversationMessages(String conversationId, String userId, Pageable pageable) {
         log.debug("Getting messages for conversation: {}", conversationId);
+        assertParticipant(conversationId, userId);
         
         Page<ChatMessage> messages = chatMessageRepository
                 .findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
@@ -91,9 +92,7 @@ public class ChatService {
         ChatConversation conversation = chatConversationRepository.findById(request.getConversationId())
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
         
-        if (!conversation.getParticipantIds().contains(senderId)) {
-            throw new RuntimeException("User is not a participant in this conversation");
-        }
+        assertParticipant(conversation, senderId);
 
         // Get sender user details
         var senderUser = userService.getById(senderId);
@@ -141,6 +140,7 @@ public class ChatService {
      */
     public void markMessagesAsRead(String conversationId, String userId) {
         log.debug("Marking messages as read for user: {} in conversation: {}", userId, conversationId);
+        assertParticipant(conversationId, userId);
         
         List<ChatMessage> unreadMessages = chatMessageRepository
                 .findByConversationIdAndReadByNotContaining(conversationId, userId);
@@ -159,11 +159,29 @@ public class ChatService {
     /**
      * Get conversation by ID
      */
-    public ChatConversationDTO getConversationById(String conversationId) {
-        ChatConversation conversation = chatConversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
-        
+    public ChatConversationDTO getConversationById(String conversationId, String userId) {
+        ChatConversation conversation = requireConversation(conversationId);
+        assertParticipant(conversation, userId);
+
         return convertToConversationDTO(conversation);
+    }
+
+    /** Callable from REST and STOMP handlers before touching a conversation. */
+    public void assertParticipant(String conversationId, String userId) {
+        assertParticipant(requireConversation(conversationId), userId);
+    }
+
+    private ChatConversation requireConversation(String conversationId) {
+        return chatConversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+    }
+
+    private void assertParticipant(ChatConversation conversation, String userId) {
+        if (conversation.getParticipantIds() == null
+                || !conversation.getParticipantIds().contains(userId)) {
+            throw new org.adnan.travner.exception.ForbiddenException(
+                    "User is not a participant in this conversation");
+        }
     }
 
     // Helper methods

@@ -9,6 +9,7 @@ import org.adnan.travner.dto.OrderDTO;
 import org.adnan.travner.service.OrderService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -223,6 +224,7 @@ public class OrderController {
      * Get all orders (admin only)
      */
     @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<OrderDTO>>> getAllOrders(
             Authentication authentication) {
         try {
@@ -244,6 +246,7 @@ public class OrderController {
      * Admin cancel order
      */
     @PostMapping("/{orderId}/admin-cancel")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<OrderDTO>> adminCancelOrder(
             Authentication authentication,
             @PathVariable String orderId) {

@@ -3,6 +3,7 @@ package org.adnan.travner.controller;
 import lombok.RequiredArgsConstructor;
 import org.adnan.travner.entry.PostEntry;
 import org.adnan.travner.repository.PostRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ import java.util.Map;
 @CrossOrigin
 @RequestMapping("debug")
 @RequiredArgsConstructor
-// Debug controller - Should only be accessible by admins in production
+@Profile("!prod") // Debug endpoints are not registered in production at all.
 public class DebugController {
 
     private final PostRepository postRepository;

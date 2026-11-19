@@ -131,6 +131,26 @@ class JwtAuthenticationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void actuatorMetrics_requiresAdminRole() throws Exception {
+        mockMvc.perform(get("/actuator/metrics")
+                        .header("Authorization", "Bearer " + tokenFor("testuser", List.of("USER"))))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/actuator/metrics"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void actuatorHealth_staysPublicForUptimeChecks() throws Exception {
+        // This slice has no actuator handler, so only assert that the filter
+        // chain did not challenge the anonymous request (401/403).
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(result -> org.junit.jupiter.api.Assertions.assertFalse(
+                        result.getResponse().getStatus() == 401
+                                || result.getResponse().getStatus() == 403));
+    }
+
     private String tokenFor(String username, List<String> roles) {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()

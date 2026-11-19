@@ -39,7 +39,9 @@ public class SpringSecurity {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Public endpoints - no authentication required
+                        // Uptime probes stay public; all other management data is privileged.
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/api/public/**").permitAll()
                         // Token issuance is public; refresh is a single-use secret carried in a cookie.
                         .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()

@@ -5,6 +5,7 @@ import org.adnan.travner.dto.ChatMessageDTO;
 import org.adnan.travner.dto.SendMessageDTO;
 import org.adnan.travner.entry.ChatConversation;
 import org.adnan.travner.entry.ChatMessage;
+import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.repository.ChatConversationRepository;
 import org.adnan.travner.repository.ChatMessageRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -167,16 +168,37 @@ class ChatServiceTest {
         List<ChatMessage> messages = Arrays.asList(testMessage);
         Page<ChatMessage> messagePage = new PageImpl<>(messages);
         
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
         when(chatMessageRepository.findByConversationIdOrderByCreatedAtDesc(eq("conv1"), any(Pageable.class)))
                 .thenReturn(messagePage);
 
         // When
-        Page<ChatMessageDTO> result = chatService.getConversationMessages("conv1", Pageable.unpaged());
+        Page<ChatMessageDTO> result = chatService.getConversationMessages("conv1", "user1", Pageable.unpaged());
 
         // Then
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
         assertEquals("msg1", result.getContent().get(0).getId());
+    }
+
+    @Test
+    void nonParticipantCannotReadMessages() {
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
+
+        assertThrows(ForbiddenException.class,
+                () -> chatService.getConversationMessages("conv1", "intruder", Pageable.unpaged()));
+        verifyNoInteractions(chatMessageRepository);
+    }
+
+    @Test
+    void nonParticipantCannotReadConversationOrMarkRead() {
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
+
+        assertThrows(ForbiddenException.class,
+                () -> chatService.getConversationById("conv1", "intruder"));
+        assertThrows(ForbiddenException.class,
+                () -> chatService.markMessagesAsRead("conv1", "intruder"));
+        verifyNoInteractions(chatMessageRepository);
     }
 }
 

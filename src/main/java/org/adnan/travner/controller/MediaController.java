@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.MediaDTO;
+import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.service.MediaService;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
@@ -62,6 +63,9 @@ public class MediaController {
             // Return success response
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Media uploaded successfully", uploadedMedia));
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Access denied"));
         } catch (Exception e) {
             log.error("Error uploading media: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -153,6 +157,9 @@ public class MediaController {
         try {
             mediaService.deleteMedia(mediaId, authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Media deleted successfully", null));
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Access denied"));
         } catch (RuntimeException e) {
             log.error("Error deleting media {}: {}", mediaId, e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN)

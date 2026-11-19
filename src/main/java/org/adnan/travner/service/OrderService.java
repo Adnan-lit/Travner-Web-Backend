@@ -6,6 +6,7 @@ import org.adnan.travner.dto.CartDTO;
 import org.adnan.travner.dto.CreateOrderRequest;
 import org.adnan.travner.dto.OrderDTO;
 import org.adnan.travner.entry.OrderEntry;
+import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.OrderRepository;
 import org.adnan.travner.repository.UserRepository;
@@ -310,6 +311,14 @@ public class OrderService {
         OrderEntry order = orderRepository.findById(new org.bson.types.ObjectId(orderId))
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
+        // Only a seller of one of the order's items (or an admin) may fulfill it.
+        boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
+        boolean isSeller = order.getItems() != null && order.getItems().stream()
+                .anyMatch(item -> user.getId().toHexString().equals(item.getSellerId()));
+        if (!isAdmin && !isSeller) {
+            throw new ForbiddenException("Only the seller or an administrator can fulfill this order");
+        }
+
         if (!order.getStatus().equals(OrderEntry.OrderStatus.PAID)) {
             throw new RuntimeException("Order cannot be fulfilled. Current status: " + order.getStatus());
         }
@@ -348,7 +357,7 @@ public class OrderService {
 
         // Check if user is admin
         if (admin.getRoles() == null || !admin.getRoles().contains("ADMIN")) {
-            throw new RuntimeException("Only administrators can cancel orders");
+            throw new ForbiddenException("Only administrators can cancel orders");
         }
 
         OrderEntry order = orderRepository.findById(new org.bson.types.ObjectId(orderId))

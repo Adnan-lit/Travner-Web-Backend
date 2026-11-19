@@ -90,19 +90,9 @@ public class ChatController {
         
         String userId = authentication.getName();
         
-        // Verify user is participant
-        ChatConversationDTO conversation = chatService.getConversationById(conversationId);
-        if (!conversation.getParticipantIds().contains(userId)) {
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<Page<ChatMessageDTO>>builder()
-                    .success(false)
-                    .message("User is not a participant in this conversation")
-                    .build()
-            );
-        }
-        
+        // Participant check is enforced in the service for REST and STOMP paths.
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<ChatMessageDTO> messages = chatService.getConversationMessages(conversationId, pageable);
+        Page<ChatMessageDTO> messages = chatService.getConversationMessages(conversationId, userId, pageable);
         
         ApiResponse<Page<ChatMessageDTO>> response = ApiResponse.<Page<ChatMessageDTO>>builder()
                 .success(true)
@@ -186,6 +176,7 @@ public class ChatController {
     public void handleTypingIndicator(@Payload TypingIndicatorDTO typingIndicator, Principal principal) {
         String senderId = principal.getName();
         log.debug("Received typing indicator from user: {} in conversation: {}", senderId, typingIndicator.getConversationId());
+        chatService.assertParticipant(typingIndicator.getConversationId(), senderId);
         
         // Set the user info
         typingIndicator.setUserId(senderId);
@@ -210,7 +201,7 @@ public class ChatController {
         
         try {
             // Verify user is participant in conversation
-            ChatConversationDTO conversation = chatService.getConversationById(conversationId);
+            ChatConversationDTO conversation = chatService.getConversationById(conversationId, userId);
             if (!conversation.getParticipantIds().contains(userId)) {
                 return ResponseEntity.badRequest().body(
                     ApiResponse.<Map<String, String>>builder()

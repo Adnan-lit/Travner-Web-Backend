@@ -7,6 +7,7 @@ import org.adnan.travner.dto.MediaDTO;
 import org.adnan.travner.dto.ProductDTO;
 import org.adnan.travner.dto.ProductRequest;
 import org.adnan.travner.entry.ProductEntry;
+import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.repository.ProductRepository;
 import org.adnan.travner.service.MediaService;
 import org.adnan.travner.service.ProductService;
@@ -334,6 +335,9 @@ public class MarketController {
         }
 
         try {
+            // Only the seller/admin may change this product's media.
+            productService.assertCanManageProductMedia(productId, authentication.getName());
+
             // Verify product exists
             Optional<ProductEntry> productOpt = productRepository.findById(new ObjectId(productId));
             if (productOpt.isEmpty()) {
@@ -360,6 +364,9 @@ public class MarketController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Media uploaded successfully", uploadedMedia));
 
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Access denied"));
         } catch (Exception e) {
             log.error("Error uploading media for product {}: {}", productId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -387,6 +394,9 @@ public class MarketController {
         }
 
         try {
+            // Only the seller/admin may change this product's media.
+            productService.assertCanManageProductMedia(productId, authentication.getName());
+
             // Verify product exists
             Optional<ProductEntry> productOpt = productRepository.findById(new ObjectId(productId));
             if (productOpt.isEmpty()) {
@@ -406,6 +416,9 @@ public class MarketController {
             log.info("Media removed from product {} by user {}", productId, authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Media removed from product successfully", null));
 
+        } catch (ForbiddenException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Access denied"));
         } catch (Exception e) {
             log.error("Error removing media from product {}: {}", productId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

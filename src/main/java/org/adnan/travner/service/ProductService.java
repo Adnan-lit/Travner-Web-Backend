@@ -7,6 +7,8 @@ import org.adnan.travner.dto.ProductRequest;
 import org.adnan.travner.entry.MediaEntry;
 import org.adnan.travner.entry.ProductEntry;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.ForbiddenException;
+import org.adnan.travner.exception.ResourceNotFoundException;
 import org.adnan.travner.repository.MediaRepository;
 import org.adnan.travner.repository.ProductRepository;
 import org.adnan.travner.repository.UserRepository;
@@ -227,6 +229,28 @@ public class ProductService {
 
         productRepository.save(product);
         log.info("Product deleted successfully: {} by user: {} (admin: {})", productId, username, isAdmin);
+    }
+
+    /**
+     * Object-level authorization for product media mutations. Sellers may manage
+     * media on their own products; administrators may manage any product.
+     */
+    public void assertCanManageProductMedia(String productId, String username) {
+        ProductEntry product = productRepository.findById(new ObjectId(productId))
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
+
+        UserEntry user = userRepository.findByuserName(username);
+        if (user == null) {
+            throw new ForbiddenException("Access denied");
+        }
+
+        boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
+        boolean isSeller = (product.getSellerId() != null
+                && product.getSellerId().equals(user.getId().toHexString()))
+                || username.equals(product.getSellerUsername());
+        if (!isAdmin && !isSeller) {
+            throw new ForbiddenException("Only the product seller or an administrator can manage product media");
+        }
     }
 
     /**
