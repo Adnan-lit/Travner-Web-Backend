@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.entry.*;
 import org.adnan.travner.repository.*;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,7 @@ import java.util.List;
  * Data seeder to populate the database with sample data for development and testing
  */
 @Component
+@Profile("!prod & !test")
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder implements CommandLineRunner {

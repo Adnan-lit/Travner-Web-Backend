@@ -121,12 +121,7 @@ logging:
     max-size: 10MB
     max-history: 30
 
-# Security configuration - use environment variables in production
-security:
-  user:
-    name: ${ADMIN_USERNAME:admin}
-    password: ${ADMIN_PASSWORD:admin123}
-    roles: ADMIN
-
+# Security is configured in Java (SecurityConfig). The former `security.user`
+# block here was dead configuration and shipped a default password.
 
 

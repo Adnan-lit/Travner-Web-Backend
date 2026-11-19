@@ -13,6 +13,9 @@ public interface UserRepository extends MongoRepository<UserEntry, ObjectId> {
     
     UserEntry findByEmail(String email);
 
+    @Query("{'roles': 'ADMIN'}")
+    long countAdmins();
+
     void deleteByuserName(String userName);
 
     @Query("{'$or': [{'userName': {'$regex': '?0', '$options': 'i'}}, {'firstName': {'$regex': '?0', '$options': 'i'}}, {'lastName': {'$regex': '?0', '$options': 'i'}}]}")

@@ -108,9 +108,6 @@ logging:
     max-size: 50MB
     max-history: 7
 
-# Production security configuration
-security:
-  user:
-    name: ${ADMIN_USERNAME}
-    password: ${ADMIN_PASSWORD}
-    roles: ADMIN
+# Bootstrap admin is opt-in; see APP_BOOTSTRAP_* in env.example.
+# The former `security.user` block was dead configuration: Spring Security in
+# this project is configured in Java and never reads those properties.
