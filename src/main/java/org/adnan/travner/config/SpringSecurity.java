@@ -41,6 +41,8 @@ public class SpringSecurity {
                         // Public endpoints - no authentication required
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        // Token issuance is public; refresh is a single-use secret carried in a cookie.
+                        .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .requestMatchers("/error").permitAll()
 
                         // WebSocket endpoints - allow connection but authenticate messages

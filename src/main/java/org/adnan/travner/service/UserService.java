@@ -54,6 +54,10 @@ public class UserService {
     @Autowired
     private CommentRepository commentRepository;
 
+    /** Injected by field to avoid a constructor cycle (AuthService no longer depends on UserService). */
+    @Autowired
+    private AuthService authService;
+
     private static final long RESET_TOKEN_TTL_SECONDS = 15 * 60;
 
     /** Hashed token -> username/expiry. In-memory and therefore node-local. */
@@ -209,6 +213,7 @@ public class UserService {
             }
             user.setPassword(passwordEncoder.encode(newPassword));
             userRepository.save(user);
+            revokeSessions(user);
             return true;
         } catch (RuntimeException e) {
             return false;
@@ -319,6 +324,7 @@ public class UserService {
             // Update with new password
             user.setPassword(passwordEncoder.encode(newPassword));
             userRepository.save(user);
+            revokeSessions(user);
             return true;
         } catch (Exception e) {
             throw new RuntimeException("Failed to change password: " + e.getMessage(), e);
@@ -407,6 +413,7 @@ public class UserService {
 
             user.setPassword(passwordEncoder.encode(newPassword));
             userRepository.save(user);
+            revokeSessions(user);
             return true;
         } catch (RuntimeException e) {
             log.warn("Could not reset password");
@@ -744,5 +751,12 @@ public class UserService {
                 .profileImageUrl(user.getProfileImageUrl())
                 .roles(user.getRoles())
                 .build();
+    }
+
+    /** A password change invalidates every outstanding refresh session. */
+    private void revokeSessions(UserEntry user) {
+        if (authService != null && user != null && user.getId() != null) {
+            authService.revokeAllForUser(user.getId().toHexString());
+        }
     }
 }

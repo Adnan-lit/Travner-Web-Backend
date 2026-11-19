@@ -30,6 +30,9 @@ class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private AuthService authService;
+
     @InjectMocks
     private UserService userService;
 
@@ -178,6 +181,7 @@ class UserServiceTest {
         verify(passwordEncoder).encode("newpassword");
         assertEquals("$2a$10$newencodedpassword", testUser.getPassword());
         verify(userRepository).save(testUser);
+        verify(authService).revokeAllForUser(testUser.getId().toHexString());
     }
 
     @Test

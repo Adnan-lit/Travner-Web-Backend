@@ -23,6 +23,15 @@ app:
   upload:
     dir: ${APP_UPLOAD_DIR:${user.home}/travner-uploads}
 
+  # JWT auth (decisions D1/D2). In prod set JWT_PRIVATE_KEY_PEM/JWT_PUBLIC_KEY_PEM
+  # to stable keys; otherwise an ephemeral RSA key is generated per startup.
+  jwt:
+    access-token-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:900}
+    refresh-token-ttl-days: ${JWT_REFRESH_TTL_DAYS:7}
+    issuer: ${JWT_ISSUER:https://travner.local}
+    refresh-cookie-name: ${JWT_REFRESH_COOKIE_NAME:travner_refresh}
+    refresh-cookie-secure: ${JWT_REFRESH_COOKIE_SECURE:false}
+
   # CORS Configuration - Allow all origins
   cors:
     allowed-origins: "*"

@@ -38,6 +38,10 @@ app:
   upload:
     dir: ${APP_UPLOAD_DIR:/app/uploads}
 
+  # Refresh cookies must be Secure over HTTPS in production.
+  jwt:
+    refresh-cookie-secure: ${JWT_REFRESH_COOKIE_SECURE:true}
+
   # CORS Configuration for production - Allow all origins
   cors:
     allowed-origins: "*"
