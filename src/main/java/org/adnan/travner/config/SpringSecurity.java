@@ -124,8 +124,10 @@ public class SpringSecurity {
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 )
-                .httpBasic(Customizer.withDefaults())
-                .userDetailsService(userDetailsService)
+                // Bearer access tokens (D1). HTTP Basic and localStorage credentials
+                // are gone; the refresh cookie is exchanged at /api/auth/refresh.
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
+                        .jwtAuthenticationConverter(new org.adnan.travner.security.JwtAuthenticationConverter())))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(401);

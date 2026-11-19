@@ -60,6 +60,9 @@ class AuthControllerTest {
     @MockBean
     private PasswordEncoder passwordEncoder;
 
+    @MockBean
+    private org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder;
+
     private UserEntry user;
     private AuthResponse response;
 

@@ -52,6 +52,9 @@ class SecurityAnonymousAccessTest {
     @MockBean
     private RateLimiter rateLimiter;
 
+    @MockBean
+    private org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder;
+
     @BeforeEach
     void allowRequests() {
         Mockito.when(rateLimiter.isApiAllowed(Mockito.anyString())).thenReturn(true);

@@ -65,20 +65,9 @@ public class RateLimitingFilter implements Filter {
     }
 
     private String getClientIdentifier(HttpServletRequest request) {
-        // Try to get authenticated user first
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Basic ")) {
-            // For authenticated users, use username as identifier
-            try {
-                String credentials = new String(java.util.Base64.getDecoder().decode(authHeader.substring(6)));
-                String username = credentials.split(":")[0];
-                return "user:" + username;
-            } catch (Exception e) {
-                // Fall back to IP if parsing fails
-            }
-        }
-        
-        // Fall back to IP address for anonymous users
+        // Authentication happens after this filter, so the SecurityContext is
+        // not populated yet. Never decode credentials here (Basic was removed).
+        // Key on the client IP; trust X-Forwarded-For only behind a known proxy.
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
             return "ip:" + xForwardedFor.split(",")[0].trim();
