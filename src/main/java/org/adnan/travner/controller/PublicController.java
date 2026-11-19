@@ -13,7 +13,6 @@ import jakarta.validation.Valid;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/public")
 public class PublicController {
 

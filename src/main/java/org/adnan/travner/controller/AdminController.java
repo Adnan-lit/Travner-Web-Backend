@@ -34,7 +34,6 @@ import java.util.Map;
  * Admin controller for maintenance operations and user management
  */
 @RestController
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
 @Slf4j

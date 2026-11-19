@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@CrossOrigin
 @RequestMapping("debug")
 @RequiredArgsConstructor
 @Profile("!prod") // Debug endpoints are not registered in production at all.

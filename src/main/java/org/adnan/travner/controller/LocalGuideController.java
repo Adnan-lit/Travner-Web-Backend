@@ -26,7 +26,6 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/local-guides")
-@CrossOrigin(origins = "*")
 public class LocalGuideController {
 
     @Autowired

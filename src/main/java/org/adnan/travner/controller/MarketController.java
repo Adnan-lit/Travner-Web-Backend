@@ -31,7 +31,6 @@ import java.util.Optional;
  * Controller for handling market and product operations
  */
 @RestController
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/market")
 @RequiredArgsConstructor
 @Slf4j

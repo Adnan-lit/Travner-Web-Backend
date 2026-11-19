@@ -19,7 +19,6 @@ import java.util.Map;
  * Controller for handling shopping cart operations
  */
 @RestController
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/cart")
 @RequiredArgsConstructor
 @Slf4j

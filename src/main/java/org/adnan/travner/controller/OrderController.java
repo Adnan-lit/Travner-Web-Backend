@@ -19,7 +19,6 @@ import java.util.List;
  * Controller for handling order operations
  */
 @RestController
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/market/orders")
 @RequiredArgsConstructor
 @Slf4j

@@ -1,5 +1,6 @@
 package org.adnan.travner.security;
 
+import org.adnan.travner.config.CorsConfig;
 import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.config.SpringSecurity;
 import org.adnan.travner.controller.PostController;
@@ -31,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = PostController.class)
 @AutoConfigureMockMvc(addFilters = true)
-@Import(SpringSecurity.class)
+@Import({SpringSecurity.class, CorsConfig.class})
 class SecurityAnonymousAccessTest {
 
     @Autowired

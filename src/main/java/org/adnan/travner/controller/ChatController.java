@@ -152,6 +152,10 @@ public class ChatController {
      */
     @MessageMapping("/chat.sendMessage")
     public void handleSendMessage(@Payload SendMessageDTO request, Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            log.warn("Ignoring WebSocket message without an authenticated principal");
+            return;
+        }
         String senderId = principal.getName();
         log.debug("Received WebSocket message from user: {} to conversation: {}", senderId, request.getConversationId());
         
@@ -174,6 +178,10 @@ public class ChatController {
      */
     @MessageMapping("/chat.typing")
     public void handleTypingIndicator(@Payload TypingIndicatorDTO typingIndicator, Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            log.warn("Ignoring typing indicator without an authenticated principal");
+            return;
+        }
         String senderId = principal.getName();
         log.debug("Received typing indicator from user: {} in conversation: {}", senderId, typingIndicator.getConversationId());
         chatService.assertParticipant(typingIndicator.getConversationId(), senderId);

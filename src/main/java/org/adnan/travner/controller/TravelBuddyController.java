@@ -26,7 +26,6 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/travel-buddies")
-@CrossOrigin(origins = "*")
 public class TravelBuddyController {
 
     @Autowired

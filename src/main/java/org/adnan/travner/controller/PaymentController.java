@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequestMapping("/api/payments")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class PaymentController {
 
     private final PaymentService paymentService;

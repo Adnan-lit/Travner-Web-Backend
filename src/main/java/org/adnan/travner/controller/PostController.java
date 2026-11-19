@@ -26,7 +26,6 @@ import java.util.Optional;
  * Controller for handling post-related operations
  */
 @RestController
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
 public class PostController {

@@ -23,7 +23,6 @@ import java.util.Optional;
  * Controller for itinerary operations
  */
 @RestController
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/itineraries")
 @RequiredArgsConstructor
 @Slf4j

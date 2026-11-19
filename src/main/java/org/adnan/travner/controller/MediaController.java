@@ -20,7 +20,6 @@ import java.util.List;
  * REST Controller for handling media uploads and retrievals from GridFS
  */
 @RestController
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/media")
 @RequiredArgsConstructor
 @Slf4j

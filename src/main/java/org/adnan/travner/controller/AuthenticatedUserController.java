@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
  * Handles /api/user/* endpoints (current logged-in user)
  */
 @RestController
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
 @Slf4j
