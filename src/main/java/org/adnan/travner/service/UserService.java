@@ -17,20 +17,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.bson.types.ObjectId;
-import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -61,21 +53,6 @@ public class UserService {
     /** Injected by field to avoid a constructor cycle (AuthService no longer depends on UserService). */
     @Autowired
     private AuthService authService;
-
-    private static final long RESET_TOKEN_TTL_SECONDS = 15 * 60;
-
-    /** Hashed token -> username/expiry. In-memory and therefore node-local. */
-    private final Map<String, ResetTokenEntry> passwordResetTokens = new ConcurrentHashMap<>();
-
-    private static class ResetTokenEntry {
-        private final String username;
-        private final Instant expiresAt;
-
-        private ResetTokenEntry(String username, Instant expiresAt) {
-            this.username = username;
-            this.expiresAt = expiresAt;
-        }
-    }
 
     public List<UserEntry> getAll() {
         List<UserEntry> users = userRepository.findAll();
@@ -386,62 +363,6 @@ public class UserService {
             return false;
         }
     }
-
-    // Password reset flow. Tokens are hashed at rest, expire, and are single-use.
-    public String generatePasswordResetToken(String username) {
-        try {
-            UserEntry user = getByUsername(username);
-            if (user == null) {
-                return null; // Don't reveal if user exists or not
-            }
-
-            String token = UUID.randomUUID().toString();
-            passwordResetTokens.put(hashToken(token),
-                    new ResetTokenEntry(user.getUserName(), Instant.now().plusSeconds(RESET_TOKEN_TTL_SECONDS)));
-            return token;
-        } catch (RuntimeException e) {
-            log.warn("Could not generate password reset token");
-            return null;
-        }
-    }
-
-    public boolean resetPasswordWithToken(String token, String newPassword) {
-        try {
-            if (token == null || newPassword == null || newPassword.length() < 6) {
-                return false;
-            }
-
-            ResetTokenEntry entry = passwordResetTokens.remove(hashToken(token));
-            if (entry == null || entry.expiresAt.isBefore(Instant.now())) {
-                return false;
-            }
-
-            UserEntry user = getByUsername(entry.username);
-            if (user == null) {
-                return false;
-            }
-
-            user.setPassword(passwordEncoder.encode(newPassword));
-            userRepository.save(user);
-            revokeSessions(user);
-            return true;
-        } catch (RuntimeException e) {
-            log.warn("Could not reset password");
-            return false;
-        }
-    }
-
-    private static String hashToken(String token) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(token.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 is not available", e);
-        }
-    }
-
-
 
     // Set user active/inactive status
     public boolean setUserActiveStatus(String username, boolean active) {

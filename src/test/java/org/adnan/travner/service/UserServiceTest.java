@@ -18,7 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -360,68 +359,6 @@ class UserServiceTest {
         assertEquals("UpdatedFirst", testUser.getFirstName());
         assertEquals("Updated bio", testUser.getBio());
         verify(userRepository).save(testUser);
-    }
-
-    @Test
-    void testGeneratePasswordResetToken_Success() {
-        // Given
-        when(userRepository.findByuserName("testuser")).thenReturn(testUser);
-
-        // When
-        String token = userService.generatePasswordResetToken("testuser");
-
-        // Then
-        assertNotNull(token);
-        assertFalse(token.isEmpty());
-    }
-
-    @Test
-    void testResetPasswordWithToken_Success() {
-        // Given
-        when(userRepository.findByuserName("testuser")).thenReturn(testUser);
-        when(passwordEncoder.encode("newpassword123")).thenReturn("$2a$10$newencodedpassword123");
-        when(userRepository.save(any(UserEntry.class))).thenReturn(testUser);
-
-        // First generate a token
-        String token = userService.generatePasswordResetToken("testuser");
-
-        // When
-        boolean result = userService.resetPasswordWithToken(token, "newpassword123");
-
-        // Then
-        assertTrue(result);
-        verify(passwordEncoder).encode("newpassword123");
-        verify(userRepository).save(testUser);
-    }
-
-    @Test
-    void testResetPasswordWithToken_InvalidToken() {
-        boolean result = userService.resetPasswordWithToken(UUID.randomUUID().toString(), "newpassword123");
-
-        assertFalse(result);
-        verify(passwordEncoder, never()).encode(any());
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void testResetPasswordWithToken_IsSingleUse() {
-        when(userRepository.findByuserName("testuser")).thenReturn(testUser);
-        when(passwordEncoder.encode("newpassword123")).thenReturn("$2a$10$newencodedpassword123");
-        String token = userService.generatePasswordResetToken("testuser");
-
-        assertTrue(userService.resetPasswordWithToken(token, "newpassword123"));
-        assertFalse(userService.resetPasswordWithToken(token, "newpassword123"));
-        verify(passwordEncoder, times(1)).encode("newpassword123");
-        verify(userRepository, times(1)).save(testUser);
-    }
-
-    @Test
-    void testResetPasswordWithToken_TooShortPassword() {
-        when(userRepository.findByuserName("testuser")).thenReturn(testUser);
-        String token = userService.generatePasswordResetToken("testuser");
-
-        assertFalse(userService.resetPasswordWithToken(token, "short"));
-        verify(passwordEncoder, never()).encode(any());
     }
 
     @Test
