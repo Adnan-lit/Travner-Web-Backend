@@ -4,6 +4,7 @@ import org.adnan.travner.dto.LocalGuideDTO;
 import org.adnan.travner.dto.LocalGuideRequest;
 import org.adnan.travner.entry.LocalGuideEntry;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.repository.LocalGuideRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.adnan.travner.service.LocalGuideService;
@@ -87,8 +88,7 @@ public class LocalGuideController {
             
             return ResponseEntity.ok(guides.map(localGuideService::convertToDTO));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving local guides: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -102,8 +102,7 @@ public class LocalGuideController {
                     .map(guide -> ResponseEntity.ok(guide))
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving local guide: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -133,8 +132,7 @@ public class LocalGuideController {
             LocalGuideDTO guide = localGuideService.createLocalGuide(request, userOpt.get().getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(guide);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error creating local guide: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -160,8 +158,7 @@ public class LocalGuideController {
                     .map(guide -> ResponseEntity.ok(guide))
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error updating local guide: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -189,8 +186,7 @@ public class LocalGuideController {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error deleting local guide: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -203,8 +199,7 @@ public class LocalGuideController {
             List<LocalGuideDTO> guides = localGuideService.getLocalGuidesByUser(userId);
             return ResponseEntity.ok(guides);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving user's local guides: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 }

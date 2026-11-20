@@ -10,6 +10,8 @@ import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.dto.auth.AuthResponse;
 import org.adnan.travner.dto.auth.AuthUser;
 import org.adnan.travner.dto.auth.LoginRequest;
+import org.adnan.travner.exception.ErrorCode;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.service.AuthService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -54,7 +56,8 @@ public class AuthController {
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request,
                                    HttpServletRequest httpRequest) {
         if (!rateLimiter.isLoginAllowed(clientKey(httpRequest))) {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
+            return ExceptionResponses.of(ErrorCode.RATE_LIMITED, HttpStatus.TOO_MANY_REQUESTS,
+                    "Too many login attempts. Please try again later.");
         }
         try {
             AuthService.AuthResult result = authService.login(request.getUsername(), request.getPassword());

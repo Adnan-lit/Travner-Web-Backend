@@ -1,6 +1,5 @@
 package org.adnan.travner.exception;
 
-import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -22,184 +21,102 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Global exception handler for the Travner API
- * Provides centralized error handling and consistent error responses
+ * Global exception handler for the Travner API. Every branch delegates to
+ * {@link ExceptionResponses} so responses carry a stable code and correlation ID
+ * and 5xx responses never leak internal messages.
  */
 @RestControllerAdvice
-@Slf4j
 public class GlobalExceptionHandler {
 
-    /**
-     * Handle validation errors from @Valid annotations
-     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationErrors(
             MethodArgumentNotValidException ex) {
-
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-
-        log.warn("Validation failed: {}", errors);
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Validation failed", errors));
+        return ExceptionResponses.of(ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST,
+                "Validation failed", fieldErrors(ex.getBindingResult().getAllErrors().stream()
+                        .map(error -> (FieldError) error).toList()));
     }
 
-    /**
-     * Handle validation errors from @Validated on method parameters
-     */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleConstraintViolation(
             ConstraintViolationException ex) {
-
         Map<String, String> errors = ex.getConstraintViolations().stream()
                 .collect(Collectors.toMap(
                         violation -> violation.getPropertyPath().toString(),
                         ConstraintViolation::getMessage));
-
-        log.warn("Constraint violation: {}", errors);
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Validation failed", errors));
+        return ExceptionResponses.of(ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST,
+                "Validation failed", errors);
     }
 
-    /**
-     * Handle binding errors
-     */
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleBindingErrors(BindException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-
-        log.warn("Binding failed: {}", errors);
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Invalid request data", errors));
+        return ExceptionResponses.of(ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST,
+                "Invalid request data", fieldErrors(ex.getBindingResult().getAllErrors().stream()
+                        .map(error -> (FieldError) error).toList()));
     }
 
-    /**
-     * Handle type mismatch errors (e.g., invalid path variables)
-     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        Class<?> requiredType = ex.getRequiredType();
-        String typeName = requiredType != null ? requiredType.getSimpleName() : "unknown";
-        String message = String.format("Invalid value '%s' for parameter '%s'. Expected type: %s",
-                ex.getValue(), ex.getName(), typeName);
-
-        log.warn("Type mismatch: {}", message);
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(message));
+        return ExceptionResponses.from(ex);
     }
 
-    /**
-     * Handle authentication errors
-     */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Object>> handleBadCredentials(BadCredentialsException ex) {
-        log.warn("Authentication failed: {}", ex.getMessage());
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("Invalid credentials"));
+        return ExceptionResponses.from(ex);
     }
 
-    /**
-     * Handle custom business logic exceptions
-     */
-    /**
-     * Handle resource not found exceptions
-     */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Object>> handleResourceNotFound(ResourceNotFoundException ex) {
-        log.warn("Resource not found: {}", ex.getMessage());
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error(ex.getMessage()));
+        return ExceptionResponses.from(ex);
     }
 
-    /**
-     * Object-level authorization failures always map to 403 with a generic body;
-     * internal reasons stay in the server log.
-     */
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ApiResponse<Object>> handleForbidden(ForbiddenException ex) {
-        log.warn("Authorization denied: {}", ex.getMessage());
-
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error("Access denied"));
+        return ExceptionResponses.from(ex);
     }
 
-    /** Method-security denials must not fall through to the RuntimeException handler. */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Object>> handleAccessDenied(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error("Access denied"));
+        return ExceptionResponses.from(ex);
     }
 
-    /** Unknown routes must stay 404 instead of being swallowed as a 500. */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiResponse<Object>> handleNoResource(NoResourceFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error("Not found"));
+        return ExceptionResponses.of(ErrorCode.RESOURCE_NOT_FOUND, HttpStatus.NOT_FOUND, "Not found");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException ex) {
-        log.warn("Illegal argument: {}", ex.getMessage());
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(ex.getMessage()));
+        return ExceptionResponses.from(ex);
     }
 
-    /** Illegal order transitions are client-visible conflicts, not server errors. */
     @ExceptionHandler(InvalidOrderStateException.class)
     public ResponseEntity<ApiResponse<Object>> handleInvalidOrderState(InvalidOrderStateException ex) {
-        log.warn("Rejected order transition: {}", ex.getMessage());
-
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error("Order cannot be changed from its current status"));
+        return ExceptionResponses.from(ex);
     }
 
-    /** Two concurrent writes to the same order: retry with the latest version. */
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<ApiResponse<Object>> handleOptimisticLock(OptimisticLockingFailureException ex) {
-        log.warn("Concurrent order modification rejected");
-
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error("Order was modified concurrently; reload and retry"));
+        return ExceptionResponses.from(ex);
     }
 
-    /**
-     * Handle runtime exceptions from business logic
-     */
+    @ExceptionHandler(DuplicateUserException.class)
+    public ResponseEntity<ApiResponse<Object>> handleDuplicateUser(DuplicateUserException ex) {
+        return ExceptionResponses.from(ex);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Object>> handleRuntimeException(RuntimeException ex) {
-        log.error("Runtime exception: {}", ex.getMessage(), ex);
-
-        // Don't expose internal error details in production
-        String message = ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred";
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(message));
+        return ExceptionResponses.from(ex);
     }
 
-    /**
-     * Handle any other unexpected exceptions
-     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGenericException(Exception ex) {
-        log.error("Unexpected exception: {}", ex.getMessage(), ex);
+        return ExceptionResponses.from(ex);
+    }
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("An unexpected error occurred. Please try again later."));
+    private Map<String, String> fieldErrors(java.util.List<FieldError> errors) {
+        Map<String, String> result = new HashMap<>();
+        errors.forEach(error -> result.put(error.getField(), error.getDefaultMessage()));
+        return result;
     }
 }

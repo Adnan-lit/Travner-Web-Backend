@@ -3,6 +3,7 @@ package org.adnan.travner.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.service.AIService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,13 +40,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating travel recommendations", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate travel recommendations: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -76,13 +71,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating AI response", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate AI response: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -105,13 +94,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating itinerary suggestions", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate itinerary suggestions: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -132,13 +115,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating travel buddy suggestions", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate travel buddy suggestions: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -161,13 +138,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating food recommendations", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate food recommendations: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -189,13 +160,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating budget travel tips", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate budget travel tips: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -216,13 +181,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating cultural insights", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate cultural insights: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -243,13 +202,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating weather information", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate weather information: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -270,13 +223,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating safety tips", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate safety tips: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -297,13 +244,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating transportation information", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate transportation information: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -326,13 +267,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating accommodation recommendations", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<String>builder()
-                    .success(false)
-                    .message("Failed to generate accommodation recommendations: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -363,13 +298,7 @@ public class AIController {
                     .build()
             );
         } catch (Exception e) {
-            log.error("Error generating destination guide", e);
-            return ResponseEntity.badRequest().body(
-                ApiResponse.<Map<String, String>>builder()
-                    .success(false)
-                    .message("Failed to generate destination guide: " + e.getMessage())
-                    .build()
-            );
+            return ExceptionResponses.from(e);
         }
     }
 

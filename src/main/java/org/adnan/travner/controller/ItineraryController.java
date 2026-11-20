@@ -1,5 +1,6 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.exception.ExceptionResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,9 +52,7 @@ public class ItineraryController {
             Page<ItineraryDTO> itineraries = itineraryService.getPublicItineraries(pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
-            log.error("Error retrieving itineraries: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve itineraries: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -71,9 +70,7 @@ public class ItineraryController {
                         .body(ApiResponse.error("Itinerary not found with ID: " + id));
             }
         } catch (Exception e) {
-            log.error("Error retrieving itinerary {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve itinerary: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -92,9 +89,7 @@ public class ItineraryController {
             Page<ItineraryDTO> itineraries = itineraryService.getItinerariesByDestination(destination, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
-            log.error("Error retrieving itineraries by destination {}: {}", destination, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get itineraries by destination: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -113,9 +108,7 @@ public class ItineraryController {
             Page<ItineraryDTO> itineraries = itineraryService.getItinerariesByUser(username, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
-            log.error("Error retrieving itineraries by user {}: {}", username, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get itineraries by user: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -134,9 +127,7 @@ public class ItineraryController {
             Page<ItineraryDTO> itineraries = itineraryService.searchItineraries(query, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
-            log.error("Error searching itineraries: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to search itineraries: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -155,9 +146,7 @@ public class ItineraryController {
             Page<ItineraryDTO> itineraries = itineraryService.getItinerariesByTags(tags, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
-            log.error("Error retrieving itineraries by tags {}: {}", tags, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get itineraries by tags: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -175,9 +164,7 @@ public class ItineraryController {
             Page<ItineraryDTO> itineraries = itineraryService.getTemplateItineraries(pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
-            log.error("Error retrieving template itineraries: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get template itineraries: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -199,9 +186,7 @@ public class ItineraryController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Itinerary created successfully", createdItinerary));
         } catch (Exception e) {
-            log.error("Error creating itinerary: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Failed to create itinerary: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -223,9 +208,7 @@ public class ItineraryController {
             ItineraryDTO updatedItinerary = itineraryService.updateItinerary(id, authentication.getName(), request);
             return ResponseEntity.ok(ApiResponse.success("Itinerary updated successfully", updatedItinerary));
         } catch (RuntimeException e) {
-            log.error("Error updating itinerary {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Failed to update itinerary: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -246,9 +229,7 @@ public class ItineraryController {
             itineraryService.deleteItinerary(id, authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Itinerary deleted successfully", null));
         } catch (RuntimeException e) {
-            log.error("Error deleting itinerary {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Failed to delete itinerary: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -269,9 +250,7 @@ public class ItineraryController {
             ItineraryDTO updatedItinerary = itineraryService.likeItinerary(id, authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Itinerary liked successfully", updatedItinerary));
         } catch (RuntimeException e) {
-            log.error("Error liking itinerary {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to like itinerary: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 }

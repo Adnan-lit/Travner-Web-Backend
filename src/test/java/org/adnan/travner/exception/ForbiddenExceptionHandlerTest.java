@@ -16,6 +16,7 @@ class ForbiddenExceptionHandlerTest {
                 new GlobalExceptionHandler().handleForbidden(new ForbiddenException("secret internal reason"));
 
         assertEquals(403, response.getStatusCode().value());
+        assertEquals("FORBIDDEN", response.getBody().getCode());
         assertEquals("Access denied", response.getBody().getMessage());
         assertFalse(response.getBody().toString().contains("secret internal reason"));
     }
@@ -26,6 +27,7 @@ class ForbiddenExceptionHandlerTest {
                 new GlobalExceptionHandler().handleAccessDenied(new AccessDeniedException("denied"));
 
         assertEquals(403, response.getStatusCode().value());
+        assertEquals("FORBIDDEN", response.getBody().getCode());
         assertEquals("Access denied", response.getBody().getMessage());
     }
 }

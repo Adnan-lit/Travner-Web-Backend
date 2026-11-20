@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.PostDTO;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.repository.PostRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.adnan.travner.service.UserService;
@@ -131,9 +132,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", response));
 
         } catch (Exception e) {
-            log.error("Error retrieving users: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve users: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -160,9 +159,7 @@ public class AdminController {
                         .body(ApiResponse.error("User not found"));
             }
         } catch (Exception e) {
-            log.error("Error retrieving user {}: {}", username, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve user: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -203,9 +200,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("User roles updated successfully", user));
 
         } catch (Exception e) {
-            log.error("Error updating roles for user {}: {}", username, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to update user roles: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -238,9 +233,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("User activated successfully", user));
 
         } catch (Exception e) {
-            log.error("Error activating user {}: {}", username, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to activate user: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -273,9 +266,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("User deactivated successfully", user));
 
         } catch (Exception e) {
-            log.error("Error deactivating user {}: {}", username, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to deactivate user: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -312,9 +303,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("User deleted successfully", null));
 
         } catch (Exception e) {
-            log.error("Error deleting user {}: {}", username, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to delete user: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -358,9 +347,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("Posts retrieved successfully", response));
 
         } catch (Exception e) {
-            log.error("Error retrieving posts: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve posts: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -385,9 +372,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("Post deleted successfully", null));
 
         } catch (Exception e) {
-            log.error("Error deleting post {}: {}", postId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to delete post: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -424,9 +409,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("Post statistics retrieved", stats));
 
         } catch (Exception e) {
-            log.error("Error getting post stats: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get post statistics: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -470,9 +453,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("System statistics retrieved", stats));
 
         } catch (Exception e) {
-            log.error("Error getting system stats: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get system statistics: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -516,9 +497,7 @@ public class AdminController {
             ));
 
         } catch (Exception e) {
-            log.error("Error during media URL cleanup: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to cleanup media URLs: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -608,9 +587,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("Dashboard data retrieved successfully", dashboard));
             
         } catch (Exception e) {
-            log.error("Error getting dashboard data: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get dashboard data: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -672,9 +649,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("User activity retrieved successfully", activity));
             
         } catch (Exception e) {
-            log.error("Error getting user activity for {}: {}", username, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get user activity: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -730,9 +705,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("System health retrieved successfully", health));
             
         } catch (Exception e) {
-            log.error("Error getting system health: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get system health: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -800,7 +773,9 @@ public class AdminController {
                     successCount++;
                     
                 } catch (Exception e) {
-                    errors.add("Error processing " + username + ": " + e.getMessage());
+                    log.error("Bulk user operation failed for {} [trace={}]", username,
+                            org.slf4j.MDC.get(org.adnan.travner.config.CorrelationIdFilter.MDC_KEY), e);
+                    errors.add("Error processing " + username);
                     failureCount++;
                 }
             }
@@ -818,9 +793,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("Bulk operation completed", result));
             
         } catch (Exception e) {
-            log.error("Error performing bulk user operation: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to perform bulk operation: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -865,9 +838,7 @@ public class AdminController {
             return ResponseEntity.ok(ApiResponse.success("Moderation queue retrieved successfully", response));
             
         } catch (Exception e) {
-            log.error("Error getting moderation queue: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get moderation queue: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 }

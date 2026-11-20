@@ -20,6 +20,12 @@ public class ApiResponse<T> {
     private String message;
     private T data;
 
+    /** Stable, machine-readable error code; absent on successful responses. */
+    private String code;
+
+    /** Correlation ID echoed in the X-Correlation-Id header and server logs. */
+    private String traceId;
+
     // Pagination fields - used when returning paginated data
     private PaginationMeta pagination;
 
@@ -66,6 +72,17 @@ public class ApiResponse<T> {
                 .success(false)
                 .message(message)
                 .data(data)
+                .build();
+    }
+
+    /** Error response carrying a stable {@link org.adnan.travner.exception.ErrorCode}. */
+    public static <T> ApiResponse<T> error(String code, String message, String traceId) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .code(code)
+                .message(message)
+                .traceId(traceId)
+                .data(null)
                 .build();
     }
 

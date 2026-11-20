@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.MediaDTO;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.service.MediaService;
 import org.adnan.travner.web.ValidObjectId;
@@ -67,9 +68,7 @@ public class MediaController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Access denied"));
         } catch (Exception e) {
-            log.error("Error uploading media: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to upload media: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -98,8 +97,7 @@ public class MediaController {
             List<MediaDTO> media = mediaService.getMediaForPost(postId);
             return ResponseEntity.ok(ApiResponse.success(media));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve media: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -118,9 +116,7 @@ public class MediaController {
             List<MediaDTO> media = mediaService.getMediaForEntity(entityId, type);
             return ResponseEntity.ok(ApiResponse.success(media));
         } catch (Exception e) {
-            log.error("Error retrieving media for entity {}: {}", entityId, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve media: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 

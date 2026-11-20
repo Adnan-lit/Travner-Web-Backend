@@ -1,5 +1,6 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.exception.ExceptionResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
@@ -67,9 +68,7 @@ public class MarketController {
             Page<ProductDTO> products = productService.getAllAvailableProducts(pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
-            log.error("Error retrieving products: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve products: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -90,9 +89,7 @@ public class MarketController {
                         .body(ApiResponse.error("Product not found with ID: " + id));
             }
         } catch (Exception e) {
-            log.error("Error retrieving product {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve product: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -116,9 +113,7 @@ public class MarketController {
             Page<ProductDTO> products = productService.searchProducts(query, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
-            log.error("Error searching products: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to search products: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -142,9 +137,7 @@ public class MarketController {
             Page<ProductDTO> products = productService.getProductsByCategory(category, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
-            log.error("Error retrieving products by category {}: {}", category, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get products by category: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -168,9 +161,7 @@ public class MarketController {
             Page<ProductDTO> products = productService.getProductsByLocation(location, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
-            log.error("Error retrieving products by location {}: {}", location, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get products by location: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -194,9 +185,7 @@ public class MarketController {
             Page<ProductDTO> products = productService.getProductsByTags(tags, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
-            log.error("Error retrieving products by tags {}: {}", tags, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get products by tags: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -220,9 +209,7 @@ public class MarketController {
             Page<ProductDTO> products = productService.getProductsBySeller(sellerId, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
-            log.error("Error retrieving products by seller {}: {}", sellerId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve products by seller: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -248,9 +235,7 @@ public class MarketController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Product created successfully", createdProduct));
         } catch (Exception e) {
-            log.error("Error creating product: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Failed to create product: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -277,9 +262,7 @@ public class MarketController {
             ProductDTO updatedProduct = productService.updateProduct(id, authentication.getName(), productRequest);
             return ResponseEntity.ok(ApiResponse.success("Product updated successfully", updatedProduct));
         } catch (RuntimeException e) {
-            log.error("Error updating product {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Failed to update product: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -304,9 +287,7 @@ public class MarketController {
             productService.deleteProduct(id, authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Product deleted successfully", null));
         } catch (RuntimeException e) {
-            log.error("Error deleting product {}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Failed to delete product: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -357,9 +338,7 @@ public class MarketController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Access denied"));
         } catch (Exception e) {
-            log.error("Error uploading media for product {}: {}", productId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to upload media: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -403,9 +382,7 @@ public class MarketController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Access denied"));
         } catch (Exception e) {
-            log.error("Error removing media from product {}: {}", productId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to remove media: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 }

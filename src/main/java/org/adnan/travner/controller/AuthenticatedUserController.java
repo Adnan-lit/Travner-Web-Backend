@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.UserSummaryDTO;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -59,9 +60,7 @@ public class AuthenticatedUserController {
             return ResponseEntity.ok(ApiResponse.success("User profile retrieved successfully", userSummary));
 
         } catch (Exception e) {
-            log.error("Error retrieving user profile: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve user profile: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -94,9 +93,7 @@ public class AuthenticatedUserController {
             return ResponseEntity.ok(ApiResponse.success("Account deleted successfully", null));
 
         } catch (Exception e) {
-            log.error("Error deleting user account: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to delete account: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 }

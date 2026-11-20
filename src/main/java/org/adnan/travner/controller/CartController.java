@@ -7,6 +7,7 @@ import org.adnan.travner.dto.AddToCartRequest;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.CartDTO;
 import org.adnan.travner.dto.UpdateCartItemRequest;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.service.CartService;
 import org.adnan.travner.web.ValidObjectId;
 import org.springframework.http.HttpStatus;
@@ -44,9 +45,7 @@ public class CartController {
             CartDTO cart = cartService.getUserCart(authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Cart retrieved successfully", cart));
         } catch (Exception e) {
-            log.error("Error getting cart for user: {}", authentication.getName(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve cart: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -71,9 +70,7 @@ public class CartController {
             CartDTO cart = cartService.addToCart(authentication.getName(), request);
             return ResponseEntity.ok(ApiResponse.success("Item added to cart successfully", cart));
         } catch (RuntimeException e) {
-            log.error("Error adding item to cart for user: {}", authentication.getName(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
+            return ExceptionResponses.from(e);
         } catch (Exception e) {
             log.error("Unexpected error adding item to cart for user: {}", authentication.getName(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -122,9 +119,7 @@ public class CartController {
             CartDTO cart = cartService.updateCartItem(authentication.getName(), request);
             return ResponseEntity.ok(ApiResponse.success("Cart item updated successfully", cart));
         } catch (RuntimeException e) {
-            log.error("Error updating cart item for user: {}", authentication.getName(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
+            return ExceptionResponses.from(e);
         } catch (Exception e) {
             log.error("Unexpected error updating cart item for user: {}", authentication.getName(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -153,9 +148,7 @@ public class CartController {
             CartDTO cart = cartService.removeFromCart(authentication.getName(), productId);
             return ResponseEntity.ok(ApiResponse.success("Item removed from cart successfully", cart));
         } catch (RuntimeException e) {
-            log.error("Error removing item from cart for user: {}", authentication.getName(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
+            return ExceptionResponses.from(e);
         } catch (Exception e) {
             log.error("Unexpected error removing item from cart for user: {}", authentication.getName(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -200,9 +193,7 @@ public class CartController {
                     )
             ));
         } catch (Exception e) {
-            log.error("Error during checkout for user: {}", authentication.getName(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to checkout: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -223,9 +214,7 @@ public class CartController {
             CartDTO cart = cartService.clearCart(authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Cart cleared successfully", cart));
         } catch (Exception e) {
-            log.error("Error clearing cart for user: {}", authentication.getName(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to clear cart: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -246,9 +235,7 @@ public class CartController {
             int itemCount = cartService.getCartItemCount(authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Cart item count retrieved successfully", itemCount));
         } catch (Exception e) {
-            log.error("Error getting cart item count for user: {}", authentication.getName(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get cart item count: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 }

@@ -49,10 +49,19 @@ public class RateLimitingFilter implements Filter {
         if (allowed) {
             chain.doFilter(request, response);
         } else {
-            log.warn("Rate limit exceeded for client: {} on path: {}", clientId, requestPath);
+            log.warn("Rate limit exceeded [trace={}] for client: {} on path: {}",
+                    org.slf4j.MDC.get(CorrelationIdFilter.MDC_KEY), clientId, requestPath);
             httpResponse.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             httpResponse.setContentType("application/json");
-            httpResponse.getWriter().write("{\"success\":false,\"message\":\"Rate limit exceeded. Please try again later.\"}");
+            String traceId = org.slf4j.MDC.get(CorrelationIdFilter.MDC_KEY);
+            if (traceId == null || traceId.isBlank()) {
+                traceId = java.util.UUID.randomUUID().toString();
+            }
+            httpResponse.setHeader(CorrelationIdFilter.HEADER, traceId);
+            httpResponse.getWriter().write(
+                    "{\"success\":false,\"code\":\"RATE_LIMITED\","
+                            + "\"message\":\"Rate limit exceeded. Please try again later.\","
+                            + "\"traceId\":\"" + traceId + "\"}");
         }
     }
 

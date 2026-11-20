@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.CommentDTO;
 import org.adnan.travner.dto.CommentRequest;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.service.CommentService;
 import org.adnan.travner.util.RequestValidation;
 import org.adnan.travner.web.ValidObjectId;
@@ -38,8 +39,7 @@ public class CommentController {
             Page<CommentDTO> comments = commentService.getPostComments(postId, pageable);
             return ResponseEntity.ok(ApiResponse.success("Comments retrieved successfully", comments));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve comments: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -51,8 +51,7 @@ public class CommentController {
                     .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                             .body(ApiResponse.error("Comment not found")));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve comment: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -72,8 +71,7 @@ public class CommentController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Comment created successfully", createdComment));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Failed to create comment: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -92,8 +90,7 @@ public class CommentController {
             CommentDTO updatedComment = commentService.updateComment(id, authentication.getName(), commentRequest);
             return ResponseEntity.ok(ApiResponse.success("Comment updated successfully", updatedComment));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Failed to update comment: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -111,8 +108,7 @@ public class CommentController {
             commentService.deleteComment(id, authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Comment deleted successfully", null));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Failed to delete comment: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -130,8 +126,7 @@ public class CommentController {
             CommentDTO updatedComment = commentService.updateVote(id, authentication.getName(), true);
             return ResponseEntity.ok(ApiResponse.success("Comment upvoted successfully", updatedComment));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Failed to upvote comment: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -149,8 +144,7 @@ public class CommentController {
             CommentDTO updatedComment = commentService.updateVote(id, authentication.getName(), false);
             return ResponseEntity.ok(ApiResponse.success("Comment downvoted successfully", updatedComment));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Failed to downvote comment: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 }

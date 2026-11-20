@@ -1,5 +1,6 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.exception.ExceptionResponses;
 import lombok.RequiredArgsConstructor;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.PostDTO;
@@ -60,8 +61,7 @@ public class PostController {
             Page<PostDTO> posts = postService.getAllPublishedPosts(pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve posts: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -102,8 +102,7 @@ public class PostController {
             Page<PostDTO> posts = postService.getPostsByUser(username, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve posts by user: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -127,8 +126,7 @@ public class PostController {
             Page<PostDTO> posts = postService.searchPosts(query, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to search posts: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -152,8 +150,7 @@ public class PostController {
             Page<PostDTO> posts = postService.getPostsByLocation(location, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get posts by location: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -177,8 +174,7 @@ public class PostController {
             Page<PostDTO> posts = postService.getPostsByTags(tags, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to get posts by tags: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -204,8 +200,7 @@ public class PostController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Post created successfully", createdPost));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Failed to create post: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -232,8 +227,7 @@ public class PostController {
             PostDTO updatedPost = postService.updatePost(id, authentication.getName(), postRequest);
             return ResponseEntity.ok(ApiResponse.success("Post updated successfully", updatedPost));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Failed to update post: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -258,8 +252,7 @@ public class PostController {
             postService.deletePost(id, authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Post deleted successfully", null));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error("Failed to delete post: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -300,8 +293,7 @@ public class PostController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Media uploaded successfully", uploadedMedia));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to upload media: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -317,8 +309,7 @@ public class PostController {
             List<MediaDTO> media = mediaService.getMediaForPost(postId);
             return ResponseEntity.ok(ApiResponse.success(media));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve media: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -352,8 +343,7 @@ public class PostController {
             String message = isUpvote ? "Post upvoted successfully" : "Post downvoted successfully";
             return ResponseEntity.ok(ApiResponse.success(message, updatedPost));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to vote on post: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -378,8 +368,7 @@ public class PostController {
             PostDTO updatedPost = postService.updateVote(id, authentication.getName(), true);
             return ResponseEntity.ok(ApiResponse.success("Post upvoted successfully", updatedPost));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Failed to upvote post: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -404,8 +393,7 @@ public class PostController {
             PostDTO updatedPost = postService.updateVote(id, authentication.getName(), false);
             return ResponseEntity.ok(ApiResponse.success("Post downvoted successfully", updatedPost));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Failed to downvote post: " + e.getMessage()));
+            return ExceptionResponses.from(e);
         }
     }
 }

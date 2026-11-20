@@ -4,6 +4,7 @@ import org.adnan.travner.dto.TravelBuddyDTO;
 import org.adnan.travner.dto.TravelBuddyRequest;
 import org.adnan.travner.entry.TravelBuddyEntry;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.repository.TravelBuddyRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.adnan.travner.service.TravelBuddyService;
@@ -80,8 +81,7 @@ public class TravelBuddyController {
             
             return ResponseEntity.ok(buddies.map(travelBuddyService::convertToDTO));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving travel buddies: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -95,8 +95,7 @@ public class TravelBuddyController {
                     .map(buddy -> ResponseEntity.ok(buddy))
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving travel buddy: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -120,8 +119,7 @@ public class TravelBuddyController {
             TravelBuddyDTO buddy = travelBuddyService.createTravelBuddy(request, userOpt.get().getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(buddy);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error creating travel buddy: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -147,8 +145,7 @@ public class TravelBuddyController {
                     .map(buddy -> ResponseEntity.ok(buddy))
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error updating travel buddy: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -176,8 +173,7 @@ public class TravelBuddyController {
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error deleting travel buddy: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 
@@ -190,8 +186,7 @@ public class TravelBuddyController {
             List<TravelBuddyDTO> buddies = travelBuddyService.getTravelBuddiesByUser(userId);
             return ResponseEntity.ok(buddies);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving user's travel buddies: " + e.getMessage());
+            return ExceptionResponses.from(e);
         }
     }
 }

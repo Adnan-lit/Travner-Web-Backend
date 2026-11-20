@@ -6,6 +6,7 @@ import org.adnan.travner.dto.PostRequest;
 import org.adnan.travner.service.PostService;
 import org.adnan.travner.service.MediaService;
 import org.adnan.travner.dto.MediaDTO;
+import org.adnan.travner.exception.ExceptionResponses;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -168,5 +171,29 @@ class PostControllerTest {
     void getPostByIdRejectsMalformedIdWithBadRequest() throws Exception {
         mockMvc.perform(get("/api/posts/not-an-object-id"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    void errorResponsesCarryStableCodeAndCorrelationId() throws Exception {
+        mockMvc.perform(get("/api/posts").param("page", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.traceId").exists())
+                .andExpect(header().exists("X-Correlation-Id"));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    void unexpectedServiceFailureDoesNotLeakInternalMessage() throws Exception {
+        when(postService.getAllPublishedPosts(any(Pageable.class)))
+                .thenThrow(new IllegalStateException("mongodb://user:secret@internal-host"));
+
+        mockMvc.perform(get("/api/posts"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.message").value(ExceptionResponses.INTERNAL_MESSAGE))
+                .andExpect(content().string(not(containsString("internal-host"))))
+                .andExpect(content().string(not(containsString("secret"))));
     }
 }
