@@ -121,6 +121,30 @@ class JwtStompChannelInterceptorTest {
     }
 
     @Test
+    void jwtPrincipalId_isUsedForParticipantCheck() {
+        when(conversationRepository.findById("conv1"))
+                .thenReturn(Optional.of(conversation("conv1", USER_ID)));
+        StompHeaderAccessor accessor = accessor(StompCommand.SUBSCRIBE, null);
+        accessor.setUser(jwtAuthenticatedUser());
+        accessor.setDestination("/topic/conversation/conv1");
+
+        assertDoesNotThrow(() -> interceptor.preSend(message(accessor), channel));
+    }
+
+    @Test
+    void usernameOnlyParticipantList_doesNotAuthorizeJwtPrincipal() {
+        // D-06: a participantIds list containing the display username must NOT
+        // authorize a principal whose subject is the database ID.
+        when(conversationRepository.findById("conv1"))
+                .thenReturn(Optional.of(conversation("conv1", "alice")));
+        StompHeaderAccessor accessor = accessor(StompCommand.SUBSCRIBE, null);
+        accessor.setUser(jwtAuthenticatedUser());
+        accessor.setDestination("/topic/conversation/conv1");
+
+        assertThrows(AccessDeniedException.class, () -> interceptor.preSend(message(accessor), channel));
+    }
+
+    @Test
     void authenticatedUserCanSubscribeToPersonalQueue() {
         StompHeaderAccessor accessor = accessor(StompCommand.SUBSCRIBE, null);
         accessor.setUser(authenticatedUser());
@@ -145,6 +169,13 @@ class JwtStompChannelInterceptorTest {
 
     private Authentication authenticatedUser() {
         return new UsernamePasswordAuthenticationToken("alice", null, List.of());
+    }
+
+    /** Principal produced by JwtAuthenticationConverter: subject = ID, name = username. */
+    private Authentication jwtAuthenticatedUser() {
+        UserPrincipal principal = new UserPrincipal(USER_ID, "alice", null, "alice@example.com",
+                List.of("USER"), true);
+        return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
     }
 
     private ChatConversation conversation(String id, String participant) {

@@ -3,8 +3,10 @@ package org.adnan.travner.service;
 import org.adnan.travner.dto.ChatConversationDTO;
 import org.adnan.travner.dto.ChatMessageDTO;
 import org.adnan.travner.dto.SendMessageDTO;
+import org.adnan.travner.dto.chat.ChatParticipantDTO;
 import org.adnan.travner.entry.ChatConversation;
 import org.adnan.travner.entry.ChatMessage;
+import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.repository.ChatConversationRepository;
 import org.adnan.travner.repository.ChatMessageRepository;
@@ -21,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -199,6 +202,94 @@ class ChatServiceTest {
         assertThrows(ForbiddenException.class,
                 () -> chatService.markMessagesAsRead("conv1", "intruder"));
         verifyNoInteractions(chatMessageRepository);
+    }
+
+    // P2-02: resolved participant summaries, per-user unread counts and ID identity.
+
+    @Test
+    void conversationDto_exposesResolvedParticipantsAndPerUserUnreadCounts() {
+        when(chatConversationRepository.findByParticipantIdsContainingAndIsActiveTrue(
+                eq("user1"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(testConversation)));
+        when(userService.getById("user1")).thenReturn(user("alice", "Alice", "A"));
+        when(userService.getById("user2")).thenReturn(user("bob", "Bob", "B"));
+        when(chatMessageRepository.countByConversationIdAndReadByNotContaining("conv1", "user1")).thenReturn(0L);
+        when(chatMessageRepository.countByConversationIdAndReadByNotContaining("conv1", "user2")).thenReturn(3L);
+
+        ChatConversationDTO dto = chatService
+                .getUserConversations("user1", Pageable.unpaged()).getContent().get(0);
+
+        assertEquals(2, dto.getParticipants().size());
+        ChatParticipantDTO alice = dto.getParticipants().get(0);
+        assertEquals("user1", alice.getId());
+        assertEquals("alice", alice.getUsername());
+        assertEquals("Alice A", alice.getDisplayName());
+        assertEquals(Map.of("user1", 0, "user2", 3), dto.getUnreadCounts());
+        assertEquals(0, dto.getUnreadCount(), "legacy count must reflect the requesting user");
+    }
+
+    @Test
+    void messageDto_resolvesSenderWithoutUnknownUserFallback() {
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
+        when(chatMessageRepository.findByConversationIdOrderByCreatedAtDesc(eq("conv1"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(testMessage)));
+        when(userService.getById("user1")).thenReturn(user("alice", "Alice", "A"));
+
+        ChatMessageDTO dto = chatService
+                .getConversationMessages("conv1", "user1", Pageable.unpaged()).getContent().get(0);
+
+        assertEquals("Alice A", dto.getSenderUsername());
+        assertNotNull(dto.getSender());
+        assertEquals("alice", dto.getSender().getUsername());
+        assertEquals("Alice A", dto.getSender().getDisplayName());
+        assertEquals("user1", dto.getSender().getId());
+        assertNotEquals("Unknown User", dto.getSenderUsername());
+    }
+
+    @Test
+    void messageDto_fallsBackToStoredNameForDeletedAccount() {
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
+        when(chatMessageRepository.findByConversationIdOrderByCreatedAtDesc(eq("conv1"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(testMessage)));
+        when(userService.getById("user1")).thenReturn(null);
+
+        ChatMessageDTO dto = chatService
+                .getConversationMessages("conv1", "user1", Pageable.unpaged()).getContent().get(0);
+
+        assertEquals("testuser", dto.getSenderUsername());
+        assertNotEquals("Unknown User", dto.getSenderUsername());
+    }
+
+    @Test
+    void sendMessage_rejectsNonParticipant() {
+        SendMessageDTO request = SendMessageDTO.builder()
+                .conversationId("conv1").content("hi").messageType("TEXT").build();
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
+
+        assertThrows(ForbiddenException.class, () -> chatService.sendMessage(request, "intruder"));
+        verifyNoInteractions(chatMessageRepository);
+    }
+
+    @Test
+    void markMessagesAsRead_setsReadWhenEveryParticipantHasRead() {
+        testConversation.setParticipantIds(List.of("user1", "user2"));
+        testMessage.setReadBy(new java.util.ArrayList<>(List.of("user2")));
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
+        when(chatMessageRepository.findByConversationIdAndReadByNotContaining("conv1", "user1"))
+                .thenReturn(List.of(testMessage));
+
+        chatService.markMessagesAsRead("conv1", "user1");
+
+        assertEquals("READ", testMessage.getStatus());
+        assertTrue(testMessage.getReadBy().containsAll(List.of("user1", "user2")));
+    }
+
+    private UserEntry user(String username, String first, String last) {
+        UserEntry entry = new UserEntry();
+        entry.setUserName(username);
+        entry.setFirstName(first);
+        entry.setLastName(last);
+        return entry;
     }
 }
 

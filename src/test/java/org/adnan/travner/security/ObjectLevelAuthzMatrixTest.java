@@ -159,7 +159,7 @@ class ObjectLevelAuthzMatrixTest {
 
     @Test
     void chatMessages_deniedByParticipantCheck_returnsGeneric403() throws Exception {
-        when(chatService.getConversationMessages(anyString(), eq(USER_A), any()))
+        when(chatService.getConversationMessages(anyString(), eq(USER_A_ID), any()))
                 .thenThrow(new ForbiddenException(INTERNAL_REASON));
 
         assertGenericForbidden(get("/api/chat/conversations/conv1/messages"));
@@ -168,7 +168,7 @@ class ObjectLevelAuthzMatrixTest {
     @Test
     void chatMarkRead_deniedByParticipantCheck_returnsGeneric403() throws Exception {
         org.mockito.Mockito.doThrow(new ForbiddenException(INTERNAL_REASON))
-                .when(chatService).markMessagesAsRead(anyString(), eq(USER_A));
+                .when(chatService).markMessagesAsRead(anyString(), eq(USER_A_ID));
 
         assertGenericForbidden(post("/api/chat/conversations/conv1/mark-read"));
     }
@@ -196,6 +196,19 @@ class ObjectLevelAuthzMatrixTest {
 
         verify(orderService).getUserOrders(USER_A);
         verify(orderService).getUserOrders(USER_B);
+    }
+
+    @Test
+    void chatEndpoint_passesJwtSubjectIdNotDisplayUsername() throws Exception {
+        mockMvc.perform(get("/api/chat/conversations").header("Authorization", userToken))
+                .andExpect(status().isOk());
+        org.mockito.Mockito.doNothing().when(chatService).markMessagesAsRead(anyString(), anyString());
+        mockMvc.perform(post("/api/chat/conversations/conv1/mark-read").header("Authorization", userToken))
+                .andExpect(status().isOk());
+
+        verify(chatService).getUserConversations(eq(USER_A_ID), any());
+        verify(chatService).markMessagesAsRead("conv1", USER_A_ID);
+        verify(chatService, org.mockito.Mockito.never()).getUserConversations(eq(USER_A), any());
     }
 
     private void assertGenericForbidden(org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder builder)

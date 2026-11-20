@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.adnan.travner.dto.chat.ChatParticipantDTO;
 import org.springframework.data.annotation.Id;
 
 import java.time.LocalDateTime;
@@ -18,7 +19,10 @@ public class ChatMessageDTO {
     private String id;
     private String conversationId;
     private String senderId;
+    /** Resolved display name of the sender; never "Unknown User" or a raw ID. */
     private String senderUsername;
+    /** Resolved, display-safe sender summary. */
+    private ChatParticipantDTO sender;
     private String content;
     private String messageType; // TEXT, IMAGE, FILE
     private LocalDateTime createdAt;

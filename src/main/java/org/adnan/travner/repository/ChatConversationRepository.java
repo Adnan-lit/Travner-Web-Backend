@@ -29,7 +29,7 @@ public interface ChatConversationRepository extends MongoRepository<ChatConversa
     /**
      * Find direct conversation between two users
      */
-    @Query("{ 'type': 'DIRECT', 'participantIds': { $all: [?0, ?1] }, 'participantIds': { $size: 2 } }")
+    @Query("{ 'type': 'DIRECT', 'participantIds': { $all: [?0, ?1], $size: 2 } }")
     Optional<ChatConversation> findDirectConversationBetweenUsers(String userId1, String userId2);
     
     /**

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.*;
+import org.adnan.travner.security.PrincipalIdentity;
 import org.adnan.travner.service.ChatService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -42,7 +43,7 @@ public class ChatController {
             @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
         
-        String userId = authentication.getName();
+        String userId = PrincipalIdentity.requireUserId(authentication);
         Pageable pageable = PageRequest.of(page, size, Sort.by("lastMessageAt").descending());
         
         Page<ChatConversationDTO> conversations = chatService.getUserConversations(userId, pageable);
@@ -65,7 +66,7 @@ public class ChatController {
             @PathVariable String otherUserId,
             Authentication authentication) {
         
-        String currentUserId = authentication.getName();
+        String currentUserId = PrincipalIdentity.requireUserId(authentication);
         ChatConversationDTO conversation = chatService.getOrCreateDirectConversation(currentUserId, otherUserId);
         
         ApiResponse<ChatConversationDTO> response = ApiResponse.<ChatConversationDTO>builder()
@@ -88,8 +89,8 @@ public class ChatController {
             @RequestParam(defaultValue = "50") int size,
             Authentication authentication) {
         
-        String userId = authentication.getName();
-        
+        String userId = PrincipalIdentity.requireUserId(authentication);
+
         // Participant check is enforced in the service for REST and STOMP paths.
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<ChatMessageDTO> messages = chatService.getConversationMessages(conversationId, userId, pageable);
@@ -112,7 +113,7 @@ public class ChatController {
             @RequestBody SendMessageDTO request,
             Authentication authentication) {
         
-        String senderId = authentication.getName();
+        String senderId = PrincipalIdentity.requireUserId(authentication);
         ChatMessageDTO message = chatService.sendMessage(request, senderId);
         
         // Broadcast message to conversation participants via WebSocket
@@ -136,7 +137,7 @@ public class ChatController {
             @PathVariable String conversationId,
             Authentication authentication) {
         
-        String userId = authentication.getName();
+        String userId = PrincipalIdentity.requireUserId(authentication);
         chatService.markMessagesAsRead(conversationId, userId);
         
         ApiResponse<Void> response = ApiResponse.<Void>builder()
@@ -152,22 +153,23 @@ public class ChatController {
      */
     @MessageMapping("/chat.sendMessage")
     public void handleSendMessage(@Payload SendMessageDTO request, Principal principal) {
-        if (principal == null || principal.getName() == null) {
+        if (PrincipalIdentity.findUserId(principal).isEmpty()) {
             log.warn("Ignoring WebSocket message without an authenticated principal");
             return;
         }
-        String senderId = principal.getName();
+        String senderId = PrincipalIdentity.requireUserId(principal);
         log.debug("Received WebSocket message from user: {} to conversation: {}", senderId, request.getConversationId());
-        
+
         try {
             ChatMessageDTO message = chatService.sendMessage(request, senderId);
-            
+
             // Broadcast to conversation participants
             messagingTemplate.convertAndSend("/topic/conversation/" + request.getConversationId(), message);
-            
-            // Send to user-specific queue for notifications
-            messagingTemplate.convertAndSendToUser(senderId, "/queue/messages", message);
-            
+
+            // Personal queues are addressed by the principal NAME (display
+            // username), which is what Spring's user-destination resolver uses.
+            messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/messages", message);
+
         } catch (Exception e) {
             log.error("Error handling WebSocket message: {}", e.getMessage(), e);
         }
@@ -178,15 +180,15 @@ public class ChatController {
      */
     @MessageMapping("/chat.typing")
     public void handleTypingIndicator(@Payload TypingIndicatorDTO typingIndicator, Principal principal) {
-        if (principal == null || principal.getName() == null) {
+        if (PrincipalIdentity.findUserId(principal).isEmpty()) {
             log.warn("Ignoring typing indicator without an authenticated principal");
             return;
         }
-        String senderId = principal.getName();
+        String senderId = PrincipalIdentity.requireUserId(principal);
         log.debug("Received typing indicator from user: {} in conversation: {}", senderId, typingIndicator.getConversationId());
         chatService.assertParticipant(typingIndicator.getConversationId(), senderId);
-        
-        // Set the user info
+
+        // Identity uses the stable ID; the display name stays human-readable.
         typingIndicator.setUserId(senderId);
         typingIndicator.setUsername(principal.getName());
         
@@ -204,7 +206,7 @@ public class ChatController {
             @RequestParam("conversationId") String conversationId,
             Authentication authentication) {
         
-        String userId = authentication.getName();
+        String userId = PrincipalIdentity.requireUserId(authentication);
         log.debug("Uploading file for user: {} in conversation: {}", userId, conversationId);
         
         try {

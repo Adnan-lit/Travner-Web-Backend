@@ -12,7 +12,7 @@ import org.adnan.travner.dto.user.ProfileUpdateRequest;
 import org.adnan.travner.dto.user.UserStatsDTO;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.exception.ResourceNotFoundException;
-import org.adnan.travner.security.UserPrincipal;
+import org.adnan.travner.security.PrincipalIdentity;
 import org.adnan.travner.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -326,10 +326,9 @@ public class UserController {
         if (authentication == null) {
             throw new ResourceNotFoundException("Authentication required");
         }
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof UserPrincipal userPrincipal
-                && userPrincipal.getId() != null && !userPrincipal.getId().isBlank()) {
-            return userPrincipal.getId();
+        java.util.Optional<String> id = PrincipalIdentity.findUserId(authentication);
+        if (id.isPresent()) {
+            return id.get();
         }
         UserEntry user = userService.getByUsername(authentication.getName());
         if (user == null || user.getId() == null) {

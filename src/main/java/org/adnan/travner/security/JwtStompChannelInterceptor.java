@@ -63,7 +63,10 @@ public class JwtStompChannelInterceptor implements ChannelInterceptor {
                 throw new AccessDeniedException("WebSocket authentication required");
             }
             if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-                authorizeConversationSubscription(accessor.getDestination(), user.getName());
+                // Conversation participantIds are user IDs; the principal name
+                // is only a display username (P2-02 / D-06).
+                String userId = PrincipalIdentity.findUserId(user).orElse(user.getName());
+                authorizeConversationSubscription(accessor.getDestination(), userId);
             }
         }
         return message;
@@ -83,7 +86,7 @@ public class JwtStompChannelInterceptor implements ChannelInterceptor {
         }
     }
 
-    private void authorizeConversationSubscription(String destination, String username) {
+    private void authorizeConversationSubscription(String destination, String userId) {
         if (destination == null) {
             return;
         }
@@ -95,7 +98,7 @@ public class JwtStompChannelInterceptor implements ChannelInterceptor {
         String conversationId = matcher.group(1);
         ChatConversation conversation = conversationRepository.findById(conversationId).orElse(null);
         if (conversation == null || conversation.getParticipantIds() == null
-                || !conversation.getParticipantIds().contains(username)) {
+                || !conversation.getParticipantIds().contains(userId)) {
             throw new AccessDeniedException("Not a participant in this conversation");
         }
     }

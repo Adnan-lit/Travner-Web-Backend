@@ -106,9 +106,8 @@ public class SpringSecurity {
                         // Authenticated user endpoints - require authentication
                         .requestMatchers("/api/user/**").authenticated()
                         .requestMatchers("/api/cart/**").hasAnyRole("USER", "ADMIN")
-                        // Apply the same rule to both conversation paths
-                        .requestMatchers("/api/conversations/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/chat/conversations/**").hasAnyRole("USER", "ADMIN")
+                        // All chat REST endpoints live under /api/chat (P2-02 consolidation).
+                        .requestMatchers("/api/chat/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/messages/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/media/upload").hasAnyRole("USER", "ADMIN")
                         
