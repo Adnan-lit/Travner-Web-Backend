@@ -163,6 +163,8 @@ class EndpointAuthzMatrixTest {
                 new Endpoint("POST /api/chat/upload", HttpMethod.POST, "/api/chat/upload", true),
                 new Endpoint("POST /api/market/orders/{id}/fulfill", HttpMethod.POST,
                         "/api/market/orders/ord1/fulfill", false),
+                new Endpoint("POST /api/market/orders/{id}/confirm-cash", HttpMethod.POST,
+                        "/api/market/orders/ord1/confirm-cash", false),
                 new Endpoint("POST /api/users/{id}/follow", HttpMethod.POST,
                         "/api/users/507f191e810c19729de860ea/follow", false));
     }

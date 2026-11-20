@@ -19,6 +19,7 @@ import java.util.List;
 @Builder
 public class OrderDTO {
     private String id;
+    private Long version;
     private String orderNumber;
     private String userId;
     private String userEmail;
@@ -73,7 +74,6 @@ public class OrderDTO {
     @AllArgsConstructor
     public static class PaymentInfoDTO {
         private String paymentMethod;
-        private String transactionId;
         private OrderEntry.PaymentStatus paymentStatus;
         private LocalDateTime paidAt;
     }

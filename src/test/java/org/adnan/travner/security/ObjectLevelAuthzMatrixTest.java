@@ -10,6 +10,7 @@ import org.adnan.travner.controller.MediaController;
 import org.adnan.travner.controller.OrderController;
 import org.adnan.travner.entry.ProductEntry;
 import org.adnan.travner.exception.ForbiddenException;
+import org.adnan.travner.exception.InvalidOrderStateException;
 import org.adnan.travner.repository.ProductRepository;
 import org.adnan.travner.service.ChatAttachmentService;
 import org.adnan.travner.service.ChatService;
@@ -24,6 +25,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -113,6 +115,47 @@ class ObjectLevelAuthzMatrixTest {
                 .thenThrow(new ForbiddenException(INTERNAL_REASON));
 
         assertGenericForbidden(post("/api/market/orders/ord1/fulfill"));
+    }
+
+    @Test
+    void payEndpoint_isRemoved_buyerCannotSelfMarkPaid() throws Exception {
+        mockMvc.perform(post("/api/market/orders/ord1/pay")
+                        .header("Authorization", userToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void confirmCash_deniedByOwnershipCheck_returnsGeneric403() throws Exception {
+        when(orderService.confirmCashOrder(eq(USER_A), anyString()))
+                .thenThrow(new ForbiddenException(INTERNAL_REASON));
+
+        mockMvc.perform(post("/api/market/orders/ord1/confirm-cash")
+                        .header("Authorization", userToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Access denied"))
+                .andExpect(content().string(not(containsString(INTERNAL_REASON))));
+    }
+
+    @Test
+    void invalidOrderTransition_returns409WithoutLeakingInternalState() throws Exception {
+        when(orderService.confirmCashOrder(eq(USER_A), anyString()))
+                .thenThrow(new InvalidOrderStateException("internal status detail"));
+
+        mockMvc.perform(post("/api/market/orders/ord1/confirm-cash")
+                        .header("Authorization", userToken))
+                .andExpect(status().isConflict())
+                .andExpect(content().string(not(containsString("internal status detail"))));
+    }
+
+    @Test
+    void concurrentOrderModification_returns409() throws Exception {
+        when(orderService.confirmCashOrder(eq(USER_A), anyString()))
+                .thenThrow(new OptimisticLockingFailureException("concurrent write"));
+
+        mockMvc.perform(post("/api/market/orders/ord1/confirm-cash")
+                        .header("Authorization", userToken))
+                .andExpect(status().isConflict())
+                .andExpect(content().string(not(containsString("concurrent write"))));
     }
 
     @Test

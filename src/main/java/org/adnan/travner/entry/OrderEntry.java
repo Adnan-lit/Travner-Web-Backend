@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
@@ -25,6 +26,10 @@ public class OrderEntry {
 
     @Id
     private ObjectId id;
+
+    /** Optimistic lock for status transitions; Spring Data increments it on save. */
+    @Version
+    private Long version;
 
     private String orderNumber;
     private String userId;
@@ -87,7 +92,6 @@ public class OrderEntry {
     @AllArgsConstructor
     public static class PaymentInfo {
         private String paymentMethod;
-        private String transactionId;
         private PaymentStatus paymentStatus;
         private LocalDateTime paidAt;
     }

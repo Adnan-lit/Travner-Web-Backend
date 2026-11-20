@@ -16,13 +16,6 @@ PORT=8080
 APP_UPLOAD_DIR=<path-to-upload-directory>
 ```
 
-### **Stripe Configuration** (Optional - for payments)
-```
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
-```
-
 ### **Bootstrap Admin** (Optional - one-time, only when no admin exists)
 ```
 APP_BOOTSTRAP_ADMIN_USERNAME=admin

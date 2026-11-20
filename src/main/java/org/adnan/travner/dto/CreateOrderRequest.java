@@ -63,7 +63,5 @@ public class CreateOrderRequest {
     public static class PaymentInfoRequest {
         @NotBlank(message = "Payment method is required")
         private String paymentMethod;
-        
-        private String transactionId;
     }
 }

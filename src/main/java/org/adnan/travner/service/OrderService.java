@@ -7,6 +7,7 @@ import org.adnan.travner.dto.CreateOrderRequest;
 import org.adnan.travner.dto.OrderDTO;
 import org.adnan.travner.entry.OrderEntry;
 import org.adnan.travner.exception.ForbiddenException;
+import org.adnan.travner.exception.InvalidOrderStateException;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.OrderRepository;
 import org.adnan.travner.repository.UserRepository;
@@ -15,7 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,6 +31,34 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class OrderService {
+
+    private static final String CASH_ON_DELIVERY = "CASH_ON_DELIVERY";
+
+    /**
+     * Single source of truth for order state transitions (P2-05). Anything not
+     * listed here is rejected with a 409 instead of silently changing status.
+     * Payment confirmation is seller/admin-only; buyers can never set PAID.
+     */
+    private static final Map<OrderEntry.OrderStatus, Set<OrderEntry.OrderStatus>> ALLOWED_TRANSITIONS =
+            new EnumMap<>(OrderEntry.OrderStatus.class);
+
+    static {
+        ALLOWED_TRANSITIONS.put(OrderEntry.OrderStatus.PENDING, EnumSet.of(
+                OrderEntry.OrderStatus.CONFIRMED, OrderEntry.OrderStatus.PAID, OrderEntry.OrderStatus.CANCELLED));
+        ALLOWED_TRANSITIONS.put(OrderEntry.OrderStatus.CONFIRMED, EnumSet.of(
+                OrderEntry.OrderStatus.PAID, OrderEntry.OrderStatus.CANCELLED));
+        ALLOWED_TRANSITIONS.put(OrderEntry.OrderStatus.PAID, EnumSet.of(
+                OrderEntry.OrderStatus.FULFILLED, OrderEntry.OrderStatus.CANCELLED));
+        ALLOWED_TRANSITIONS.put(OrderEntry.OrderStatus.PROCESSING, EnumSet.of(
+                OrderEntry.OrderStatus.SHIPPED, OrderEntry.OrderStatus.CANCELLED));
+        ALLOWED_TRANSITIONS.put(OrderEntry.OrderStatus.FULFILLED, EnumSet.of(
+                OrderEntry.OrderStatus.SHIPPED));
+        ALLOWED_TRANSITIONS.put(OrderEntry.OrderStatus.SHIPPED, EnumSet.of(
+                OrderEntry.OrderStatus.DELIVERED, OrderEntry.OrderStatus.CANCELLED));
+        ALLOWED_TRANSITIONS.put(OrderEntry.OrderStatus.DELIVERED, EnumSet.noneOf(OrderEntry.OrderStatus.class));
+        ALLOWED_TRANSITIONS.put(OrderEntry.OrderStatus.CANCELLED, EnumSet.noneOf(OrderEntry.OrderStatus.class));
+        ALLOWED_TRANSITIONS.put(OrderEntry.OrderStatus.REFUNDED, EnumSet.noneOf(OrderEntry.OrderStatus.class));
+    }
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
@@ -42,6 +75,12 @@ public class OrderService {
         UserEntry user = userRepository.findByuserName(username);
         if (user == null) {
             throw new RuntimeException("User not found: " + username);
+        }
+
+        // No gateway is integrated (D4); cash on delivery is the only accepted method.
+        if (request.getPaymentInfo() == null
+                || !CASH_ON_DELIVERY.equalsIgnoreCase(request.getPaymentInfo().getPaymentMethod())) {
+            throw new IllegalArgumentException("Only cash on delivery is supported");
         }
 
         // Get cart
@@ -183,13 +222,16 @@ public class OrderService {
         OrderEntry order = orderRepository.findByIdAndUserId(new org.bson.types.ObjectId(orderId), username)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
-        // Only allow cancellation for PENDING and CONFIRMED orders
+        // A buyer may cancel only before payment is confirmed.
         if (order.getStatus() != OrderEntry.OrderStatus.PENDING
                 && order.getStatus() != OrderEntry.OrderStatus.CONFIRMED) {
-            throw new RuntimeException("Order cannot be cancelled. Current status: " + order.getStatus());
+            throw new InvalidOrderStateException("Order cannot be cancelled from its current status");
         }
+        assertTransition(order.getStatus(), OrderEntry.OrderStatus.CANCELLED, "cancel");
 
         order.setStatus(OrderEntry.OrderStatus.CANCELLED);
+        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledBy(username);
         order.setUpdatedAt(LocalDateTime.now());
 
         order = orderRepository.save(order);
@@ -214,6 +256,7 @@ public class OrderService {
     private OrderDTO convertToDTO(OrderEntry order) {
         return OrderDTO.builder()
                 .id(order.getId().toString())
+                .version(order.getVersion())
                 .orderNumber(order.getOrderNumber())
                 .userId(order.getUserId())
                 .userEmail(order.getUserEmail())
@@ -264,36 +307,59 @@ public class OrderService {
     }
 
     /**
-     * Pay for an order
+     * Confirm cash-on-delivery payment. Only the seller of an item or an admin
+     * may confirm; a buyer can no longer mark their own order as PAID (D4).
+     * When a real gateway is integrated this becomes the webhook handler's job.
      */
     @Transactional
-    public OrderDTO payOrder(String username, String orderId) {
-        log.debug("Paying order {} for user: {}", orderId, username);
+    public OrderDTO confirmCashOrder(String username, String orderId) {
+        log.debug("Confirming cash payment for order {} by user: {}", orderId, username);
 
         UserEntry user = userRepository.findByuserName(username);
         if (user == null) {
             throw new RuntimeException("User not found: " + username);
         }
 
-        OrderEntry order = orderRepository.findByIdAndUserId(new org.bson.types.ObjectId(orderId), username)
+        OrderEntry order = orderRepository.findById(new org.bson.types.ObjectId(orderId))
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+        assertSellerOrAdmin(user, order, "confirm cash payment");
+        assertTransition(order.getStatus(), OrderEntry.OrderStatus.PAID, "confirm cash payment");
 
-        if (!order.getStatus().equals(OrderEntry.OrderStatus.PENDING)) {
-            throw new RuntimeException("Order cannot be paid. Current status: " + order.getStatus());
-        }
-
+        LocalDateTime now = LocalDateTime.now();
         order.setStatus(OrderEntry.OrderStatus.PAID);
-        order.setPaidAt(java.time.LocalDateTime.now());
-        
-        if (order.getPaymentInfo() != null) {
-            order.getPaymentInfo().setPaymentStatus(OrderEntry.PaymentStatus.COMPLETED);
-            order.getPaymentInfo().setPaidAt(java.time.LocalDateTime.now());
+        order.setPaidAt(now);
+        order.setUpdatedAt(now);
+        if (order.getPaymentInfo() == null) {
+            order.setPaymentInfo(OrderEntry.PaymentInfo.builder().paymentMethod(CASH_ON_DELIVERY).build());
         }
+        order.getPaymentInfo().setPaymentStatus(OrderEntry.PaymentStatus.COMPLETED);
+        order.getPaymentInfo().setPaidAt(now);
 
         orderRepository.save(order);
-        log.info("Order {} paid successfully by user: {}", orderId, username);
-
+        log.info("Cash payment confirmed for order {} by user: {}", orderId, username);
         return convertToDTO(order);
+    }
+
+    /** Reuse the seller/admin rule for every post-payment seller action. */
+    private void assertSellerOrAdmin(UserEntry user, OrderEntry order, String action) {
+        boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
+        boolean isSeller = order.getItems() != null && order.getItems().stream()
+                .anyMatch(item -> user.getId() != null
+                        && user.getId().toHexString().equals(item.getSellerId()));
+        if (!isAdmin && !isSeller) {
+            throw new ForbiddenException("Only the seller or an administrator can " + action + " this order");
+        }
+    }
+
+    /** Enforces P2-05's status graph regardless of which endpoint was called. */
+    private void assertTransition(OrderEntry.OrderStatus from,
+                                  OrderEntry.OrderStatus to,
+                                  String action) {
+        Set<OrderEntry.OrderStatus> targets = ALLOWED_TRANSITIONS.get(from);
+        if (targets == null || !targets.contains(to)) {
+            throw new InvalidOrderStateException(
+                    "Cannot " + action + " an order in status " + from);
+        }
     }
 
     /**
@@ -312,19 +378,12 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
         // Only a seller of one of the order's items (or an admin) may fulfill it.
-        boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
-        boolean isSeller = order.getItems() != null && order.getItems().stream()
-                .anyMatch(item -> user.getId().toHexString().equals(item.getSellerId()));
-        if (!isAdmin && !isSeller) {
-            throw new ForbiddenException("Only the seller or an administrator can fulfill this order");
-        }
-
-        if (!order.getStatus().equals(OrderEntry.OrderStatus.PAID)) {
-            throw new RuntimeException("Order cannot be fulfilled. Current status: " + order.getStatus());
-        }
+        assertSellerOrAdmin(user, order, "fulfill");
+        assertTransition(order.getStatus(), OrderEntry.OrderStatus.FULFILLED, "fulfill");
 
         order.setStatus(OrderEntry.OrderStatus.FULFILLED);
-        order.setFulfilledAt(java.time.LocalDateTime.now());
+        order.setFulfilledAt(LocalDateTime.now());
+        order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
         
         log.info("Order {} fulfilled successfully by user: {}", orderId, username);
@@ -363,17 +422,13 @@ public class OrderService {
         OrderEntry order = orderRepository.findById(new org.bson.types.ObjectId(orderId))
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
-        if (order.getStatus().equals(OrderEntry.OrderStatus.CANCELLED)) {
-            throw new RuntimeException("Order is already cancelled");
-        }
-
-        if (order.getStatus().equals(OrderEntry.OrderStatus.FULFILLED) || order.getStatus().equals(OrderEntry.OrderStatus.DELIVERED)) {
-            throw new RuntimeException("Cannot cancel fulfilled or delivered order");
-        }
+        // Terminal states (including REFUNDED) cannot be cancelled.
+        assertTransition(order.getStatus(), OrderEntry.OrderStatus.CANCELLED, "cancel");
 
         order.setStatus(OrderEntry.OrderStatus.CANCELLED);
-        order.setCancelledAt(java.time.LocalDateTime.now());
+        order.setCancelledAt(LocalDateTime.now());
         order.setCancelledBy(adminUsername);
+        order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
         
         log.info("Order {} cancelled by admin: {}", orderId, adminUsername);
@@ -384,7 +439,6 @@ public class OrderService {
         if (paymentInfo == null) return null;
         return OrderDTO.PaymentInfoDTO.builder()
                 .paymentMethod(paymentInfo.getPaymentMethod())
-                .transactionId(paymentInfo.getTransactionId())
                 .paymentStatus(paymentInfo.getPaymentStatus())
                 .paidAt(paymentInfo.getPaidAt())
                 .build();

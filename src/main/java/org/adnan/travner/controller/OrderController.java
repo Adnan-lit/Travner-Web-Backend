@@ -7,8 +7,10 @@ import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.CreateOrderRequest;
 import org.adnan.travner.dto.OrderDTO;
 import org.adnan.travner.exception.ForbiddenException;
+import org.adnan.travner.exception.InvalidOrderStateException;
 import org.adnan.travner.exception.ResourceNotFoundException;
 import org.adnan.travner.service.OrderService;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,8 +51,9 @@ public class OrderController {
             OrderDTO order = orderService.createOrder(authentication.getName(), request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Order created successfully", order));
-        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException e) {
-            throw e; // mapped centrally to 403/404/400
+        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException
+                 | InvalidOrderStateException | OptimisticLockingFailureException e) {
+            throw e; // mapped centrally to 403/404/400/409
         } catch (RuntimeException e) {
             log.error("Error creating order for user: {}", authentication.getName(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -78,7 +81,8 @@ public class OrderController {
         try {
             List<OrderDTO> orders = orderService.getUserOrders(authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Orders retrieved successfully", orders));
-        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException e) {
+        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException
+                 | InvalidOrderStateException | OptimisticLockingFailureException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error getting orders for user: {}", authentication.getName(), e);
@@ -107,7 +111,8 @@ public class OrderController {
         try {
             OrderDTO order = orderService.getOrderById(authentication.getName(), orderId);
             return ResponseEntity.ok(ApiResponse.success("Order retrieved successfully", order));
-        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException e) {
+        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException
+                 | InvalidOrderStateException | OptimisticLockingFailureException e) {
             throw e;
         } catch (RuntimeException e) {
             log.error("Error getting order {} for user: {}", orderId, authentication.getName(), e);
@@ -140,7 +145,8 @@ public class OrderController {
         try {
             OrderDTO order = orderService.getOrderByOrderNumber(authentication.getName(), orderNumber);
             return ResponseEntity.ok(ApiResponse.success("Order retrieved successfully", order));
-        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException e) {
+        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException
+                 | InvalidOrderStateException | OptimisticLockingFailureException e) {
             throw e;
         } catch (RuntimeException e) {
             log.error("Error getting order {} for user: {}", orderNumber, authentication.getName(), e);
@@ -173,7 +179,8 @@ public class OrderController {
         try {
             OrderDTO order = orderService.cancelOrder(authentication.getName(), orderId);
             return ResponseEntity.ok(ApiResponse.success("Order cancelled successfully", order));
-        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException e) {
+        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException
+                 | InvalidOrderStateException | OptimisticLockingFailureException e) {
             throw e;
         } catch (RuntimeException e) {
             log.error("Error cancelling order {} for user: {}", orderId, authentication.getName(), e);
@@ -188,10 +195,11 @@ public class OrderController {
 
 
     /**
-     * Pay for an order
+     * Confirm cash-on-delivery payment (seller/admin only). No gateway is
+     * integrated, and a buyer must never be able to mark an order as PAID.
      */
-    @PostMapping("/{orderId}/pay")
-    public ResponseEntity<ApiResponse<OrderDTO>> payOrder(
+    @PostMapping("/{orderId}/confirm-cash")
+    public ResponseEntity<ApiResponse<OrderDTO>> confirmCashOrder(
             Authentication authentication,
             @PathVariable String orderId) {
         try {
@@ -200,14 +208,16 @@ public class OrderController {
                         .body(ApiResponse.error("Authentication required"));
             }
 
-            OrderDTO order = orderService.payOrder(authentication.getName(), orderId);
-            return ResponseEntity.ok(ApiResponse.success("Order paid successfully", order));
-        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException e) {
+            OrderDTO order = orderService.confirmCashOrder(authentication.getName(), orderId);
+            return ResponseEntity.ok(ApiResponse.success("Cash payment confirmed", order));
+        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException
+                 | InvalidOrderStateException | OptimisticLockingFailureException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error paying order {} for user: {}", orderId, authentication.getName(), e);
+            log.error("Error confirming cash payment for order {} by user: {}",
+                    orderId, authentication.getName(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to pay order"));
+                    .body(ApiResponse.error("Failed to confirm cash payment"));
         }
     }
 
@@ -226,7 +236,8 @@ public class OrderController {
 
             OrderDTO order = orderService.fulfillOrder(authentication.getName(), orderId);
             return ResponseEntity.ok(ApiResponse.success("Order fulfilled successfully", order));
-        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException e) {
+        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException
+                 | InvalidOrderStateException | OptimisticLockingFailureException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error fulfilling order {} for user: {}", orderId, authentication.getName(), e);
@@ -250,7 +261,8 @@ public class OrderController {
 
             List<OrderDTO> orders = orderService.getAllOrders();
             return ResponseEntity.ok(ApiResponse.success("Orders retrieved successfully", orders));
-        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException e) {
+        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException
+                 | InvalidOrderStateException | OptimisticLockingFailureException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error retrieving all orders for user: {}", authentication.getName(), e);
@@ -275,7 +287,8 @@ public class OrderController {
 
             OrderDTO order = orderService.adminCancelOrder(authentication.getName(), orderId);
             return ResponseEntity.ok(ApiResponse.success("Order cancelled by admin successfully", order));
-        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException e) {
+        } catch (ForbiddenException | ResourceNotFoundException | IllegalArgumentException
+                 | InvalidOrderStateException | OptimisticLockingFailureException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error admin cancelling order {} for user: {}", orderId, authentication.getName(), e);

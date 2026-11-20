@@ -65,13 +65,6 @@ app:
       timeout: ${AI_TIMEOUT:30000}
       cache-ttl: ${AI_CACHE_TTL:3600}
 
-  # Payment Configuration
-  stripe:
-    secret-key: ${STRIPE_SECRET_KEY:}
-    publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
-    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-    currency: ${STRIPE_CURRENCY:usd}
-
   # Cache Configuration
   cache:
     redis:
