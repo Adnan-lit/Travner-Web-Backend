@@ -3,7 +3,7 @@ package org.adnan.travner.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
-import org.adnan.travner.dto.UserSummaryDTO;
+import org.adnan.travner.dto.UserDetailDTO;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.service.UserService;
@@ -29,7 +29,7 @@ public class AuthenticatedUserController {
      * This endpoint is called by frontend after authentication
      */
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse<UserSummaryDTO>> getCurrentUserProfile(Authentication authentication) {
+    public ResponseEntity<ApiResponse<UserDetailDTO>> getCurrentUserProfile(Authentication authentication) {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Authentication required"));
@@ -39,25 +39,14 @@ public class AuthenticatedUserController {
             String username = authentication.getName();
             log.debug("Getting profile for authenticated user: {}", username);
 
-            UserEntry user = userService.getByUsernameSecure(username);
+            UserEntry user = userService.getByUsername(username);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("User not found"));
             }
 
-            UserSummaryDTO userSummary = UserSummaryDTO.builder()
-                    .id(user.getId().toString())
-                    .userName(user.getUserName())
-                    .firstName(user.getFirstName())
-                    .lastName(user.getLastName())
-                    .email(user.getEmail())
-                    .bio(user.getBio())
-                    .location(user.getLocation())
-                    .profileImageUrl(user.getProfileImageUrl())
-                    .roles(user.getRoles())
-                    .build();
-
-            return ResponseEntity.ok(ApiResponse.success("User profile retrieved successfully", userSummary));
+            return ResponseEntity.ok(ApiResponse.success(
+                    "User profile retrieved successfully", UserDetailDTO.from(user)));
 
         } catch (Exception e) {
             return ExceptionResponses.from(e);
@@ -78,7 +67,7 @@ public class AuthenticatedUserController {
             String username = authentication.getName();
             log.info("User {} is deleting their account", username);
 
-            UserEntry user = userService.getByUsernameSecure(username);
+            UserEntry user = userService.getByUsername(username);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("User not found"));

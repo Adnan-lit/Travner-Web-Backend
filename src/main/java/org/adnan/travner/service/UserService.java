@@ -28,6 +28,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.adnan.travner.dto.UserDetailDTO;
 import org.adnan.travner.dto.UserSummaryDTO;
 import org.adnan.travner.util.IdentityNormalizer;
 
@@ -55,10 +56,7 @@ public class UserService {
     private AuthService authService;
 
     public List<UserEntry> getAll() {
-        List<UserEntry> users = userRepository.findAll();
-        // Remove passwords for security
-        users.forEach(user -> user.setPassword(""));
-        return users;
+        return userRepository.findAll();
     }
 
     @Transactional
@@ -105,14 +103,6 @@ public class UserService {
 
     public UserEntry getByUsername(String username) {
         return userRepository.findByuserName(IdentityNormalizer.normalizeUsername(username));
-    }
-
-    public UserEntry getByUsernameSecure(String username) {
-        UserEntry user = getByUsername(username);
-        if (user != null) {
-            user.setPassword(""); // Remove password for security
-        }
-        return user;
     }
 
     @Transactional
@@ -212,12 +202,9 @@ public class UserService {
     }
 
     public List<UserEntry> getUsersByRole(String role) {
-        List<UserEntry> users = userRepository.findAll().stream()
+        return userRepository.findAll().stream()
                 .filter(user -> user.getRoles() != null && user.getRoles().contains(role))
                 .toList();
-        // Remove passwords for security
-        users.forEach(user -> user.setPassword(""));
-        return users;
     }
 
     public boolean promoteUserToAdmin(String username) {
@@ -386,11 +373,7 @@ public class UserService {
                 return null;
             }
             ObjectId objectId = new ObjectId(id);
-            UserEntry user = userRepository.findById(objectId).orElse(null);
-            if (user != null) {
-                user.setPassword(""); // Remove password for security
-            }
-            return user;
+            return userRepository.findById(objectId).orElse(null);
         } catch (RuntimeException e) {
             return null;
         }
@@ -402,11 +385,7 @@ public class UserService {
             if (id == null) {
                 return null;
             }
-            UserEntry user = userRepository.findById(id).orElse(null);
-            if (user != null) {
-                user.setPassword(""); // Remove password for security
-            }
-            return user;
+            return userRepository.findById(id).orElse(null);
         } catch (Exception e) {
             log.error("Error finding user by ObjectId: {}", id, e);
             return null;
@@ -613,7 +592,7 @@ public class UserService {
      * Update user profile
      */
     @Transactional
-    public UserSummaryDTO updateProfile(String username, ProfileUpdateRequest profileData) {
+    public UserDetailDTO updateProfile(String username, ProfileUpdateRequest profileData) {
         try {
             UserEntry user = getByUsername(username);
             if (user == null) {
@@ -639,7 +618,7 @@ public class UserService {
             
             UserEntry updatedUser = userRepository.save(user);
             log.info("Profile updated for user: {}", username);
-            return convertToUserSummaryDTO(updatedUser);
+            return UserDetailDTO.from(updatedUser);
         } catch (Exception e) {
             log.error("Error updating profile for user: {}", username, e);
             throw new RuntimeException("Failed to update profile", e);
@@ -651,7 +630,7 @@ public class UserService {
      * Note: This method expects the image URL to be provided.
      * Actual file upload should be handled by MediaService
      */
-    public UserSummaryDTO uploadProfileImage(String username, String imageUrl) {
+    public UserDetailDTO uploadProfileImage(String username, String imageUrl) {
         try {
             UserEntry user = getByUsername(username);
             if (user == null) {
@@ -661,7 +640,7 @@ public class UserService {
             user.setProfileImageUrl(imageUrl);
             UserEntry updatedUser = userRepository.save(user);
             log.info("Profile image updated for user: {}", username);
-            return convertToUserSummaryDTO(updatedUser);
+            return UserDetailDTO.from(updatedUser);
         } catch (Exception e) {
             log.error("Error uploading profile image for user: {}", username, e);
             throw new RuntimeException("Failed to upload profile image", e);
@@ -669,7 +648,8 @@ public class UserService {
     }
 
     /**
-     * Convert UserEntry to UserSummaryDTO
+     * Build the public summary used in search results, follower lists and author
+     * references. Never includes email or any other private field.
      */
     private UserSummaryDTO convertToUserSummaryDTO(UserEntry user) {
         return UserSummaryDTO.builder()
@@ -677,7 +657,6 @@ public class UserService {
                 .userName(user.getUserName())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
-                .email(user.getEmail())
                 .bio(user.getBio())
                 .location(user.getLocation())
                 .profileImageUrl(user.getProfileImageUrl())

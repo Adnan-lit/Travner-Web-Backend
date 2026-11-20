@@ -136,7 +136,6 @@ public class TravelBuddyService {
                 .requester(org.adnan.travner.dto.UserSummaryDTO.builder()
                         .id(entry.getRequester().getId().toString())
                         .userName(entry.getRequester().getUserName())
-                        .email(entry.getRequester().getEmail())
                         .build())
                 .destination(entry.getDestination())
                 .destinationCountry(entry.getDestinationCountry())

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
+import org.adnan.travner.dto.UserDetailDTO;
 import org.adnan.travner.dto.UserSummaryDTO;
 import org.adnan.travner.dto.user.ProfileUpdateRequest;
 import org.adnan.travner.dto.user.UserStatsDTO;
@@ -280,15 +281,15 @@ public class UserController {
      */
     @PutMapping("/profile")
     @Operation(summary = "Update profile", description = "Update current user's profile")
-    public ResponseEntity<ApiResponse<UserSummaryDTO>> updateProfile(
+    public ResponseEntity<ApiResponse<UserDetailDTO>> updateProfile(
             @Valid @RequestBody ProfileUpdateRequest request,
             Authentication authentication) {
 
         log.debug("Updating profile for user: {}", authentication.getName());
 
-        UserSummaryDTO user = userService.updateProfile(authentication.getName(), request);
+        UserDetailDTO user = userService.updateProfile(authentication.getName(), request);
 
-        ApiResponse<UserSummaryDTO> response = ApiResponse.<UserSummaryDTO>builder()
+        ApiResponse<UserDetailDTO> response = ApiResponse.<UserDetailDTO>builder()
                 .success(true)
                 .message("Profile updated successfully")
                 .data(user)

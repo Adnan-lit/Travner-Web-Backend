@@ -141,7 +141,6 @@ public class LocalGuideService {
                 .user(org.adnan.travner.dto.UserSummaryDTO.builder()
                         .id(entry.getUser().getId().toString())
                         .userName(entry.getUser().getUserName())
-                        .email(entry.getUser().getEmail())
                         .build())
                 .location(entry.getLocation())
                 .city(entry.getCity())

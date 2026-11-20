@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.PostDTO;
+import org.adnan.travner.dto.UserDetailDTO;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.exception.ExceptionResponses;
 import org.adnan.travner.repository.PostRepository;
@@ -112,12 +113,13 @@ public class AdminController {
             // Get total count
             long totalElements = mongoTemplate.count(query, UserEntry.class);
 
-            // Get paginated results
+            // Get paginated results and map to an explicit safe DTO. Never serialize
+            // UserEntry directly — mutating it to blank the password risks writing
+            // the blank hash back to MongoDB when the entity is still managed.
             query.with(pageable);
-            List<UserEntry> users = mongoTemplate.find(query, UserEntry.class);
-
-            // Remove passwords for security
-            users.forEach(user -> user.setPassword(""));
+            List<UserDetailDTO> users = mongoTemplate.find(query, UserEntry.class).stream()
+                    .map(UserDetailDTO::from)
+                    .toList();
 
             // Create response with pagination info
             Map<String, Object> response = new HashMap<>();
@@ -140,7 +142,7 @@ public class AdminController {
      * Get user by username
      */
     @GetMapping("/users/{username}")
-    public ResponseEntity<ApiResponse<UserEntry>> getUserByUsername(
+    public ResponseEntity<ApiResponse<UserDetailDTO>> getUserByUsername(
             @PathVariable String username,
             Authentication authentication) {
         
@@ -150,10 +152,10 @@ public class AdminController {
         }
 
         try {
-            UserEntry user = userService.getByUsernameSecure(username);
+            UserEntry user = userService.getByUsername(username);
             if (user != null) {
-                user.setPassword(""); // Remove password for security
-                return ResponseEntity.ok(ApiResponse.success("User retrieved successfully", user));
+                return ResponseEntity.ok(ApiResponse.success(
+                        "User retrieved successfully", UserDetailDTO.from(user)));
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("User not found"));
@@ -167,7 +169,7 @@ public class AdminController {
      * Update user roles
      */
     @PutMapping("/users/{username}/roles")
-    public ResponseEntity<ApiResponse<UserEntry>> updateUserRoles(
+    public ResponseEntity<ApiResponse<UserDetailDTO>> updateUserRoles(
             @PathVariable String username,
             @RequestBody Map<String, List<String>> roleRequest,
             Authentication authentication) {
@@ -191,13 +193,13 @@ public class AdminController {
             }
 
             user.setRoles(roles);
-            userRepository.save(user);
-            user.setPassword(""); // Remove password for security
+            UserEntry updatedUser = userRepository.save(user);
 
             log.info("Admin {} updated roles for user {} to {}", 
                 authentication.getName(), username, roles);
 
-            return ResponseEntity.ok(ApiResponse.success("User roles updated successfully", user));
+            return ResponseEntity.ok(ApiResponse.success(
+                    "User roles updated successfully", UserDetailDTO.from(updatedUser)));
 
         } catch (Exception e) {
             return ExceptionResponses.from(e);
@@ -208,7 +210,7 @@ public class AdminController {
      * Activate user
      */
     @PutMapping("/users/{username}/activate")
-    public ResponseEntity<ApiResponse<UserEntry>> activateUser(
+    public ResponseEntity<ApiResponse<UserDetailDTO>> activateUser(
             @PathVariable String username,
             Authentication authentication) {
         
@@ -225,12 +227,12 @@ public class AdminController {
             }
 
             user.setActive(true);
-            userRepository.save(user);
-            user.setPassword(""); // Remove password for security
+            UserEntry updatedUser = userRepository.save(user);
 
             log.info("Admin {} activated user {}", authentication.getName(), username);
 
-            return ResponseEntity.ok(ApiResponse.success("User activated successfully", user));
+            return ResponseEntity.ok(ApiResponse.success(
+                    "User activated successfully", UserDetailDTO.from(updatedUser)));
 
         } catch (Exception e) {
             return ExceptionResponses.from(e);
@@ -241,7 +243,7 @@ public class AdminController {
      * Deactivate user
      */
     @PutMapping("/users/{username}/deactivate")
-    public ResponseEntity<ApiResponse<UserEntry>> deactivateUser(
+    public ResponseEntity<ApiResponse<UserDetailDTO>> deactivateUser(
             @PathVariable String username,
             Authentication authentication) {
         
@@ -258,12 +260,12 @@ public class AdminController {
             }
 
             user.setActive(false);
-            userRepository.save(user);
-            user.setPassword(""); // Remove password for security
+            UserEntry updatedUser = userRepository.save(user);
 
             log.info("Admin {} deactivated user {}", authentication.getName(), username);
 
-            return ResponseEntity.ok(ApiResponse.success("User deactivated successfully", user));
+            return ResponseEntity.ok(ApiResponse.success(
+                    "User deactivated successfully", UserDetailDTO.from(updatedUser)));
 
         } catch (Exception e) {
             return ExceptionResponses.from(e);
@@ -826,8 +828,13 @@ public class AdminController {
 
             query.with(pageable);
             
-            List<org.adnan.travner.entry.PostEntry> posts = mongoTemplate.find(query, org.adnan.travner.entry.PostEntry.class);
-            
+            // Map entities to DTOs: raw PostEntry documents embed the author
+            // entity and internal moderation fields that are not part of the API.
+            List<org.adnan.travner.dto.PostDTO> posts = mongoTemplate
+                    .find(query, org.adnan.travner.entry.PostEntry.class).stream()
+                    .map(postService::toDTO)
+                    .toList();
+
             Map<String, Object> response = new HashMap<>();
             response.put("content", posts);
             response.put("totalElements", totalElements);

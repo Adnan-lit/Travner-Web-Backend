@@ -7,6 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * Public author/user summary. Deliberately excludes email and every other
+ * private field; use {@link UserDetailDTO} for the user's own or admin views.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,7 +20,6 @@ public class UserSummaryDTO {
     private String userName;
     private String firstName;
     private String lastName;
-    private String email;
     private String bio;
     private String location;
     private String profileImageUrl;

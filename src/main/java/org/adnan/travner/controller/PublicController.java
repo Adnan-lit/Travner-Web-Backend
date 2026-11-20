@@ -1,6 +1,7 @@
 package org.adnan.travner.controller;
 
 import org.adnan.travner.dto.ApiResponse;
+import org.adnan.travner.dto.UserDetailDTO;
 import org.adnan.travner.dto.UserSummaryDTO;
 import org.adnan.travner.exception.DuplicateUserException;
 import org.adnan.travner.util.IdentityNormalizer;
@@ -27,7 +28,7 @@ public class PublicController {
      * Register a new user
      */
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserSummaryDTO>> registerUser(@Valid @RequestBody UserEntry userRequest) {
+    public ResponseEntity<ApiResponse<UserDetailDTO>> registerUser(@Valid @RequestBody UserEntry userRequest) {
         try {
             if (userRequest == null || userRequest.getUserName() == null || userRequest.getPassword() == null) {
                 return ResponseEntity.badRequest()
@@ -47,21 +48,12 @@ public class PublicController {
             // Create new user
             userService.saveNewUser(userRequest);
 
-            // Return user info without password
-            UserEntry createdUser = userService.getByUsernameSecure(userRequest.getUserName());
-            UserSummaryDTO userSummary = UserSummaryDTO.builder()
-                    .id(createdUser.getId().toString())
-                    .userName(createdUser.getUserName())
-                    .firstName(createdUser.getFirstName())
-                    .lastName(createdUser.getLastName())
-                    .email(createdUser.getEmail())
-                    .bio(createdUser.getBio())
-                    .location(createdUser.getLocation())
-                    .roles(createdUser.getRoles())
-                    .build();
+            // Explicit DTO: the persistence entity is never part of the response contract.
+            UserEntry createdUser = userService.getByUsername(userRequest.getUserName());
+            UserDetailDTO createdUserDetail = UserDetailDTO.from(createdUser);
 
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success("User registered successfully with a lowercase username", userSummary));
+                    .body(ApiResponse.success("User registered successfully with a lowercase username", createdUserDetail));
 
         } catch (DuplicateUserException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
@@ -79,7 +71,7 @@ public class PublicController {
     @GetMapping("/user/{username}")
     public ResponseEntity<ApiResponse<UserSummaryDTO>> getPublicUserInfo(@PathVariable String username) {
         try {
-            UserEntry user = userService.getByUsernameSecure(username);
+            UserEntry user = userService.getByUsername(username);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("User not found"));

@@ -20,6 +20,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -49,7 +50,7 @@ class PublicControllerTest {
     @Test
     void register_normalizesIdentityAndReturnsCanonicalUsername() throws Exception {
         when(userService.isUsernameAvailable("alice_01")).thenReturn(true);
-        when(userService.getByUsernameSecure("alice_01")).thenReturn(createdUser());
+        when(userService.getByUsername("alice_01")).thenReturn(createdUser());
 
         String body = mockMvc.perform(post("/api/public/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -105,6 +106,20 @@ class PublicControllerTest {
     }
 
     @Test
+    void publicUserInfoDoesNotExposeEmailOrPassword() throws Exception {
+        when(userService.getByUsername("alice_01")).thenReturn(createdUser());
+
+        String body = mockMvc.perform(get("/api/public/user/alice_01"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode data = objectMapper.readTree(body).at("/data");
+        assertEquals("alice_01", data.at("/userName").asText());
+        assertTrue(data.at("/email").isMissingNode(), "public profile must not expose email");
+        assertTrue(data.at("/password").isMissingNode(), "public profile must not expose password");
+    }
+
+    @Test
     void checkUsername_delegatesToNormalizingService() throws Exception {
         when(userService.isUsernameAvailable(anyString())).thenReturn(true);
 
@@ -112,7 +127,7 @@ class PublicControllerTest {
                 .andExpect(status().isOk());
 
         verify(userService).isUsernameAvailable("Alice_01");
-        verify(userService, never()).getByUsernameSecure(anyString());
+        verify(userService, never()).getByUsername(anyString());
     }
 
     private UserEntry createdUser() {

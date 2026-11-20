@@ -328,6 +328,11 @@ public class PostService {
         return mediaUrls;
     }
 
+    /** Safe mapping for internal/admin callers that hold a raw entity. */
+    public PostDTO toDTO(PostEntry post) {
+        return convertToDTO(post, 0);
+    }
+
     private PostDTO convertToDTO(PostEntry post, long commentCount) {
         UserEntry author = post.getAuthor();
         UserSummaryDTO authorDTO = null;

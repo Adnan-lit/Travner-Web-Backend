@@ -154,18 +154,24 @@ class UserServiceTest {
     }
 
     @Test
-    void testGetByUsernameSecure_Success() {
-        // Given
-        when(userRepository.findByuserName("testuser")).thenReturn(testUser);
+    void testPasswordHashIsNeverSerialized() throws Exception {
+        // Defense in depth: even if an entity is returned by accident, the hash
+        // must not appear in JSON. Input deserialization still works (signup).
+        com.fasterxml.jackson.databind.ObjectMapper mapper =
+                new com.fasterxml.jackson.databind.ObjectMapper()
+                        .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        testUser.setPassword("$2a$10$super-secret-hash");
 
-        // When
-        UserEntry result = userService.getByUsernameSecure("testuser");
+        String json = mapper.writeValueAsString(testUser);
 
-        // Then
-        assertNotNull(result);
-        assertEquals("testuser", result.getUserName());
-        assertEquals("", result.getPassword()); // Password should be removed for security
-        verify(userRepository).findByuserName("testuser");
+        assertFalse(json.contains("password"));
+        assertFalse(json.contains("super-secret-hash"));
+        assertEquals("testuser", testUser.getUserName());
+
+        UserEntry parsed = mapper.readValue(
+                "{\"userName\":\"alice\",\"password\":\"plain\",\"email\":\"a@b.com\"}",
+                UserEntry.class);
+        assertEquals("plain", parsed.getPassword());
     }
 
     @Test

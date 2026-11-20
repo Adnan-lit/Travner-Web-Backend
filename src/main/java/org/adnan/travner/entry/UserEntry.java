@@ -1,5 +1,6 @@
 package org.adnan.travner.entry;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -34,6 +35,8 @@ public class UserEntry {
     @Pattern(regexp = "^[a-z0-9_]+$", message = "Username must be lowercase letters, numbers, and underscores")
     private String userName;
 
+    /** Accepted on input (signup) but never serialized, even if an entity is returned by mistake. */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")
     private String password;
