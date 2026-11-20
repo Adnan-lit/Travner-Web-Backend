@@ -7,10 +7,10 @@ import org.adnan.travner.dto.PostRequest;
 import org.adnan.travner.service.PostService;
 import org.adnan.travner.service.MediaService;
 import org.adnan.travner.dto.MediaDTO;
+import org.adnan.travner.util.RequestValidation;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,6 +21,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Controller for handling post-related operations
@@ -29,6 +30,10 @@ import java.util.Optional;
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
 public class PostController {
+
+    private static final Set<String> SORT_FIELDS = Set.of(
+            "createdAt", "updatedAt", "title", "location", "category",
+            "published", "upvotes", "downvotes", "commentCount");
 
     private final PostService postService;
     private final MediaService mediaService;
@@ -45,22 +50,13 @@ public class PostController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<PostDTO>>> getAllPosts(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
 
+        Pageable pageable = RequestValidation.pageable(page, size, sortBy, direction, SORT_FIELDS, "createdAt");
+
         try {
-            Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-
-            // Make sure the field to sort by exists
-            Pageable pageable;
-            try {
-                pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-            } catch (Exception e) {
-                // If the sort field is invalid, fall back to sorting by createdAt
-                pageable = PageRequest.of(page, size, Sort.by(sortDirection, "createdAt"));
-            }
-
             Page<PostDTO> posts = postService.getAllPublishedPosts(pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
@@ -76,7 +72,7 @@ public class PostController {
      * @return Post details if found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<PostDTO>> getPostById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<PostDTO>> getPostById(@ValidObjectId("id") String id) {
         Optional<PostDTO> post = postService.getPostById(id);
         if (post.isPresent()) {
             return ResponseEntity.ok(ApiResponse.success(post.get()));
@@ -98,10 +94,11 @@ public class PostController {
     public ResponseEntity<ApiResponse<List<PostDTO>>> getPostsByUser(
             @PathVariable String username,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<PostDTO> posts = postService.getPostsByUser(username, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
@@ -122,10 +119,11 @@ public class PostController {
     public ResponseEntity<ApiResponse<List<PostDTO>>> searchPosts(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<PostDTO> posts = postService.searchPosts(query, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
@@ -146,10 +144,11 @@ public class PostController {
     public ResponseEntity<ApiResponse<List<PostDTO>>> getPostsByLocation(
             @PathVariable String location,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<PostDTO> posts = postService.getPostsByLocation(location, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
@@ -170,10 +169,11 @@ public class PostController {
     public ResponseEntity<ApiResponse<List<PostDTO>>> getPostsByTags(
             @RequestParam List<String> tags,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<PostDTO> posts = postService.getPostsByTags(tags, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(posts));
         } catch (Exception e) {
@@ -220,7 +220,7 @@ public class PostController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<PostDTO>> updatePost(
             Authentication authentication,
-            @PathVariable String id,
+            @ValidObjectId("id") String id,
             @Valid @RequestBody PostRequest postRequest) {
 
         if (authentication == null) {
@@ -247,7 +247,7 @@ public class PostController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Object>> deletePost(
             Authentication authentication,
-            @PathVariable String id) {
+            @ValidObjectId("id") String id) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -274,7 +274,7 @@ public class PostController {
     @PostMapping("/{postId}/media")
     public ResponseEntity<ApiResponse<List<MediaDTO>>> uploadPostMedia(
             Authentication authentication,
-            @PathVariable String postId,
+            @ValidObjectId("postId") String postId,
             @RequestParam("files") MultipartFile[] files) {
 
         if (authentication == null) {
@@ -312,7 +312,7 @@ public class PostController {
      * @return List of media associated with the post
      */
     @GetMapping("/{postId}/media")
-    public ResponseEntity<ApiResponse<List<MediaDTO>>> getPostMedia(@PathVariable String postId) {
+    public ResponseEntity<ApiResponse<List<MediaDTO>>> getPostMedia(@ValidObjectId("postId") String postId) {
         try {
             List<MediaDTO> media = mediaService.getMediaForPost(postId);
             return ResponseEntity.ok(ApiResponse.success(media));
@@ -333,7 +333,7 @@ public class PostController {
     @PostMapping("/{id}/vote")
     public ResponseEntity<ApiResponse<PostDTO>> voteOnPost(
             Authentication authentication,
-            @PathVariable String id,
+            @ValidObjectId("id") String id,
             @RequestBody Map<String, Boolean> voteRequest) {
 
         if (authentication == null) {
@@ -367,7 +367,7 @@ public class PostController {
     @PostMapping("/{id}/upvote")
     public ResponseEntity<ApiResponse<PostDTO>> upvotePost(
             Authentication authentication,
-            @PathVariable String id) {
+            @ValidObjectId("id") String id) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -393,7 +393,7 @@ public class PostController {
     @PostMapping("/{id}/downvote")
     public ResponseEntity<ApiResponse<PostDTO>> downvotePost(
             Authentication authentication,
-            @PathVariable String id) {
+            @ValidObjectId("id") String id) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

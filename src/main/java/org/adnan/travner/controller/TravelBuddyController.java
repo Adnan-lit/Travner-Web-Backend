@@ -8,11 +8,11 @@ import org.adnan.travner.repository.TravelBuddyRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.adnan.travner.service.TravelBuddyService;
 import org.adnan.travner.util.IdentityNormalizer;
+import org.adnan.travner.util.RequestValidation;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Controller for travel buddy operations
@@ -28,6 +29,9 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/travel-buddies")
 public class TravelBuddyController {
+
+    private static final Set<String> SORT_FIELDS = Set.of(
+            "status", "travelDate", "destination", "createdAt", "updatedAt");
 
     @Autowired
     private TravelBuddyService travelBuddyService;
@@ -44,7 +48,7 @@ public class TravelBuddyController {
     @GetMapping
     public ResponseEntity<?> getAllTravelBuddies(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction,
             @RequestParam(required = false) String query,
@@ -57,10 +61,9 @@ public class TravelBuddyController {
             @RequestParam(required = false) String preferredGender,
             @RequestParam(required = false) String status
     ) {
+        Pageable pageable = RequestValidation.pageable(page, size, sortBy, direction, SORT_FIELDS, "createdAt");
+
         try {
-            Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
-            Pageable pageable = PageRequest.of(page, size, sort);
-            
             Page<TravelBuddyEntry> buddies;
             
             if (query != null && !query.trim().isEmpty()) {
@@ -86,7 +89,7 @@ public class TravelBuddyController {
      * Get travel buddy by ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getTravelBuddyById(@PathVariable String id) {
+    public ResponseEntity<?> getTravelBuddyById(@ValidObjectId("id") String id) {
         try {
             return travelBuddyService.getTravelBuddyById(id)
                     .map(buddy -> ResponseEntity.ok(buddy))
@@ -127,7 +130,7 @@ public class TravelBuddyController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<?> updateTravelBuddy(
-            @PathVariable String id,
+            @ValidObjectId("id") String id,
             @Valid @RequestBody TravelBuddyRequest request,
             Authentication authentication
     ) {
@@ -154,7 +157,7 @@ public class TravelBuddyController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteTravelBuddy(
-            @PathVariable String id,
+            @ValidObjectId("id") String id,
             Authentication authentication
     ) {
         try {
@@ -182,7 +185,7 @@ public class TravelBuddyController {
      * Get travel buddies by user
      */
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getTravelBuddiesByUser(@PathVariable String userId) {
+    public ResponseEntity<?> getTravelBuddiesByUser(@ValidObjectId("userId") String userId) {
         try {
             List<TravelBuddyDTO> buddies = travelBuddyService.getTravelBuddiesByUser(userId);
             return ResponseEntity.ok(buddies);

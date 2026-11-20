@@ -5,6 +5,8 @@ import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.CommentDTO;
 import org.adnan.travner.dto.CommentRequest;
 import org.adnan.travner.service.CommentService;
+import org.adnan.travner.util.RequestValidation;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,12 +27,14 @@ public class CommentController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<CommentDTO>>> getComments(
-            @PathVariable String postId,
+            @ValidObjectId("postId") String postId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = PageRequest.of(RequestValidation.page(page), RequestValidation.size(size),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
 
         try {
-            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
             Page<CommentDTO> comments = commentService.getPostComments(postId, pageable);
             return ResponseEntity.ok(ApiResponse.success("Comments retrieved successfully", comments));
         } catch (Exception e) {
@@ -40,7 +44,7 @@ public class CommentController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CommentDTO>> getCommentById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<CommentDTO>> getCommentById(@ValidObjectId("id") String id) {
         try {
             Optional<CommentDTO> comment = commentService.getCommentById(id);
             return comment.map(c -> ResponseEntity.ok(ApiResponse.success(c)))
@@ -55,7 +59,7 @@ public class CommentController {
     @PostMapping
     public ResponseEntity<ApiResponse<CommentDTO>> createComment(
             Authentication authentication,
-            @PathVariable String postId,
+            @ValidObjectId("postId") String postId,
             @RequestBody CommentRequest commentRequest) {
 
         if (authentication == null) {
@@ -76,7 +80,7 @@ public class CommentController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CommentDTO>> updateComment(
             Authentication authentication,
-            @PathVariable String id,
+            @ValidObjectId("id") String id,
             @RequestBody CommentRequest commentRequest) {
 
         if (authentication == null) {
@@ -96,7 +100,7 @@ public class CommentController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Object>> deleteComment(
             Authentication authentication,
-            @PathVariable String id) {
+            @ValidObjectId("id") String id) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -115,7 +119,7 @@ public class CommentController {
     @PostMapping("/{id}/upvote")
     public ResponseEntity<ApiResponse<CommentDTO>> upvoteComment(
             Authentication authentication,
-            @PathVariable String id) {
+            @ValidObjectId("id") String id) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -134,7 +138,7 @@ public class CommentController {
     @PostMapping("/{id}/downvote")
     public ResponseEntity<ApiResponse<CommentDTO>> downvoteComment(
             Authentication authentication,
-            @PathVariable String id) {
+            @ValidObjectId("id") String id) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

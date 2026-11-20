@@ -8,6 +8,7 @@ import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.CartDTO;
 import org.adnan.travner.dto.UpdateCartItemRequest;
 import org.adnan.travner.service.CartService;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -91,7 +92,7 @@ public class CartController {
     @PutMapping("/items/{productId}")
     public ResponseEntity<ApiResponse<CartDTO>> updateCartItemByProductId(
             Authentication authentication,
-            @PathVariable String productId,
+            @ValidObjectId("productId") String productId,
             @RequestBody Map<String, Integer> requestBody) {
 
         if (authentication == null) {
@@ -141,7 +142,7 @@ public class CartController {
     @DeleteMapping("/items/{productId}")
     public ResponseEntity<ApiResponse<CartDTO>> removeItemFromCart(
             Authentication authentication,
-            @PathVariable String productId) {
+            @ValidObjectId("productId") String productId) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

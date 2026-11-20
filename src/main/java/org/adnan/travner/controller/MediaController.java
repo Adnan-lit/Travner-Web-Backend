@@ -6,6 +6,7 @@ import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.MediaDTO;
 import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.service.MediaService;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -92,7 +93,7 @@ public class MediaController {
      * @return List of media associated with the post
      */
     @GetMapping("/posts/{postId}")
-    public ResponseEntity<ApiResponse<List<MediaDTO>>> getMediaForPost(@PathVariable String postId) {
+    public ResponseEntity<ApiResponse<List<MediaDTO>>> getMediaForPost(@ValidObjectId("postId") String postId) {
         try {
             List<MediaDTO> media = mediaService.getMediaForPost(postId);
             return ResponseEntity.ok(ApiResponse.success(media));
@@ -111,7 +112,7 @@ public class MediaController {
      */
     @GetMapping("/entity/{entityId}")
     public ResponseEntity<ApiResponse<List<MediaDTO>>> getMediaForEntity(
-            @PathVariable String entityId,
+            @ValidObjectId("entityId") String entityId,
             @RequestParam(required = false) String type) {
         try {
             List<MediaDTO> media = mediaService.getMediaForEntity(entityId, type);
@@ -127,7 +128,7 @@ public class MediaController {
      * Get a specific media file by ID for download
      */
     @GetMapping("/{mediaId}")
-    public ResponseEntity<InputStreamResource> getMediaFile(@PathVariable String mediaId) {
+    public ResponseEntity<InputStreamResource> getMediaFile(@ValidObjectId("mediaId") String mediaId) {
         try {
             return mediaService.getMediaFile(mediaId);
         } catch (IOException e) {
@@ -146,7 +147,7 @@ public class MediaController {
     @DeleteMapping("/{mediaId}")
     public ResponseEntity<ApiResponse<Object>> deleteMedia(
             Authentication authentication,
-            @PathVariable String mediaId) {
+            @ValidObjectId("mediaId") String mediaId) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

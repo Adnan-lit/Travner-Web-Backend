@@ -10,6 +10,8 @@ import org.adnan.travner.repository.UserRepository;
 import org.adnan.travner.service.UserService;
 import org.adnan.travner.service.PostService;
 import org.adnan.travner.service.ProductService;
+import org.adnan.travner.util.RequestValidation;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +31,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Admin controller for maintenance operations and user management
@@ -38,6 +41,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class AdminController {
+
+    private static final Set<String> USER_SORT_FIELDS = Set.of(
+            "userName", "email", "firstName", "lastName", "createdAt", "lastLoginAt", "roles");
+
+    private static final Set<String> POST_SORT_FIELDS = Set.of(
+            "createdAt", "updatedAt", "title", "location", "category",
+            "published", "upvotes", "downvotes", "commentCount");
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
@@ -77,15 +87,9 @@ public class AdminController {
                     .body(ApiResponse.error("Admin access required"));
         }
 
+        Pageable pageable = RequestValidation.pageable(page, size, sortBy, direction, USER_SORT_FIELDS, "createdAt");
+
         try {
-            // Create sort object
-            Sort sort = direction.equalsIgnoreCase("desc") 
-                ? Sort.by(sortBy).descending() 
-                : Sort.by(sortBy).ascending();
-
-            // Create pageable
-            Pageable pageable = PageRequest.of(page, size, sort);
-
             // Build query
             Query query = new Query();
             
@@ -118,11 +122,11 @@ public class AdminController {
             Map<String, Object> response = new HashMap<>();
             response.put("content", users);
             response.put("totalElements", totalElements);
-            response.put("totalPages", (int) Math.ceil((double) totalElements / size));
-            response.put("currentPage", page);
-            response.put("size", size);
-            response.put("first", page == 0);
-            response.put("last", page >= (int) Math.ceil((double) totalElements / size) - 1);
+            response.put("totalPages", (int) Math.ceil((double) totalElements / pageable.getPageSize()));
+            response.put("currentPage", pageable.getPageNumber());
+            response.put("size", pageable.getPageSize());
+            response.put("first", pageable.getPageNumber() == 0);
+            response.put("last", pageable.getPageNumber() >= (int) Math.ceil((double) totalElements / pageable.getPageSize()) - 1);
 
             return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", response));
 
@@ -336,11 +340,10 @@ public class AdminController {
                     .body(ApiResponse.error("Admin access required"));
         }
 
+        Pageable pageable = RequestValidation.pageable(page, size, sortBy, direction, POST_SORT_FIELDS, "createdAt");
+
         try {
             // Use PostService to get posts with pagination
-            Pageable pageable = PageRequest.of(page, size, 
-                Sort.by(direction.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC, sortBy));
-            
             Page<PostDTO> posts = postService.getAllPosts(pageable);
             
             Map<String, Object> response = new HashMap<>();
@@ -366,7 +369,7 @@ public class AdminController {
      */
     @DeleteMapping("/posts/{postId}")
     public ResponseEntity<ApiResponse<String>> deletePost(
-            @PathVariable String postId,
+            @ValidObjectId("postId") String postId,
             Authentication authentication) {
         
         if (!isAdmin(authentication)) {
@@ -835,6 +838,9 @@ public class AdminController {
                     .body(ApiResponse.error("Admin access required"));
         }
 
+        Pageable pageable = PageRequest.of(RequestValidation.page(page), RequestValidation.size(size),
+                Sort.by("createdAt").descending());
+
         try {
             // Get posts that might need moderation (reported, flagged, etc.)
             Query query = new Query(Criteria.where("reported").is(true)
@@ -844,8 +850,7 @@ public class AdminController {
                 ));
             
             long totalElements = mongoTemplate.count(query, "posts");
-            
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
             query.with(pageable);
             
             List<org.adnan.travner.entry.PostEntry> posts = mongoTemplate.find(query, org.adnan.travner.entry.PostEntry.class);
@@ -853,10 +858,10 @@ public class AdminController {
             Map<String, Object> response = new HashMap<>();
             response.put("content", posts);
             response.put("totalElements", totalElements);
-            response.put("totalPages", (int) Math.ceil((double) totalElements / size));
-            response.put("currentPage", page);
-            response.put("size", size);
-            
+            response.put("totalPages", (int) Math.ceil((double) totalElements / pageable.getPageSize()));
+            response.put("currentPage", pageable.getPageNumber());
+            response.put("size", pageable.getPageSize());
+
             return ResponseEntity.ok(ApiResponse.success("Moderation queue retrieved successfully", response));
             
         } catch (Exception e) {

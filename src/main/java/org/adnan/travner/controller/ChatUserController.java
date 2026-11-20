@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.UserSummaryDTO;
 import org.adnan.travner.service.UserService;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -91,7 +92,7 @@ public class ChatUserController {
     @GetMapping("/{userId}/chat-summary")
     @Operation(summary = "Get chat summary", description = "Get chat history summary with a specific user")
     public ResponseEntity<ApiResponse<ChatSummaryResponse>> getChatSummary(
-            @PathVariable String userId,
+            @ValidObjectId("userId") String userId,
             Authentication authentication) {
         log.debug("Getting chat summary between user {} and {}", authentication.getName(), userId);
 

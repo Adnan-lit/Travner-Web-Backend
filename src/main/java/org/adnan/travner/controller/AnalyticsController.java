@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.service.AnalyticsService;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -50,7 +51,7 @@ public class AnalyticsController {
      * Get user engagement metrics
      */
     @GetMapping("/user/{userId}/engagement")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserEngagement(@PathVariable String userId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserEngagement(@ValidObjectId("userId") String userId) {
         try {
             Map<String, Object> engagement = analyticsService.getUserEngagement(userId);
             return ResponseEntity.ok(
@@ -129,7 +130,7 @@ public class AnalyticsController {
      */
     @GetMapping("/user/{userId}/activity")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getUserActivityTimeline(
-            @PathVariable String userId,
+            @ValidObjectId("userId") String userId,
             @RequestParam(defaultValue = "week") String timeframe) {
         try {
             List<Map<String, Object>> activities = analyticsService.getUserActivityTimeline(userId, timeframe);

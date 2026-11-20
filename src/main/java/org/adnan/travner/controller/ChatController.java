@@ -9,6 +9,8 @@ import org.adnan.travner.dto.chat.ChatAttachmentDTO;
 import org.adnan.travner.security.PrincipalIdentity;
 import org.adnan.travner.service.ChatAttachmentService;
 import org.adnan.travner.service.ChatService;
+import org.adnan.travner.util.RequestValidation;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -48,7 +50,8 @@ public class ChatController {
             Authentication authentication) {
         
         String userId = PrincipalIdentity.requireUserId(authentication);
-        Pageable pageable = PageRequest.of(page, size, Sort.by("lastMessageAt").descending());
+        Pageable pageable = PageRequest.of(RequestValidation.page(page), RequestValidation.size(size),
+                Sort.by("lastMessageAt").descending());
         
         Page<ChatConversationDTO> conversations = chatService.getUserConversations(userId, pageable);
         
@@ -67,7 +70,7 @@ public class ChatController {
     @GetMapping("/conversations/direct/{otherUserId}")
     @Operation(summary = "Get or create direct conversation", description = "Get or create direct conversation with another user")
     public ResponseEntity<ApiResponse<ChatConversationDTO>> getOrCreateDirectConversation(
-            @PathVariable String otherUserId,
+            @ValidObjectId("otherUserId") String otherUserId,
             Authentication authentication) {
         
         String currentUserId = PrincipalIdentity.requireUserId(authentication);
@@ -90,13 +93,14 @@ public class ChatController {
     public ResponseEntity<ApiResponse<Page<ChatMessageDTO>>> getConversationMessages(
             @PathVariable String conversationId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
         
         String userId = PrincipalIdentity.requireUserId(authentication);
 
         // Participant check is enforced in the service for REST and STOMP paths.
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(RequestValidation.page(page), RequestValidation.size(size),
+                Sort.by("createdAt").descending());
         Page<ChatMessageDTO> messages = chatService.getConversationMessages(conversationId, userId, pageable);
         
         ApiResponse<Page<ChatMessageDTO>> response = ApiResponse.<Page<ChatMessageDTO>>builder()

@@ -11,11 +11,11 @@ import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.repository.ProductRepository;
 import org.adnan.travner.service.MediaService;
 import org.adnan.travner.service.ProductService;
+import org.adnan.travner.util.RequestValidation;
+import org.adnan.travner.web.ValidObjectId;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Controller for handling market and product operations
@@ -34,6 +35,11 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class MarketController {
+
+    private static final Set<String> SORT_FIELDS = Set.of(
+            "name", "description", "price", "category", "images", "sellerId",
+            "sellerUsername", "stockQuantity", "isAvailable", "location", "tags",
+            "createdAt", "updatedAt", "views", "rating", "reviewCount");
 
     private final ProductService productService;
     private final MediaService mediaService;
@@ -51,22 +57,13 @@ public class MarketController {
     @GetMapping("/products")
     public ResponseEntity<ApiResponse<List<ProductDTO>>> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
 
+        Pageable pageable = RequestValidation.pageable(page, size, sortBy, direction, SORT_FIELDS, "createdAt");
+
         try {
-            Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-
-            // Make sure the field to sort by exists
-            Pageable pageable;
-            try {
-                pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-            } catch (Exception e) {
-                // If the sort field is invalid, fall back to sorting by createdAt
-                pageable = PageRequest.of(page, size, Sort.by(sortDirection, "createdAt"));
-            }
-
             Page<ProductDTO> products = productService.getAllAvailableProducts(pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
@@ -83,7 +80,7 @@ public class MarketController {
      * @return Product details if found
      */
     @GetMapping("/products/{id}")
-    public ResponseEntity<ApiResponse<ProductDTO>> getProductById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<ProductDTO>> getProductById(@ValidObjectId("id") String id) {
         try {
             Optional<ProductDTO> product = productService.getProductById(id);
             if (product.isPresent()) {
@@ -111,10 +108,11 @@ public class MarketController {
     public ResponseEntity<ApiResponse<List<ProductDTO>>> searchProducts(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ProductDTO> products = productService.searchProducts(query, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
@@ -136,10 +134,11 @@ public class MarketController {
     public ResponseEntity<ApiResponse<List<ProductDTO>>> getProductsByCategory(
             @PathVariable String category,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ProductDTO> products = productService.getProductsByCategory(category, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
@@ -161,10 +160,11 @@ public class MarketController {
     public ResponseEntity<ApiResponse<List<ProductDTO>>> getProductsByLocation(
             @RequestParam String location,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ProductDTO> products = productService.getProductsByLocation(location, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
@@ -186,10 +186,11 @@ public class MarketController {
     public ResponseEntity<ApiResponse<List<ProductDTO>>> getProductsByTags(
             @RequestParam List<String> tags,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ProductDTO> products = productService.getProductsByTags(tags, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
@@ -209,12 +210,13 @@ public class MarketController {
      */
     @GetMapping("/products/seller/{sellerId}")
     public ResponseEntity<ApiResponse<List<ProductDTO>>> getProductsBySeller(
-            @PathVariable String sellerId,
+            @ValidObjectId("sellerId") String sellerId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ProductDTO> products = productService.getProductsBySeller(sellerId, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(products));
         } catch (Exception e) {
@@ -263,7 +265,7 @@ public class MarketController {
     @PutMapping("/products/{id}")
     public ResponseEntity<ApiResponse<ProductDTO>> updateProduct(
             Authentication authentication,
-            @PathVariable String id,
+            @ValidObjectId("id") String id,
             @Valid @RequestBody ProductRequest productRequest) {
 
         if (authentication == null) {
@@ -291,7 +293,7 @@ public class MarketController {
     @DeleteMapping("/products/{id}")
     public ResponseEntity<ApiResponse<Object>> deleteProduct(
             Authentication authentication,
-            @PathVariable String id) {
+            @ValidObjectId("id") String id) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -319,7 +321,7 @@ public class MarketController {
     @PostMapping("/products/{productId}/upload-media")
     public ResponseEntity<ApiResponse<MediaDTO>> uploadProductMedia(
             Authentication authentication,
-            @PathVariable String productId,
+            @ValidObjectId("productId") String productId,
             @RequestParam("file") MultipartFile file) {
 
         if (authentication == null) {
@@ -372,7 +374,7 @@ public class MarketController {
     @DeleteMapping("/products/{productId}/media")
     public ResponseEntity<ApiResponse<Object>> deleteProductMedia(
             Authentication authentication,
-            @PathVariable String productId,
+            @ValidObjectId("productId") String productId,
             @RequestParam("mediaUrl") String mediaUrl) {
 
         if (authentication == null) {

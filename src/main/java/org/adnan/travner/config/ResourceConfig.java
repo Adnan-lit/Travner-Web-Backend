@@ -1,12 +1,15 @@
 package org.adnan.travner.config;
 
+import org.adnan.travner.web.ValidObjectIdArgumentResolver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 @Configuration
 public class ResourceConfig implements WebMvcConfigurer {
@@ -23,5 +26,10 @@ public class ResourceConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:" + uploadAbsolutePath + "/")
                 .setCachePeriod(3600)
                 .resourceChain(true);
+    }
+
+    @Override
+    public void addArgumentResolvers(@org.springframework.lang.NonNull List<HandlerMethodArgumentResolver> resolvers) {
+        resolvers.add(new ValidObjectIdArgumentResolver());
     }
 }

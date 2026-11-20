@@ -14,6 +14,8 @@ import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.exception.ResourceNotFoundException;
 import org.adnan.travner.security.PrincipalIdentity;
 import org.adnan.travner.service.UserService;
+import org.adnan.travner.util.RequestValidation;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -54,7 +56,7 @@ public class UserController {
 
         log.debug("Searching users with query: {} for user: {}", q, authentication.getName());
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("userName").ascending());
+        Pageable pageable = PageRequest.of(RequestValidation.page(page), RequestValidation.size(size), Sort.by("userName").ascending());
         Page<UserSummaryDTO> users = userService.searchUsers(q, pageable);
 
         ApiResponse<List<UserSummaryDTO>> response = ApiResponse.<List<UserSummaryDTO>>builder()
@@ -80,7 +82,7 @@ public class UserController {
     @GetMapping("/{userId}")
     @Operation(summary = "Get user by ID", description = "Get user details by user ID")
     public ResponseEntity<ApiResponse<UserSummaryDTO>> getUserById(
-            @Parameter(description = "User ID") @PathVariable String userId,
+            @Parameter(description = "User ID") @ValidObjectId("userId") String userId,
             Authentication authentication) {
 
         log.debug("Getting user by ID: {} for user: {}", userId, authentication.getName());
@@ -124,14 +126,14 @@ public class UserController {
     @GetMapping("/{userId}/followers")
     @Operation(summary = "Get user followers", description = "Get list of user's followers")
     public ResponseEntity<ApiResponse<List<UserSummaryDTO>>> getFollowers(
-            @Parameter(description = "User ID") @PathVariable String userId,
+            @Parameter(description = "User ID") @ValidObjectId("userId") String userId,
             @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
 
         log.debug("Getting followers for user: {} requested by: {}", userId, authentication.getName());
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("userName").ascending());
+        Pageable pageable = PageRequest.of(RequestValidation.page(page), RequestValidation.size(size), Sort.by("userName").ascending());
         Page<UserSummaryDTO> followers = userService.getFollowers(userId, pageable);
 
         ApiResponse<List<UserSummaryDTO>> response = ApiResponse.<List<UserSummaryDTO>>builder()
@@ -157,14 +159,14 @@ public class UserController {
     @GetMapping("/{userId}/following")
     @Operation(summary = "Get user following", description = "Get list of users that the user is following")
     public ResponseEntity<ApiResponse<List<UserSummaryDTO>>> getFollowing(
-            @Parameter(description = "User ID") @PathVariable String userId,
+            @Parameter(description = "User ID") @ValidObjectId("userId") String userId,
             @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
 
         log.debug("Getting following for user: {} requested by: {}", userId, authentication.getName());
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("userName").ascending());
+        Pageable pageable = PageRequest.of(RequestValidation.page(page), RequestValidation.size(size), Sort.by("userName").ascending());
         Page<UserSummaryDTO> following = userService.getFollowing(userId, pageable);
 
         ApiResponse<List<UserSummaryDTO>> response = ApiResponse.<List<UserSummaryDTO>>builder()
@@ -190,7 +192,7 @@ public class UserController {
     @PostMapping("/{userId}/follow")
     @Operation(summary = "Follow user", description = "Follow another user")
     public ResponseEntity<ApiResponse<Void>> followUser(
-            @Parameter(description = "User ID to follow") @PathVariable String userId,
+            @Parameter(description = "User ID to follow") @ValidObjectId("userId") String userId,
             Authentication authentication) {
 
         String followerId = currentUserId(authentication);
@@ -212,7 +214,7 @@ public class UserController {
     @DeleteMapping("/{userId}/unfollow")
     @Operation(summary = "Unfollow user", description = "Unfollow another user")
     public ResponseEntity<ApiResponse<Void>> unfollowUser(
-            @Parameter(description = "User ID to unfollow") @PathVariable String userId,
+            @Parameter(description = "User ID to unfollow") @ValidObjectId("userId") String userId,
             Authentication authentication) {
 
         String followerId = currentUserId(authentication);
@@ -234,7 +236,7 @@ public class UserController {
     @GetMapping("/{userId}/follow-status")
     @Operation(summary = "Check follow status", description = "Check if current user follows another user")
     public ResponseEntity<ApiResponse<Boolean>> isFollowing(
-            @Parameter(description = "User ID to check") @PathVariable String userId,
+            @Parameter(description = "User ID to check") @ValidObjectId("userId") String userId,
             Authentication authentication) {
 
         String followerId = currentUserId(authentication);
@@ -257,7 +259,7 @@ public class UserController {
     @GetMapping("/{userId}/stats")
     @Operation(summary = "Get user statistics", description = "Get user's statistics including posts, followers, etc.")
     public ResponseEntity<ApiResponse<UserStatsDTO>> getUserStats(
-            @Parameter(description = "User ID") @PathVariable String userId,
+            @Parameter(description = "User ID") @ValidObjectId("userId") String userId,
             Authentication authentication) {
 
         log.debug("Getting stats for user: {} requested by: {}", userId, authentication.getName());

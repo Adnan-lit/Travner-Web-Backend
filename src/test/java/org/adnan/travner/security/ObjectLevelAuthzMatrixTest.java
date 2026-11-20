@@ -114,12 +114,12 @@ class ObjectLevelAuthzMatrixTest {
         when(orderService.fulfillOrder(eq(USER_A), anyString()))
                 .thenThrow(new ForbiddenException(INTERNAL_REASON));
 
-        assertGenericForbidden(post("/api/market/orders/ord1/fulfill"));
+        assertGenericForbidden(post("/api/market/orders/507f191e810c19729de860ea/fulfill"));
     }
 
     @Test
     void payEndpoint_isRemoved_buyerCannotSelfMarkPaid() throws Exception {
-        mockMvc.perform(post("/api/market/orders/ord1/pay")
+        mockMvc.perform(post("/api/market/orders/507f191e810c19729de860ea/pay")
                         .header("Authorization", userToken))
                 .andExpect(status().isNotFound());
     }
@@ -129,7 +129,7 @@ class ObjectLevelAuthzMatrixTest {
         when(orderService.confirmCashOrder(eq(USER_A), anyString()))
                 .thenThrow(new ForbiddenException(INTERNAL_REASON));
 
-        mockMvc.perform(post("/api/market/orders/ord1/confirm-cash")
+        mockMvc.perform(post("/api/market/orders/507f191e810c19729de860ea/confirm-cash")
                         .header("Authorization", userToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Access denied"))
@@ -141,7 +141,7 @@ class ObjectLevelAuthzMatrixTest {
         when(orderService.confirmCashOrder(eq(USER_A), anyString()))
                 .thenThrow(new InvalidOrderStateException("internal status detail"));
 
-        mockMvc.perform(post("/api/market/orders/ord1/confirm-cash")
+        mockMvc.perform(post("/api/market/orders/507f191e810c19729de860ea/confirm-cash")
                         .header("Authorization", userToken))
                 .andExpect(status().isConflict())
                 .andExpect(content().string(not(containsString("internal status detail"))));
@@ -152,7 +152,7 @@ class ObjectLevelAuthzMatrixTest {
         when(orderService.confirmCashOrder(eq(USER_A), anyString()))
                 .thenThrow(new OptimisticLockingFailureException("concurrent write"));
 
-        mockMvc.perform(post("/api/market/orders/ord1/confirm-cash")
+        mockMvc.perform(post("/api/market/orders/507f191e810c19729de860ea/confirm-cash")
                         .header("Authorization", userToken))
                 .andExpect(status().isConflict())
                 .andExpect(content().string(not(containsString("concurrent write"))));
@@ -163,7 +163,7 @@ class ObjectLevelAuthzMatrixTest {
         when(orderService.getOrderById(eq(USER_A), anyString()))
                 .thenThrow(new ForbiddenException(INTERNAL_REASON));
 
-        assertGenericForbidden(get("/api/market/orders/ord1"));
+        assertGenericForbidden(get("/api/market/orders/507f191e810c19729de860ea"));
     }
 
     @Test
@@ -171,7 +171,7 @@ class ObjectLevelAuthzMatrixTest {
         when(orderService.adminCancelOrder(eq(ADMIN), anyString()))
                 .thenThrow(new ForbiddenException(INTERNAL_REASON));
 
-        mockMvc.perform(post("/api/market/orders/ord1/admin-cancel")
+        mockMvc.perform(post("/api/market/orders/507f191e810c19729de860ea/admin-cancel")
                         .header("Authorization", adminToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Access denied"))
@@ -193,7 +193,7 @@ class ObjectLevelAuthzMatrixTest {
         org.mockito.Mockito.doThrow(new ForbiddenException(INTERNAL_REASON))
                 .when(mediaService).deleteMedia(anyString(), eq(USER_A));
 
-        assertGenericForbidden(delete("/api/media/media1"));
+        assertGenericForbidden(delete("/api/media/507f191e810c19729de860ec"));
     }
 
     @Test
@@ -227,7 +227,7 @@ class ObjectLevelAuthzMatrixTest {
         org.mockito.Mockito.doThrow(new ForbiddenException(INTERNAL_REASON))
                 .when(productService).assertCanManageProductMedia(anyString(), eq(USER_A));
 
-        mockMvc.perform(multipart("/api/market/products/prod1/upload-media")
+        mockMvc.perform(multipart("/api/market/products/507f191e810c19729de860ea/upload-media")
                         .file(new MockMultipartFile("file", "p.txt", "text/plain", new byte[]{1}))
                         .header("Authorization", userToken))
                 .andExpect(status().isForbidden())

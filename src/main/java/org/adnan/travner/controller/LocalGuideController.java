@@ -8,11 +8,11 @@ import org.adnan.travner.repository.LocalGuideRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.adnan.travner.service.LocalGuideService;
 import org.adnan.travner.util.IdentityNormalizer;
+import org.adnan.travner.util.RequestValidation;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Controller for local guide operations
@@ -28,6 +29,10 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/local-guides")
 public class LocalGuideController {
+
+    private static final Set<String> SORT_FIELDS = Set.of(
+            "isAvailable", "rating", "reviewCount", "createdAt", "updatedAt",
+            "hourlyRate", "location");
 
     @Autowired
     private LocalGuideService localGuideService;
@@ -44,7 +49,7 @@ public class LocalGuideController {
     @GetMapping
     public ResponseEntity<?> getAllLocalGuides(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction,
             @RequestParam(required = false) String query,
@@ -57,10 +62,9 @@ public class LocalGuideController {
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) Boolean isAvailable
     ) {
+        Pageable pageable = RequestValidation.pageable(page, size, sortBy, direction, SORT_FIELDS, "createdAt");
+
         try {
-            Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
-            Pageable pageable = PageRequest.of(page, size, sort);
-            
             Page<LocalGuideEntry> guides;
             
             if (query != null && !query.trim().isEmpty()) {
@@ -92,7 +96,7 @@ public class LocalGuideController {
      * Get local guide by ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getLocalGuideById(@PathVariable String id) {
+    public ResponseEntity<?> getLocalGuideById(@ValidObjectId("id") String id) {
         try {
             return localGuideService.getLocalGuideById(id)
                     .map(guide -> ResponseEntity.ok(guide))
@@ -139,7 +143,7 @@ public class LocalGuideController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<?> updateLocalGuide(
-            @PathVariable String id,
+            @ValidObjectId("id") String id,
             @Valid @RequestBody LocalGuideRequest request,
             Authentication authentication
     ) {
@@ -166,7 +170,7 @@ public class LocalGuideController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteLocalGuide(
-            @PathVariable String id,
+            @ValidObjectId("id") String id,
             Authentication authentication
     ) {
         try {
@@ -194,7 +198,7 @@ public class LocalGuideController {
      * Get local guides by user
      */
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getLocalGuidesByUser(@PathVariable String userId) {
+    public ResponseEntity<?> getLocalGuidesByUser(@ValidObjectId("userId") String userId) {
         try {
             List<LocalGuideDTO> guides = localGuideService.getLocalGuidesByUser(userId);
             return ResponseEntity.ok(guides);

@@ -10,6 +10,7 @@ import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.exception.InvalidOrderStateException;
 import org.adnan.travner.exception.ResourceNotFoundException;
 import org.adnan.travner.service.OrderService;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -101,7 +102,7 @@ public class OrderController {
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderDTO>> getOrderById(
             Authentication authentication,
-            @PathVariable String orderId) {
+            @ValidObjectId("orderId") String orderId) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -169,7 +170,7 @@ public class OrderController {
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<OrderDTO>> cancelOrder(
             Authentication authentication,
-            @PathVariable String orderId) {
+            @ValidObjectId("orderId") String orderId) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -201,7 +202,7 @@ public class OrderController {
     @PostMapping("/{orderId}/confirm-cash")
     public ResponseEntity<ApiResponse<OrderDTO>> confirmCashOrder(
             Authentication authentication,
-            @PathVariable String orderId) {
+            @ValidObjectId("orderId") String orderId) {
         try {
             if (authentication == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -227,7 +228,7 @@ public class OrderController {
     @PostMapping("/{orderId}/fulfill")
     public ResponseEntity<ApiResponse<OrderDTO>> fulfillOrder(
             Authentication authentication,
-            @PathVariable String orderId) {
+            @ValidObjectId("orderId") String orderId) {
         try {
             if (authentication == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -278,7 +279,7 @@ public class OrderController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<OrderDTO>> adminCancelOrder(
             Authentication authentication,
-            @PathVariable String orderId) {
+            @ValidObjectId("orderId") String orderId) {
         try {
             if (authentication == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

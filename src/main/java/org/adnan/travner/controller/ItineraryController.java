@@ -7,10 +7,10 @@ import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.ItineraryDTO;
 import org.adnan.travner.dto.ItineraryRequest;
 import org.adnan.travner.service.ItineraryService;
+import org.adnan.travner.util.RequestValidation;
+import org.adnan.travner.web.ValidObjectId;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Controller for itinerary operations
@@ -28,6 +29,10 @@ import java.util.Optional;
 @Slf4j
 public class ItineraryController {
 
+    private static final Set<String> SORT_FIELDS = Set.of(
+            "title", "description", "destination", "startDate", "isPublic",
+            "isTemplate", "createdAt", "updatedAt");
+
     private final ItineraryService itineraryService;
 
     /**
@@ -36,14 +41,13 @@ public class ItineraryController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<ItineraryDTO>>> getAllItineraries(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
 
-        try {
-            Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-            Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        Pageable pageable = RequestValidation.pageable(page, size, sortBy, direction, SORT_FIELDS, "createdAt");
 
+        try {
             Page<ItineraryDTO> itineraries = itineraryService.getPublicItineraries(pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
@@ -57,7 +61,7 @@ public class ItineraryController {
      * Get itinerary by ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ItineraryDTO>> getItineraryById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<ItineraryDTO>> getItineraryById(@ValidObjectId("id") String id) {
         try {
             Optional<ItineraryDTO> itinerary = itineraryService.getItineraryById(id);
             if (itinerary.isPresent()) {
@@ -80,10 +84,11 @@ public class ItineraryController {
     public ResponseEntity<ApiResponse<List<ItineraryDTO>>> getItinerariesByDestination(
             @PathVariable String destination,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ItineraryDTO> itineraries = itineraryService.getItinerariesByDestination(destination, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
@@ -100,10 +105,11 @@ public class ItineraryController {
     public ResponseEntity<ApiResponse<List<ItineraryDTO>>> getItinerariesByUser(
             @PathVariable String username,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ItineraryDTO> itineraries = itineraryService.getItinerariesByUser(username, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
@@ -120,10 +126,11 @@ public class ItineraryController {
     public ResponseEntity<ApiResponse<List<ItineraryDTO>>> searchItineraries(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ItineraryDTO> itineraries = itineraryService.searchItineraries(query, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
@@ -140,10 +147,11 @@ public class ItineraryController {
     public ResponseEntity<ApiResponse<List<ItineraryDTO>>> getItinerariesByTags(
             @RequestParam List<String> tags,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ItineraryDTO> itineraries = itineraryService.getItinerariesByTags(tags, pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
@@ -159,10 +167,11 @@ public class ItineraryController {
     @GetMapping("/templates")
     public ResponseEntity<ApiResponse<List<ItineraryDTO>>> getTemplateItineraries(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = RequestValidation.pageable(page, size);
 
         try {
-            Pageable pageable = PageRequest.of(page, size);
             Page<ItineraryDTO> itineraries = itineraryService.getTemplateItineraries(pageable);
             return ResponseEntity.ok(ApiResponse.fromPage(itineraries));
         } catch (Exception e) {
@@ -202,7 +211,7 @@ public class ItineraryController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ItineraryDTO>> updateItinerary(
             Authentication authentication,
-            @PathVariable String id,
+            @ValidObjectId("id") String id,
             @Valid @RequestBody ItineraryRequest request) {
 
         if (authentication == null) {
@@ -226,7 +235,7 @@ public class ItineraryController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Object>> deleteItinerary(
             Authentication authentication,
-            @PathVariable String id) {
+            @ValidObjectId("id") String id) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -249,7 +258,7 @@ public class ItineraryController {
     @PostMapping("/{id}/like")
     public ResponseEntity<ApiResponse<ItineraryDTO>> likeItinerary(
             Authentication authentication,
-            @PathVariable String id) {
+            @ValidObjectId("id") String id) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
