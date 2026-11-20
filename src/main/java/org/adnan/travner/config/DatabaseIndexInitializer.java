@@ -13,7 +13,9 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import com.mongodb.client.MongoDatabase;
 import org.springframework.data.mongodb.core.index.Index;
+import org.springframework.data.mongodb.core.index.IndexField;
 import org.springframework.data.mongodb.core.index.IndexInfo;
 import org.springframework.data.mongodb.core.index.IndexOperations;
 import org.springframework.stereotype.Component;
@@ -47,6 +49,11 @@ public class DatabaseIndexInitializer implements ApplicationRunner {
     private static final String CARTS = "carts";
     private static final String FOLLOWS = "follows";
     private static final String POST_VOTES = "post_votes";
+    private static final String POSTS = "posts";
+    private static final String PRODUCTS = "products";
+    private static final String CHAT_MESSAGES = "chat_messages";
+    private static final String CHAT_CONVERSATIONS = "chat_conversations";
+    private static final String ORDERS = "orders";
 
     private final MongoTemplate mongoTemplate;
 
@@ -56,12 +63,29 @@ public class DatabaseIndexInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        warnIfNotReplicaSet();
         normalizeUsers();
         normalizeCarts();
         deduplicateFollows();
         deduplicateVotes();
         createUniqueIndexes();
-        log.info("Identity normalization and unique indexes verified");
+        createCompoundIndexes();
+        log.info("Identity normalization and index verification complete");
+    }
+
+    /** Standalone MongoDB cannot run {@code @Transactional} writes; warn, do not abort. */
+    private void warnIfNotReplicaSet() {
+        try {
+            MongoDatabase database = mongoTemplate.getDb();
+            Document hello = database == null ? null : database.runCommand(new Document("hello", 1));
+            if (hello == null || hello.getString("setName") == null) {
+                log.warn("MongoDB is not a replica set. @Transactional writes (checkout, cart, follow, "
+                        + "post, order) require a replica set; see DEPLOYMENT.md. "
+                        + "This warning does not stop startup.");
+            }
+        } catch (Exception e) {
+            log.debug("Could not determine MongoDB replica-set status", e);
+        }
     }
 
     /** Raw documents avoid entity setters, so we can detect what is actually stored. */
@@ -218,28 +242,86 @@ public class DatabaseIndexInitializer implements ApplicationRunner {
         ensureUniqueIndex(CARTS, "carts_userId_unique", "userId");
     }
 
-    private void ensureUniqueIndex(String collection, String name, String... fields) {
-        IndexOperations indexOperations = mongoTemplate.indexOps(collection);
-        List<String> keyFields = List.of(fields);
-        for (IndexInfo existing : indexOperations.getIndexInfo()) {
-            if (!existing.isIndexForFields(keyFields)) {
-                continue;
-            }
-            if (existing.isUnique()) {
-                // An older deployment may already have an equivalent unique
-                // index under a different name; MongoDB rejects a second one.
-                log.debug("Unique index on {} {} already exists as {}", collection, keyFields, existing.getName());
-                return;
-            }
-            throw new IllegalStateException("Existing index " + existing.getName() + " on " + collection
-                    + " is not unique; drop it before startup so the unique index can be built");
-        }
+    /**
+     * Keys use persisted BSON names, not Java property names: {@code author} is a
+     * DBRef (so its id is {@code author.$id}), products map to snake_case via
+     * {@code @Field}, and the active conversation collection is
+     * {@code chat_conversations}. Orders have no root {@code sellerId}; the only
+     * seller field is {@code items.sellerId}, so that key is used instead.
+     */
+    private void createCompoundIndexes() {
+        ensureIndex(POSTS, "posts_published_createdAt_idx", false,
+                new Index().on("published", Sort.Direction.ASC).on("createdAt", Sort.Direction.DESC));
+        ensureIndex(POSTS, "posts_author_createdAt_idx", false,
+                new Index().on("author.$id", Sort.Direction.ASC).on("createdAt", Sort.Direction.DESC));
+        ensureIndex(PRODUCTS, "products_available_createdAt_idx", false,
+                new Index().on("is_available", Sort.Direction.ASC).on("created_at", Sort.Direction.DESC));
+        ensureIndex(PRODUCTS, "products_category_available_idx", false,
+                new Index().on("category", Sort.Direction.ASC).on("is_available", Sort.Direction.ASC));
+        ensureIndex(CHAT_MESSAGES, "chat_messages_conversation_createdAt_idx", false,
+                new Index().on("conversationId", Sort.Direction.ASC).on("createdAt", Sort.Direction.DESC));
+        ensureIndex(CHAT_CONVERSATIONS, "chat_conversations_participants_lastMessageAt_idx", false,
+                new Index().on("participantIds", Sort.Direction.ASC).on("lastMessageAt", Sort.Direction.DESC));
+        ensureIndex(ORDERS, "orders_userId_orderedAt_idx", false,
+                new Index().on("userId", Sort.Direction.ASC).on("orderedAt", Sort.Direction.DESC));
+        ensureIndex(ORDERS, "orders_itemsSellerId_status_idx", false,
+                new Index().on("items.sellerId", Sort.Direction.ASC).on("status", Sort.Direction.ASC));
+    }
 
+    private void ensureUniqueIndex(String collection, String name, String... fields) {
         Index index = new Index();
         for (String field : fields) {
             index.on(field, Sort.Direction.ASC);
         }
-        indexOperations.ensureIndex(index.unique().named(name));
+        ensureIndex(collection, name, true, index);
+    }
+
+    private void ensureIndex(String collection, String name, boolean unique, Index index) {
+        IndexOperations indexOperations = mongoTemplate.indexOps(collection);
+        for (IndexInfo existing : indexOperations.getIndexInfo()) {
+            if (!sameKeysAndDirections(existing, index)) {
+                continue;
+            }
+            if (name.equals(existing.getName()) && unique == existing.isUnique()) {
+                return;
+            }
+            if (unique && existing.isUnique()) {
+                // An older deployment may already have an equivalent unique
+                // index under a different name; MongoDB rejects a second one.
+                log.debug("Unique index on {} already exists as {}", collection, existing.getName());
+                return;
+            }
+            if (unique) {
+                throw new IllegalStateException("Existing index " + existing.getName() + " on " + collection
+                        + " is not unique; drop it before startup so the unique index can be built");
+            }
+            log.debug("Non-unique index on {} already exists as {}", collection, existing.getName());
+            return;
+        }
+        long start = System.nanoTime();
+        indexOperations.ensureIndex(unique ? index.unique().named(name) : index.named(name));
+        log.info("Created {} index {} on {} in {} ms",
+                unique ? "unique" : "compound", name, collection,
+                java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
+    }
+
+    private boolean sameKeysAndDirections(IndexInfo existing, Index index) {
+        Document keys = index.getIndexKeys();
+        List<IndexField> fields = existing.getIndexFields();
+        if (fields.size() != keys.size()) {
+            return false;
+        }
+        for (IndexField field : fields) {
+            Object direction = keys.get(field.getKey());
+            if (!(direction instanceof Number number)) {
+                return false;
+            }
+            Sort.Direction expected = number.intValue() >= 0 ? Sort.Direction.ASC : Sort.Direction.DESC;
+            if (field.getDirection() != expected) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void failOnDuplicates(Map<String, Long> counts, String label) {

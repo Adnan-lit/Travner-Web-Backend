@@ -32,7 +32,8 @@ class DatabaseIndexInitializerIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void cleanCollections() {
-        List.of("users", "carts", "follows", "post_votes")
+        List.of("users", "carts", "follows", "post_votes", "posts", "products",
+                "chat_messages", "chat_conversations", "orders")
                 .forEach(mongoTemplate::dropCollection);
     }
 
@@ -64,6 +65,20 @@ class DatabaseIndexInitializerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void createsRealCompoundIndexesOnEveryQueriedCollection() {
+        initializer.run(null);
+
+        assertIndex("posts", "posts_published_createdAt_idx");
+        assertIndex("posts", "posts_author_createdAt_idx");
+        assertIndex("products", "products_available_createdAt_idx");
+        assertIndex("products", "products_category_available_idx");
+        assertIndex("chat_messages", "chat_messages_conversation_createdAt_idx");
+        assertIndex("chat_conversations", "chat_conversations_participants_lastMessageAt_idx");
+        assertIndex("orders", "orders_userId_orderedAt_idx");
+        assertIndex("orders", "orders_itemsSellerId_status_idx");
+    }
+
+    @Test
     void duplicateNormalizedUsernamesAbortTheMigration() {
         mongoTemplate.insert(user("Alice", "alice@example.com"), "users");
         mongoTemplate.insert(user("alice", "other@example.com"), "users");
@@ -72,6 +87,12 @@ class DatabaseIndexInitializerIntegrationTest extends BaseIntegrationTest {
                 () -> initializer.run(null));
 
         assertTrue(ex.getMessage().contains("username"));
+    }
+
+    private void assertIndex(String collection, String name) {
+        assertTrue(mongoTemplate.indexOps(collection).getIndexInfo().stream()
+                        .anyMatch(index -> name.equals(index.getName()) && !index.isUnique()),
+                "Missing non-unique index " + name + " on " + collection);
     }
 
     private Set<String> uniqueNames(String collection) {

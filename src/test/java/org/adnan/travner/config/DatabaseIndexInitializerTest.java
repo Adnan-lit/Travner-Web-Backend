@@ -88,7 +88,7 @@ class DatabaseIndexInitializerTest {
     }
 
     @Test
-    void usersAreNormalizedAndAllFiveUniqueIndexesAreCreated() {
+    void usersAreNormalizedAndAllIndexesAreCreated() {
         when(mongoTemplate.findAll(Document.class, "users")).thenReturn(List.of(
                 user(" Alice ", " ALICE@Example.com "),
                 user(" BOB ", " BOB@Example.com ")));
@@ -104,17 +104,58 @@ class DatabaseIndexInitializerTest {
                 .map(user -> user.getString("email")).collect(Collectors.toSet()));
 
         ArgumentCaptor<Index> indexes = ArgumentCaptor.forClass(Index.class);
-        verify(indexOperations, times(5)).ensureIndex(indexes.capture());
+        verify(indexOperations, times(13)).ensureIndex(indexes.capture());
+        assertEquals(Set.of("users_userName_unique", "users_email_unique",
+                        "follows_follower_following_unique", "post_votes_post_user_unique",
+                        "carts_userId_unique", "posts_published_createdAt_idx",
+                        "posts_author_createdAt_idx", "products_available_createdAt_idx",
+                        "products_category_available_idx", "chat_messages_conversation_createdAt_idx",
+                        "chat_conversations_participants_lastMessageAt_idx", "orders_userId_orderedAt_idx",
+                        "orders_itemsSellerId_status_idx"),
+                indexes.getAllValues().stream()
+                        .map(index -> index.getIndexOptions().getString("name"))
+                        .collect(Collectors.toSet()));
         assertEquals(Set.of("users_userName_unique", "users_email_unique",
                         "follows_follower_following_unique", "post_votes_post_user_unique",
                         "carts_userId_unique"),
                 indexes.getAllValues().stream()
+                        .filter(index -> index.getIndexOptions().getBoolean("unique", false))
                         .map(index -> index.getIndexOptions().getString("name"))
                         .collect(Collectors.toSet()));
         assertTrue(indexes.getAllValues().stream()
-                .allMatch(index -> index.getIndexOptions().getBoolean("unique", false)));
-        assertTrue(indexes.getAllValues().stream()
                 .anyMatch(index -> index.getIndexKeys().keySet().containsAll(List.of("postId", "userId"))));
+    }
+
+    @Test
+    void compoundIndexesUsePersistedKeysAndQueryDirections() {
+        when(mongoTemplate.findAll(Document.class, "users")).thenReturn(List.of());
+        when(mongoTemplate.findAll(Document.class, "carts")).thenReturn(List.of());
+        when(mongoTemplate.indexOps(anyString())).thenReturn(indexOperations);
+
+        initializer.run(null);
+
+        ArgumentCaptor<Index> indexes = ArgumentCaptor.forClass(Index.class);
+        verify(indexOperations, times(13)).ensureIndex(indexes.capture());
+        Document byName = new Document();
+        indexes.getAllValues().forEach(index ->
+                byName.put(index.getIndexOptions().getString("name"), index.getIndexKeys()));
+
+        assertEquals(new Document("published", 1).append("createdAt", -1),
+                byName.get("posts_published_createdAt_idx"));
+        assertEquals(new Document("author.$id", 1).append("createdAt", -1),
+                byName.get("posts_author_createdAt_idx"));
+        assertEquals(new Document("is_available", 1).append("created_at", -1),
+                byName.get("products_available_createdAt_idx"));
+        assertEquals(new Document("category", 1).append("is_available", 1),
+                byName.get("products_category_available_idx"));
+        assertEquals(new Document("conversationId", 1).append("createdAt", -1),
+                byName.get("chat_messages_conversation_createdAt_idx"));
+        assertEquals(new Document("participantIds", 1).append("lastMessageAt", -1),
+                byName.get("chat_conversations_participants_lastMessageAt_idx"));
+        assertEquals(new Document("userId", 1).append("orderedAt", -1),
+                byName.get("orders_userId_orderedAt_idx"));
+        assertEquals(new Document("items.sellerId", 1).append("status", 1),
+                byName.get("orders_itemsSellerId_status_idx"));
     }
 
     @Test
@@ -147,7 +188,7 @@ class DatabaseIndexInitializerTest {
         initializer.run(null);
 
         ArgumentCaptor<Index> indexes = ArgumentCaptor.forClass(Index.class);
-        verify(indexOperations, times(4)).ensureIndex(indexes.capture());
+        verify(indexOperations, times(12)).ensureIndex(indexes.capture());
         assertTrue(indexes.getAllValues().stream().noneMatch(index ->
                 index.getIndexKeys().containsKey("userName")));
     }
@@ -213,7 +254,7 @@ class DatabaseIndexInitializerTest {
 
         verify(mongoTemplate).remove(follow2);
         verify(mongoTemplate).remove(vote2);
-        verify(indexOperations, times(5)).ensureIndex(any(Index.class));
+        verify(indexOperations, times(13)).ensureIndex(any(Index.class));
     }
 
     private Document rawCart(String userId) {

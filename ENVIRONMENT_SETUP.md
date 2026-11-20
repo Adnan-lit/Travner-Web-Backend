@@ -10,6 +10,13 @@ MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-name>.mongodb.net/?retr
 MONGODB_DATABASE=TravnerDB
 ```
 
+MongoDB must be a **replica set** (Atlas clusters are; a plain local `mongod`
+is not) because checkout and cart updates use `@Transactional`. For local
+development, start a single-node replica set (`mongod --replSet rs0` followed
+by `rs.initiate()`), otherwise those writes fail at runtime. The backend logs a
+startup `WARN` and reports `mongoReplicaSet.replicaSet=false` on
+`/actuator/health` when this is not satisfied.
+
 ### **Application Configuration**
 ```
 PORT=8080

@@ -17,6 +17,8 @@
    mongodb+srv://username:password@cluster.mongodb.net/TravnerDB?retryWrites=true&w=majority
    ```
 
+   **Replica set is required.** Several service methods use Spring `@Transactional`; MongoDB transactions only work on a replica set (or sharded cluster). MongoDB Atlas clusters are replica sets by default. A local `mongod` started without `--replSet` is **not** sufficient. The backend logs a `WARN` at startup when the connected server is not a replica set, and `/actuator/health` reports `mongoReplicaSet.replicaSet=false`. Do not treat that warning as harmless: multi-document writes such as checkout and cart updates can fail at runtime on a standalone server.
+
 ### Step 3: Deploy to Railway
 1. Go to https://railway.app/
 2. Click "New Project"
