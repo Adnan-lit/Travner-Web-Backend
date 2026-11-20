@@ -18,7 +18,7 @@ public class UserRequest {
 
     @NotBlank(message = "Username is required")
     @Size(min = 3, max = 20, message = "Username must be between 3 and 20 characters")
-    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username can only contain letters, numbers, and underscores")
+    @Pattern(regexp = "^[a-z0-9_]+$", message = "Username must be lowercase letters, numbers, and underscores")
     private String userName;
 
     @NotBlank(message = "Password is required")

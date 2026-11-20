@@ -7,6 +7,7 @@ import org.adnan.travner.entry.RefreshToken;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.RefreshTokenRepository;
 import org.adnan.travner.repository.UserRepository;
+import org.adnan.travner.util.IdentityNormalizer;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -55,7 +56,8 @@ public class AuthService {
 
     /** Authenticates credentials and issues a new token pair. */
     public AuthResult login(String username, String password) {
-        UserEntry user = username == null ? null : userRepository.findByuserName(username);
+        UserEntry user = username == null ? null
+                : userRepository.findByuserName(IdentityNormalizer.normalizeUsername(username));
         if (user == null || !user.isActive() || password == null
                 || !passwordEncoder.matches(password, user.getPassword())) {
             // Deliberately generic: do not reveal whether the username exists.

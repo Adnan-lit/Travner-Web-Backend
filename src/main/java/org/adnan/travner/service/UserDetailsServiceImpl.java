@@ -2,6 +2,7 @@ package org.adnan.travner.service;
 
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.UserRepository;
+import org.adnan.travner.util.IdentityNormalizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -19,11 +20,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserEntry user = userRepository.findByuserName(username);
+        String normalizedUsername = IdentityNormalizer.normalizeUsername(username);
+        UserEntry user = userRepository.findByuserName(normalizedUsername);
         if (user != null && user.isActive()) {
             // Update last login time (async to not slow down authentication)
             try {
-                userService.updateLastLogin(username);
+                userService.updateLastLogin(normalizedUsername);
             } catch (Exception e) {
                 // Don't fail authentication if logging fails
             }
@@ -41,6 +43,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                     .build();
             return userDetails;
         }
-        throw new UsernameNotFoundException("User Not Found With UserName: " + username);
+        throw new UsernameNotFoundException("User Not Found With UserName: " + normalizedUsername);
     }
 }

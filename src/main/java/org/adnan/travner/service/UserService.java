@@ -5,6 +5,7 @@ import org.adnan.travner.dto.user.ProfileUpdateRequest;
 import org.adnan.travner.dto.user.UserStatsDTO;
 import org.adnan.travner.entry.FollowEntry;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.DuplicateUserException;
 import org.adnan.travner.exception.ResourceNotFoundException;
 import org.adnan.travner.repository.CommentRepository;
 import org.adnan.travner.repository.FollowRepository;
@@ -36,6 +37,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.adnan.travner.dto.UserSummaryDTO;
+import org.adnan.travner.util.IdentityNormalizer;
 
 @Service
 @Slf4j
@@ -85,32 +87,38 @@ public class UserService {
     @Transactional
     public void saveNewUser(UserEntry user) {
         try {
-            // Validate user data
+            // Validate user data after canonicalizing identity fields.
             if (user == null || user.getUserName() == null || user.getPassword() == null) {
                 throw new IllegalArgumentException("User data is incomplete");
             }
-            
-            // Check if username already exists
+            user.setUserName(IdentityNormalizer.normalizeUsername(user.getUserName()));
+            user.setEmail(IdentityNormalizer.normalizeEmail(user.getEmail()));
+
             if (!isUsernameAvailable(user.getUserName())) {
-                throw new IllegalArgumentException("Username already exists");
+                throw new DuplicateUserException();
             }
-            
-            // Check if email already exists
             if (user.getEmail() != null && getUserByEmail(user.getEmail()) != null) {
-                throw new IllegalArgumentException("Email already exists");
+                throw new DuplicateUserException();
             }
-            
+
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             user.setRoles(List.of("USER"));
             user.setCreatedAt(java.time.LocalDateTime.now());
             user.setActive(true);
             userRepository.save(user);
+        } catch (DuplicateUserException e) {
+            throw e;
+        } catch (DuplicateKeyException e) {
+            // The unique index is the final authority under concurrent signups.
+            throw new DuplicateUserException();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to save user: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to save user", e);
         }
     }
 
     public void saveUser(UserEntry user) {
+        user.setUserName(IdentityNormalizer.normalizeUsername(user.getUserName()));
+        user.setEmail(IdentityNormalizer.normalizeEmail(user.getEmail()));
         // Check if password needs encoding (not already encoded)
         if (user.getPassword() != null && !user.getPassword().startsWith("$2a$")) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -119,11 +127,11 @@ public class UserService {
     }
 
     public UserEntry getByUsername(String username) {
-        return userRepository.findByuserName(username);
+        return userRepository.findByuserName(IdentityNormalizer.normalizeUsername(username));
     }
 
     public UserEntry getByUsernameSecure(String username) {
-        UserEntry user = userRepository.findByuserName(username);
+        UserEntry user = getByUsername(username);
         if (user != null) {
             user.setPassword(""); // Remove password for security
         }
@@ -174,7 +182,7 @@ public class UserService {
     }
 
     public UserEntry getUserByEmail(String email) {
-        return userRepository.findByEmail(email);
+        return userRepository.findByEmail(IdentityNormalizer.normalizeEmail(email));
     }
 
     public void updateLastLogin(String username) {
@@ -513,7 +521,7 @@ public class UserService {
      */
     public UserSummaryDTO getUserByUsername(String username) {
         try {
-            UserEntry user = userRepository.findByuserName(username);
+            UserEntry user = getByUsername(username);
             return user != null ? convertToUserSummaryDTO(user) : null;
         } catch (Exception e) {
             return null;
@@ -686,7 +694,7 @@ public class UserService {
     @Transactional
     public UserSummaryDTO updateProfile(String username, ProfileUpdateRequest profileData) {
         try {
-            UserEntry user = userRepository.findByuserName(username);
+            UserEntry user = getByUsername(username);
             if (user == null) {
                 throw new IllegalArgumentException("User not found: " + username);
             }
@@ -724,7 +732,7 @@ public class UserService {
      */
     public UserSummaryDTO uploadProfileImage(String username, String imageUrl) {
         try {
-            UserEntry user = userRepository.findByuserName(username);
+            UserEntry user = getByUsername(username);
             if (user == null) {
                 throw new IllegalArgumentException("User not found: " + username);
             }

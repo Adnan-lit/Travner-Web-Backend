@@ -17,6 +17,8 @@ import org.adnan.travner.repository.MediaRepository;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.dao.DuplicateKeyException;
+import org.adnan.travner.util.IdentityNormalizer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,7 +93,7 @@ public class PostService {
     }
 
     public Page<PostDTO> getPostsByUser(String username, Pageable pageable) {
-        UserEntry user = userRepository.findByuserName(username);
+        UserEntry user = userRepository.findByuserName(IdentityNormalizer.normalizeUsername(username));
         if (user == null) {
             throw new RuntimeException("User not found");
         }
@@ -266,7 +268,13 @@ public class PostService {
                     .voteType(newVoteType)
                     .createdAt(LocalDateTime.now())
                     .build();
-            postVoteRepository.save(newVote);
+            try {
+                postVoteRepository.save(newVote);
+            } catch (DuplicateKeyException e) {
+                // A concurrent vote for the same (post, user) already won the
+                // unique index race; the counts below reflect the stored vote.
+                log.debug("Concurrent duplicate vote ignored for post {}", id);
+            }
         }
 
         // Update post vote counts

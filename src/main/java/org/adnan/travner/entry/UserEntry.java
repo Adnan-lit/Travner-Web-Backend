@@ -9,6 +9,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.annotation.CreatedDate;
+import org.adnan.travner.util.IdentityNormalizer;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -30,7 +31,7 @@ public class UserEntry {
     @Indexed(unique = true)
     @NotBlank(message = "Username is required")
     @Size(min = 3, max = 20, message = "Username must be between 3 and 20 characters")
-    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username can only contain letters, numbers, and underscores")
+    @Pattern(regexp = "^[a-z0-9_]+$", message = "Username must be lowercase letters, numbers, and underscores")
     private String userName;
 
     @NotBlank(message = "Password is required")
@@ -68,4 +69,26 @@ public class UserEntry {
     @Pattern(regexp = "^(https?://)?[\\w\\-]+(\\.[\\w\\-]+)+([\\w\\-\\.,@?^=%&:/~\\+#]*[\\w\\-\\@?^=%&/~\\+#])?$", 
              message = "Profile image URL must be valid")
     private String profileImageUrl;
+
+    /** Normalize on every write path that uses the generated setter (Jackson included). */
+    public void setUserName(String userName) {
+        this.userName = IdentityNormalizer.normalizeUsername(userName);
+    }
+
+    public void setEmail(String email) {
+        this.email = IdentityNormalizer.normalizeEmail(email);
+    }
+
+    /** Lombok's builder assigns fields directly, so normalize in the builder too. */
+    public static class UserEntryBuilder {
+        public UserEntryBuilder userName(String userName) {
+            this.userName = IdentityNormalizer.normalizeUsername(userName);
+            return this;
+        }
+
+        public UserEntryBuilder email(String email) {
+            this.email = IdentityNormalizer.normalizeEmail(email);
+            return this;
+        }
+    }
 }

@@ -2,6 +2,9 @@ package org.adnan.travner.controller;
 
 import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.UserSummaryDTO;
+import org.adnan.travner.exception.DuplicateUserException;
+import org.adnan.travner.util.IdentityNormalizer;
+import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +17,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/public")
+@Slf4j
 public class PublicController {
 
     @Autowired
@@ -30,10 +34,14 @@ public class PublicController {
                         .body(ApiResponse.error("Username and password are required"));
             }
 
+            // Canonical form is the only form ever stored or echoed back.
+            userRequest.setUserName(IdentityNormalizer.normalizeUsername(userRequest.getUserName()));
+            userRequest.setEmail(IdentityNormalizer.normalizeEmail(userRequest.getEmail()));
+
             // Check if username is available
             if (!userService.isUsernameAvailable(userRequest.getUserName())) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(ApiResponse.error("Username already exists"));
+                        .body(ApiResponse.error("Username or email already exists"));
             }
 
             // Create new user
@@ -53,11 +61,15 @@ public class PublicController {
                     .build();
 
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success("User registered successfully", userSummary));
+                    .body(ApiResponse.success("User registered successfully with a lowercase username", userSummary));
 
+        } catch (DuplicateUserException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error("Username or email already exists"));
         } catch (Exception e) {
+            log.error("Registration failed", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Registration failed: " + e.getMessage()));
+                    .body(ApiResponse.error("Registration failed"));
         }
     }
 
@@ -87,8 +99,9 @@ public class PublicController {
             return ResponseEntity.ok(ApiResponse.success(userSummary));
 
         } catch (Exception e) {
+            log.error("Failed to retrieve public user info", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to retrieve user info: " + e.getMessage()));
+                    .body(ApiResponse.error("Failed to retrieve user info"));
         }
     }
 
@@ -102,8 +115,9 @@ public class PublicController {
             return ResponseEntity.ok(ApiResponse.success("Username check completed",
                     Map.of("available", available)));
         } catch (Exception e) {
+            log.error("Failed to check username availability", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to check username: " + e.getMessage()));
+                    .body(ApiResponse.error("Failed to check username"));
         }
     }
 }

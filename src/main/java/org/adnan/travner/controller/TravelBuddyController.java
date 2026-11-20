@@ -7,6 +7,7 @@ import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.TravelBuddyRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.adnan.travner.service.TravelBuddyService;
+import org.adnan.travner.util.IdentityNormalizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -106,7 +107,7 @@ public class TravelBuddyController {
     ) {
         try {
             String username = authentication.getName();
-            Optional<UserEntry> userOpt = Optional.ofNullable(userRepository.findByuserName(username));
+            Optional<UserEntry> userOpt = Optional.ofNullable(userRepository.findByuserName(IdentityNormalizer.normalizeUsername(username)));
             
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -132,7 +133,7 @@ public class TravelBuddyController {
     ) {
         try {
             String username = authentication.getName();
-            Optional<UserEntry> userOpt = Optional.ofNullable(userRepository.findByuserName(username));
+            Optional<UserEntry> userOpt = Optional.ofNullable(userRepository.findByuserName(IdentityNormalizer.normalizeUsername(username)));
             
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -158,7 +159,7 @@ public class TravelBuddyController {
     ) {
         try {
             String username = authentication.getName();
-            Optional<UserEntry> userOpt = Optional.ofNullable(userRepository.findByuserName(username));
+            Optional<UserEntry> userOpt = Optional.ofNullable(userRepository.findByuserName(IdentityNormalizer.normalizeUsername(username)));
             
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)

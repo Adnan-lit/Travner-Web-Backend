@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.UserRepository;
+import org.adnan.travner.util.IdentityNormalizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -27,7 +28,7 @@ import java.util.List;
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
 
-    private static final String USERNAME_PATTERN = "^[a-zA-Z0-9_]{3,20}$";
+    private static final String USERNAME_PATTERN = "^[a-z0-9_]{3,20}$";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -52,9 +53,9 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
 
-        String username = bootstrapUsername.trim();
+        String username = IdentityNormalizer.normalizeUsername(bootstrapUsername);
         if (!username.matches(USERNAME_PATTERN)) {
-            log.error("Bootstrap admin username fails validation (3-20 letters, digits or underscores); skipping.");
+            log.error("Bootstrap admin username fails validation (3-20 lowercase letters, digits or underscores); skipping.");
             return;
         }
 
@@ -72,7 +73,7 @@ public class DataInitializer implements CommandLineRunner {
                 log.error("Bootstrap admin username is already taken by a non-admin user; skipping.");
                 return;
             }
-            if (userRepository.findByEmail(bootstrapEmail) != null) {
+            if (userRepository.findByEmail(IdentityNormalizer.normalizeEmail(bootstrapEmail)) != null) {
                 log.error("Bootstrap admin email is already in use; skipping.");
                 return;
             }

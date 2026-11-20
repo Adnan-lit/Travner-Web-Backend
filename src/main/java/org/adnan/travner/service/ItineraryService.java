@@ -9,6 +9,7 @@ import org.adnan.travner.entry.ItineraryEntry;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.ItineraryRepository;
 import org.adnan.travner.repository.UserRepository;
+import org.adnan.travner.util.IdentityNormalizer;
 import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -82,7 +83,7 @@ public class ItineraryService {
     }
 
     public Page<ItineraryDTO> getItinerariesByUser(String username, Pageable pageable) {
-        UserEntry user = userRepository.findByuserName(username);
+        UserEntry user = userRepository.findByuserName(IdentityNormalizer.normalizeUsername(username));
         if (user == null) {
             throw new RuntimeException("User not found");
         }

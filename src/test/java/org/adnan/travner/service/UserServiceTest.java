@@ -1,6 +1,7 @@
 package org.adnan.travner.service;
 
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.DuplicateUserException;
 import org.adnan.travner.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.bson.types.ObjectId;
+import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -72,6 +75,69 @@ class UserServiceTest {
         assertEquals(List.of("USER"), newUser.getRoles());
         assertTrue(newUser.isActive());
         assertNotNull(newUser.getCreatedAt());
+    }
+
+    @Test
+    void saveNewUser_normalizesIdentityBeforeDuplicateChecksAndStorage() {
+        UserEntry newUser = new UserEntry();
+        newUser.setUserName("  Alice_01  ");
+        newUser.setEmail("  ALICE@Example.COM ");
+        newUser.setPassword("plainpassword");
+        when(userRepository.findByuserName("alice_01")).thenReturn(null);
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(null);
+        when(passwordEncoder.encode("plainpassword")).thenReturn("encoded");
+
+        userService.saveNewUser(newUser);
+
+        ArgumentCaptor<UserEntry> captor = ArgumentCaptor.forClass(UserEntry.class);
+        verify(userRepository).save(captor.capture());
+        assertEquals("alice_01", captor.getValue().getUserName());
+        assertEquals("alice@example.com", captor.getValue().getEmail());
+        verify(userRepository).findByuserName("alice_01");
+        verify(userRepository).findByEmail("alice@example.com");
+    }
+
+    @Test
+    void saveNewUser_duplicateEmailThrowsGenericExceptionWithoutEncodingPassword() {
+        UserEntry newUser = new UserEntry();
+        newUser.setUserName("alice_02");
+        newUser.setEmail(" ALICE@EXAMPLE.COM ");
+        newUser.setPassword("plainpassword");
+        when(userRepository.findByuserName("alice_02")).thenReturn(null);
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(testUser);
+
+        DuplicateUserException ex = assertThrows(DuplicateUserException.class,
+                () -> userService.saveNewUser(newUser));
+
+        assertEquals("Username or email already exists", ex.getMessage());
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void saveNewUser_translatesConcurrentDuplicateKeyIntoGenericException() {
+        UserEntry newUser = new UserEntry();
+        newUser.setUserName("newuser");
+        newUser.setEmail("new@example.com");
+        newUser.setPassword("plainpassword");
+        when(userRepository.findByuserName("newuser")).thenReturn(null);
+        when(userRepository.findByEmail("new@example.com")).thenReturn(null);
+        when(passwordEncoder.encode("plainpassword")).thenReturn("encoded");
+        when(userRepository.save(any(UserEntry.class)))
+                .thenThrow(new DuplicateKeyException("E11000 duplicate key"));
+
+        DuplicateUserException ex = assertThrows(DuplicateUserException.class,
+                () -> userService.saveNewUser(newUser));
+
+        assertEquals("Username or email already exists", ex.getMessage());
+    }
+
+    @Test
+    void getByUsername_normalizesMixedCaseLookup() {
+        when(userRepository.findByuserName("testuser")).thenReturn(testUser);
+
+        assertEquals(testUser, userService.getByUsername("  TESTUSER  "));
+        verify(userRepository).findByuserName("testuser");
     }
 
     @Test

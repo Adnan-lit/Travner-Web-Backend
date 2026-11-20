@@ -234,6 +234,18 @@ class AuthServiceTest {
         assertFalse(response.toString().contains("raw-refresh-secret"));
     }
 
+    @Test
+    void login_withMixedCaseAndWhitespaceUsername_usesCanonicalLookup() {
+        when(userRepository.findByuserName("alice")).thenReturn(user);
+        when(passwordEncoder.matches("correct", "hashed-password")).thenReturn(true);
+
+        AuthService.AuthResult result = authService.login("  ALICE  ", "correct");
+
+        assertNotNull(result.accessToken());
+        verify(userRepository).findByuserName("alice");
+        assertEquals("alice", jwtDecoder.decode(result.accessToken()).getClaimAsString("username"));
+    }
+
     private RefreshToken storedToken(String raw, Instant expiresAt, Instant revokedAt) {
         return RefreshToken.builder()
                 .id(new ObjectId())

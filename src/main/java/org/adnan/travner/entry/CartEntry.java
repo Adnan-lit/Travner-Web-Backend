@@ -8,6 +8,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.adnan.travner.util.IdentityNormalizer;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -147,5 +148,17 @@ public class CartEntry {
         return items.stream()
                 .mapToInt(CartItem::getQuantity)
                 .sum();
+    }
+
+    /** Carts are keyed by the canonical username, never a display variant. */
+    public void setUserId(String userId) {
+        this.userId = IdentityNormalizer.normalizeUsername(userId);
+    }
+
+    public static class CartEntryBuilder {
+        public CartEntryBuilder userId(String userId) {
+            this.userId = IdentityNormalizer.normalizeUsername(userId);
+            return this;
+        }
     }
 }

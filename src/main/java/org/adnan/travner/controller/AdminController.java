@@ -183,7 +183,7 @@ public class AdminController {
                         .body(ApiResponse.error("Roles are required"));
             }
 
-            UserEntry user = userRepository.findByuserName(username);
+            UserEntry user = userService.getByUsername(username);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("User not found"));
@@ -219,7 +219,7 @@ public class AdminController {
         }
 
         try {
-            UserEntry user = userRepository.findByuserName(username);
+            UserEntry user = userService.getByUsername(username);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("User not found"));
@@ -254,7 +254,7 @@ public class AdminController {
         }
 
         try {
-            UserEntry user = userRepository.findByuserName(username);
+            UserEntry user = userService.getByUsername(username);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("User not found"));
@@ -289,7 +289,7 @@ public class AdminController {
         }
 
         try {
-            UserEntry user = userRepository.findByuserName(username);
+            UserEntry user = userService.getByUsername(username);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("User not found"));
@@ -762,7 +762,7 @@ public class AdminController {
             
             for (String username : usernames) {
                 try {
-                    UserEntry user = userRepository.findByuserName(username);
+                    UserEntry user = userService.getByUsername(username);
                     if (user == null) {
                         errors.add("User " + username + " not found");
                         failureCount++;
