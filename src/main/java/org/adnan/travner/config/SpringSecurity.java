@@ -100,6 +100,7 @@ public class SpringSecurity {
 
                         // Market management - require authentication for write operations
                         .requestMatchers(HttpMethod.POST, "/api/market/products").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/market/products/*/upload-media").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/market/products/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/market/products/**").hasAnyRole("USER", "ADMIN")
 

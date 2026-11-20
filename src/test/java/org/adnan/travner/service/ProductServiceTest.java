@@ -1,5 +1,8 @@
 package org.adnan.travner.service;
 
+import org.adnan.travner.dto.ProductDTO;
+import org.adnan.travner.dto.ProductRequest;
+import org.adnan.travner.entry.MediaEntry;
 import org.adnan.travner.entry.ProductEntry;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.exception.ForbiddenException;
@@ -15,11 +18,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /** Product-media ownership checks introduced in P1-04. */
@@ -83,6 +89,35 @@ class ProductServiceTest {
 
         assertThrows(ResourceNotFoundException.class,
                 () -> productService.assertCanManageProductMedia(productId.toHexString(), "seller"));
+    }
+
+    @Test
+    void createProduct_mediaUrlIsNotDuplicatedWhenAlsoSuppliedAsImage() {
+        ObjectId mediaId = new ObjectId();
+        String mediaUrl = "/api/media/" + mediaId;
+        MediaEntry media = MediaEntry.builder().id(mediaId).uploadedBy(otherId.toHexString()).build();
+        ProductRequest request = ProductRequest.builder()
+                .name("Product")
+                .category("category")
+                .price(BigDecimal.ONE)
+                .stockQuantity(1)
+                .images(List.of(mediaUrl))
+                .mediaIds(List.of(mediaId.toHexString()))
+                .build();
+
+        when(userRepository.findByuserName("admin")).thenReturn(user("admin", otherId, List.of("ADMIN")));
+        when(productRepository.save(any(ProductEntry.class))).thenAnswer(invocation -> {
+            ProductEntry saved = invocation.getArgument(0);
+            if (saved.getId() == null) {
+                saved.setId(new ObjectId());
+            }
+            return saved;
+        });
+        when(mediaRepository.findById(mediaId)).thenReturn(Optional.of(media));
+
+        ProductDTO result = productService.createProduct("admin", request);
+
+        assertEquals(1, result.getImages().stream().filter(mediaUrl::equals).count());
     }
 
     private UserEntry user(String username, ObjectId id, List<String> roles) {

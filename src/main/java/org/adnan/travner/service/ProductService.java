@@ -137,8 +137,12 @@ public class ProductService {
         // Associate media with the product if media IDs are provided
         if (request.getMediaIds() != null && !request.getMediaIds().isEmpty()) {
             List<String> mediaUrls = associateMediaWithProduct(request.getMediaIds(), savedProduct.getId(), user);
-            // Add media URLs to product images
-            images.addAll(mediaUrls);
+            // Add each media URL at most once (P2-04).
+            for (String mediaUrl : mediaUrls) {
+                if (!images.contains(mediaUrl)) {
+                    images.add(mediaUrl);
+                }
+            }
             savedProduct.setImages(images);
             savedProduct = productRepository.save(savedProduct);
         }
@@ -193,8 +197,12 @@ public class ProductService {
         // Associate new media with the product if media IDs are provided
         if (request.getMediaIds() != null && !request.getMediaIds().isEmpty()) {
             List<String> mediaUrls = associateMediaWithProduct(request.getMediaIds(), savedProduct.getId(), user);
-            // Add media URLs to product images
-            images.addAll(mediaUrls);
+            // Add each media URL at most once (P2-04).
+            for (String mediaUrl : mediaUrls) {
+                if (!images.contains(mediaUrl)) {
+                    images.add(mediaUrl);
+                }
+            }
             savedProduct.setImages(images);
             savedProduct = productRepository.save(savedProduct);
         }
@@ -279,19 +287,30 @@ public class ProductService {
                 if (mediaOptional.isPresent()) {
                     MediaEntry media = mediaOptional.get();
 
-                    // Verify that the user owns this media or is an admin
+                    // uploadedBy stores the uploader's user ID, not the username.
                     boolean isAdmin = user.getRoles() != null && user.getRoles().contains("ADMIN");
-                    boolean isOwner = media.getUploadedBy().equals(user.getUserName());
+                    boolean isOwner = media.getUploadedBy() != null
+                            && media.getUploadedBy().equals(user.getId().toHexString());
 
                     if (isOwner || isAdmin) {
-                        // Associate media with the product
+                        String mediaUrl = "/api/media/" + media.getId();
+                        if (productId.equals(media.getProductId())) {
+                            // Already associated; return the URL once without re-saving.
+                            if (!mediaUrls.contains(mediaUrl)) {
+                                mediaUrls.add(mediaUrl);
+                            }
+                            continue;
+                        }
+
                         media.setProductId(productId);
+                        media.setEntityId(productId.toHexString());
+                        media.setType("product");
                         mediaRepository.save(media);
 
-                        // Generate media URL
-                        String mediaUrl = "/api/media/" + media.getId();
-                        mediaUrls.add(mediaUrl);
-                        
+                        if (!mediaUrls.contains(mediaUrl)) {
+                            mediaUrls.add(mediaUrl);
+                        }
+
                         log.info("Associated media {} with product {}", mediaId, productId);
                     } else {
                         log.warn("User {} is not authorized to associate media {} with product {}",

@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -344,20 +343,9 @@ public class MarketController {
                         .body(ApiResponse.error("Product not found"));
             }
 
-            // Upload media
+            // MediaService is the single source of truth for association: it stores
+            // the file, appends the URL idempotently, and returns that same URL.
             MediaDTO uploadedMedia = mediaService.uploadMedia(file, authentication.getName(), "product", productId);
-
-            // Update product's images list
-            ProductEntry product = productOpt.get();
-            if (product.getImages() == null) {
-                product.setImages(new ArrayList<>());
-            }
-            
-            // Add media URL to product images
-            String mediaUrl = uploadedMedia.getDownloadUrl();
-            product.getImages().add(mediaUrl);
-            product.setUpdatedAt(java.time.LocalDateTime.now());
-            productRepository.save(product);
 
             log.info("Media uploaded for product {} by user {}", productId, authentication.getName());
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -403,14 +391,8 @@ public class MarketController {
                         .body(ApiResponse.error("Product not found"));
             }
 
-            ProductEntry product = productOpt.get();
-            
-            // Remove media URL from product
-            if (product.getImages() != null) {
-                product.getImages().remove(mediaUrl);
-                product.setUpdatedAt(java.time.LocalDateTime.now());
-                productRepository.save(product);
-            }
+            // Remove the URL, the MediaEntry and the GridFS object together.
+            mediaService.deleteProductMedia(productId, mediaUrl);
 
             log.info("Media removed from product {} by user {}", productId, authentication.getName());
             return ResponseEntity.ok(ApiResponse.success("Media removed from product successfully", null));

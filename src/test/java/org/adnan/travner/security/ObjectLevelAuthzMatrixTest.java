@@ -8,6 +8,7 @@ import org.adnan.travner.controller.ChatController;
 import org.adnan.travner.controller.MarketController;
 import org.adnan.travner.controller.MediaController;
 import org.adnan.travner.controller.OrderController;
+import org.adnan.travner.entry.ProductEntry;
 import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.repository.ProductRepository;
 import org.adnan.travner.service.ChatAttachmentService;
@@ -27,6 +28,8 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Optional;
 
 import static org.adnan.travner.security.JwtTestTokenFactory.ADMIN;
 import static org.adnan.travner.security.JwtTestTokenFactory.ADMIN_ID;
@@ -187,6 +190,20 @@ class ObjectLevelAuthzMatrixTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Access denied"))
                 .andExpect(content().string(not(containsString(INTERNAL_REASON))));
+    }
+
+    @Test
+    void productMediaDelete_delegatesFullCleanupToService() throws Exception {
+        when(productRepository.findById(any())).thenReturn(Optional.of(new ProductEntry()));
+        String productId = "507f191e810c19729de860ea";
+        String mediaUrl = "/api/media/507f191e810c19729de860eb";
+
+        mockMvc.perform(delete("/api/market/products/" + productId + "/media")
+                        .param("mediaUrl", mediaUrl)
+                        .header("Authorization", userToken))
+                .andExpect(status().isOk());
+
+        verify(mediaService).deleteProductMedia(productId, mediaUrl);
     }
 
     @Test
