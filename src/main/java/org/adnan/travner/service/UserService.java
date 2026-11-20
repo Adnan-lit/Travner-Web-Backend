@@ -5,11 +5,13 @@ import org.adnan.travner.dto.user.ProfileUpdateRequest;
 import org.adnan.travner.dto.user.UserStatsDTO;
 import org.adnan.travner.entry.FollowEntry;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.ResourceNotFoundException;
 import org.adnan.travner.repository.CommentRepository;
 import org.adnan.travner.repository.FollowRepository;
 import org.adnan.travner.repository.PostRepository;
 import org.adnan.travner.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -565,73 +567,74 @@ public class UserService {
     }
 
     /**
-     * Follow a user
+     * Follow a user. Both arguments are database IDs (the caller's ID comes
+     * from the JWT subject via the controller), never usernames.
      */
     @Transactional
     public void followUser(String followerId, String userId) {
-        try {
-            ObjectId followerObjectId = new ObjectId(followerId);
-            ObjectId userObjectId = new ObjectId(userId);
-            
-            // Don't allow self-following
-            if (followerObjectId.equals(userObjectId)) {
-                throw new IllegalArgumentException("Users cannot follow themselves");
-            }
-            
-            // Check if already following
-            if (followRepository.existsByFollowerIdAndFollowingId(followerObjectId, userObjectId)) {
-                log.warn("User {} already follows user {}", followerId, userId);
-                return;
-            }
-            
-            // Verify both users exist
-            if (!userRepository.existsById(followerObjectId) || !userRepository.existsById(userObjectId)) {
-                throw new IllegalArgumentException("One or both users do not exist");
-            }
-            
-            // Create follow relationship
-            FollowEntry followEntry = FollowEntry.builder()
+        ObjectId followerObjectId = parseUserId(followerId);
+        ObjectId userObjectId = parseUserId(userId);
+
+        if (followerObjectId.equals(userObjectId)) {
+            throw new IllegalArgumentException("Users cannot follow themselves");
+        }
+        if (!userRepository.existsById(followerObjectId)) {
+            throw new ResourceNotFoundException("Authenticated user not found");
+        }
+        if (!userRepository.existsById(userObjectId)) {
+            throw new ResourceNotFoundException("User not found: " + userId);
+        }
+        if (followRepository.existsByFollowerIdAndFollowingId(followerObjectId, userObjectId)) {
+            log.debug("User {} already follows user {}", followerId, userId);
+            return;
+        }
+
+        FollowEntry followEntry = FollowEntry.builder()
                 .followerId(followerObjectId)
                 .followingId(userObjectId)
                 .createdAt(LocalDateTime.now())
                 .build();
-            
+        try {
             followRepository.save(followEntry);
-            log.info("User {} now follows user {}", followerId, userId);
-        } catch (Exception e) {
-            log.error("Error following user: {}", userId, e);
-            throw new RuntimeException("Failed to follow user", e);
+        } catch (DuplicateKeyException e) {
+            // A concurrent duplicate request is already satisfied by the unique
+            // index on (followerId, followingId).
+            log.debug("Concurrent duplicate follow for {} -> {}", followerId, userId);
         }
     }
 
     /**
-     * Unfollow a user
+     * Unfollow a user. Deleting a non-existent relationship is idempotent, but
+     * an unknown target user and malformed IDs are still typed errors.
      */
     @Transactional
     public void unfollowUser(String followerId, String userId) {
-        try {
-            ObjectId followerObjectId = new ObjectId(followerId);
-            ObjectId userObjectId = new ObjectId(userId);
-            
-            followRepository.deleteByFollowerIdAndFollowingId(followerObjectId, userObjectId);
-            log.info("User {} unfollowed user {}", followerId, userId);
-        } catch (Exception e) {
-            log.error("Error unfollowing user: {}", userId, e);
-            throw new RuntimeException("Failed to unfollow user", e);
+        ObjectId followerObjectId = parseUserId(followerId);
+        ObjectId userObjectId = parseUserId(userId);
+        if (!userRepository.existsById(userObjectId)) {
+            throw new ResourceNotFoundException("User not found: " + userId);
         }
+        followRepository.deleteByFollowerIdAndFollowingId(followerObjectId, userObjectId);
     }
 
     /**
-     * Check if user follows another user
+     * Check follow status. Validation failures propagate so callers can map
+     * them to 400 instead of silently receiving "false".
      */
     public boolean isFollowing(String followerId, String userId) {
+        ObjectId followerObjectId = parseUserId(followerId);
+        ObjectId userObjectId = parseUserId(userId);
+        return followRepository.existsByFollowerIdAndFollowingId(followerObjectId, userObjectId);
+    }
+
+    private ObjectId parseUserId(String id) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("User ID is required");
+        }
         try {
-            ObjectId followerObjectId = new ObjectId(followerId);
-            ObjectId userObjectId = new ObjectId(userId);
-            return followRepository.existsByFollowerIdAndFollowingId(followerObjectId, userObjectId);
-        } catch (Exception e) {
-            log.error("Error checking follow status", e);
-            return false;
+            return new ObjectId(id);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid user ID: " + id);
         }
     }
 

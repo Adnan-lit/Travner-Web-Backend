@@ -10,6 +10,9 @@ import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.UserSummaryDTO;
 import org.adnan.travner.dto.user.ProfileUpdateRequest;
 import org.adnan.travner.dto.user.UserStatsDTO;
+import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.exception.ResourceNotFoundException;
+import org.adnan.travner.security.UserPrincipal;
 import org.adnan.travner.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -190,9 +193,10 @@ public class UserController {
             @Parameter(description = "User ID to follow") @PathVariable String userId,
             Authentication authentication) {
 
-        log.debug("User {} following user {}", authentication.getName(), userId);
+        String followerId = currentUserId(authentication);
+        log.debug("User {} following user {}", followerId, userId);
 
-        userService.followUser(authentication.getName(), userId);
+        userService.followUser(followerId, userId);
 
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .success(true)
@@ -211,9 +215,10 @@ public class UserController {
             @Parameter(description = "User ID to unfollow") @PathVariable String userId,
             Authentication authentication) {
 
-        log.debug("User {} unfollowing user {}", authentication.getName(), userId);
+        String followerId = currentUserId(authentication);
+        log.debug("User {} unfollowing user {}", followerId, userId);
 
-        userService.unfollowUser(authentication.getName(), userId);
+        userService.unfollowUser(followerId, userId);
 
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .success(true)
@@ -232,9 +237,10 @@ public class UserController {
             @Parameter(description = "User ID to check") @PathVariable String userId,
             Authentication authentication) {
 
-        log.debug("Checking if user {} follows user {}", authentication.getName(), userId);
+        String followerId = currentUserId(authentication);
+        log.debug("Checking if user {} follows user {}", followerId, userId);
 
-        boolean following = userService.isFollowing(authentication.getName(), userId);
+        boolean following = userService.isFollowing(followerId, userId);
 
         ApiResponse<Boolean> response = ApiResponse.<Boolean>builder()
                 .success(true)
@@ -309,6 +315,27 @@ public class UserController {
                 .build();
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Resolve the caller's database ID. JWT principals carry it as the subject;
+     * other authentication types (e.g. test principals) are resolved by username.
+     * Never pass the display username into an ID-based service call (P2-01).
+     */
+    private String currentUserId(Authentication authentication) {
+        if (authentication == null) {
+            throw new ResourceNotFoundException("Authentication required");
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserPrincipal userPrincipal
+                && userPrincipal.getId() != null && !userPrincipal.getId().isBlank()) {
+            return userPrincipal.getId();
+        }
+        UserEntry user = userService.getByUsername(authentication.getName());
+        if (user == null || user.getId() == null) {
+            throw new ResourceNotFoundException("Authenticated user not found");
+        }
+        return user.getId().toHexString();
     }
 
     // Inner DTO for image upload response

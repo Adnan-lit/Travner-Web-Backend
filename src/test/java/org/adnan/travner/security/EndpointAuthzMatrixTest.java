@@ -158,7 +158,9 @@ class EndpointAuthzMatrixTest {
                 new Endpoint("GET /api/users/search", HttpMethod.GET, "/api/users/search?q=alice", false),
                 new Endpoint("POST /api/media/upload", HttpMethod.POST, "/api/media/upload", true),
                 new Endpoint("POST /api/market/orders/{id}/fulfill", HttpMethod.POST,
-                        "/api/market/orders/ord1/fulfill", false));
+                        "/api/market/orders/ord1/fulfill", false),
+                new Endpoint("POST /api/users/{id}/follow", HttpMethod.POST,
+                        "/api/users/507f191e810c19729de860ea/follow", false));
     }
 
     @ParameterizedTest(name = "user-role {0}")
