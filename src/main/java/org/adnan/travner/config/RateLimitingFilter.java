@@ -82,7 +82,7 @@ public class RateLimitingFilter implements Filter {
         // Different rate limits for different endpoint types
         if (path.startsWith("/api/public/register")) {
             return rateLimiter.isLoginAllowed(clientId);
-        } else if (path.startsWith("/api/media/upload")) {
+        } else if (path.startsWith("/api/media/upload") || path.startsWith("/api/chat/upload")) {
             return rateLimiter.isUploadAllowed(clientId);
         } else if (path.startsWith("/api/chat/") || path.startsWith("/ws/")) {
             return rateLimiter.isChatAllowed(clientId);

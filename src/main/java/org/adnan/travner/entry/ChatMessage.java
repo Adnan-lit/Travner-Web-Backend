@@ -44,4 +44,7 @@ public class ChatMessage {
     private List<String> readBy; // List of user IDs who read this message
     
     private String status; // SENT, DELIVERED, READ
+
+    /** ID of the GridFS-backed chat attachment, when this message carries one. */
+    private String attachmentId;
 }

@@ -26,6 +26,9 @@ public class SendMessageDTO {
     private String messageType;
     
     private String replyToMessageId;
+
+    /** ID of a previously uploaded attachment; must belong to this conversation and sender. */
+    private String attachmentId;
 }
 
 

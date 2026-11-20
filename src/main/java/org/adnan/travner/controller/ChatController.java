@@ -5,12 +5,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.*;
+import org.adnan.travner.dto.chat.ChatAttachmentDTO;
 import org.adnan.travner.security.PrincipalIdentity;
+import org.adnan.travner.service.ChatAttachmentService;
 import org.adnan.travner.service.ChatService;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -20,8 +25,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -31,6 +34,7 @@ import java.util.Map;
 public class ChatController {
 
     private final ChatService chatService;
+    private final ChatAttachmentService chatAttachmentService;
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -197,80 +201,66 @@ public class ChatController {
     }
 
     /**
-     * Upload file for chat
+     * Upload a validated file into a conversation. The returned attachment ID
+     * is referenced by the subsequent FILE/IMAGE message.
      */
     @PostMapping("/upload")
-    @Operation(summary = "Upload file for chat", description = "Upload a file to be shared in a chat conversation")
-    public ResponseEntity<ApiResponse<Map<String, String>>> uploadFile(
+    @Operation(summary = "Upload file for chat", description = "Store a validated file for sharing in a chat conversation")
+    public ResponseEntity<ApiResponse<ChatAttachmentDTO>> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam("conversationId") String conversationId,
             Authentication authentication) {
-        
         String userId = PrincipalIdentity.requireUserId(authentication);
-        log.debug("Uploading file for user: {} in conversation: {}", userId, conversationId);
-        
-        try {
-            // Verify user is participant in conversation
-            ChatConversationDTO conversation = chatService.getConversationById(conversationId, userId);
-            if (!conversation.getParticipantIds().contains(userId)) {
-                return ResponseEntity.badRequest().body(
-                    ApiResponse.<Map<String, String>>builder()
-                        .success(false)
-                        .message("User is not a participant in this conversation")
-                        .build()
-                );
-            }
-            
-            // Validate file
-            if (file.isEmpty()) {
-                return ResponseEntity.badRequest().body(
-                    ApiResponse.<Map<String, String>>builder()
-                        .success(false)
-                        .message("File is empty")
-                        .build()
-                );
-            }
-            
-            // Check file size (max 10MB)
-            if (file.getSize() > 10 * 1024 * 1024) {
-                return ResponseEntity.badRequest().body(
-                    ApiResponse.<Map<String, String>>builder()
-                        .success(false)
-                        .message("File size must be less than 10MB")
-                        .build()
-                );
-            }
-            
-            // Generate unique filename
-            String originalFilename = file.getOriginalFilename();
-            String fileExtension = originalFilename != null ? 
-                originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
-            String uniqueFilename = userId + "_" + System.currentTimeMillis() + fileExtension;
-            
-            // Save file (in a real implementation, you'd save to cloud storage)
-            // For now, we'll just return a placeholder URL
-            String fileUrl = "/uploads/chat/" + uniqueFilename;
-            
-            Map<String, String> responseData = new HashMap<>();
-            responseData.put("fileUrl", fileUrl);
-            responseData.put("fileName", originalFilename);
-            
-            ApiResponse<Map<String, String>> response = ApiResponse.<Map<String, String>>builder()
-                    .success(true)
-                    .message("File uploaded successfully")
-                    .data(responseData)
-                    .build();
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            log.error("Error uploading file: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(
-                ApiResponse.<Map<String, String>>builder()
-                    .success(false)
-                    .message("Failed to upload file")
-                    .build()
-            );
-        }
+        ChatAttachmentDTO attachment = chatAttachmentService.upload(file, conversationId, userId);
+        return ResponseEntity.ok(ApiResponse.<ChatAttachmentDTO>builder()
+                .success(true)
+                .message("File uploaded successfully")
+                .data(attachment)
+                .build());
+    }
+
+    /** Authorized download: membership is enforced by the service. */
+    @GetMapping("/attachments/{attachmentId}/download")
+    @Operation(summary = "Download a chat attachment")
+    public ResponseEntity<Resource> downloadAttachment(
+            @PathVariable String attachmentId,
+            Authentication authentication) {
+        String userId = PrincipalIdentity.requireUserId(authentication);
+        ChatAttachmentService.Download download = chatAttachmentService.download(attachmentId, userId);
+        String safeName = download.filename()
+                .replace("\"", "").replace("\r", "").replace("\n", "");
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(download.contentType()))
+                .contentLength(download.size())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeName + "\"")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(download.resource());
+    }
+
+    @GetMapping("/attachments/{attachmentId}")
+    @Operation(summary = "Get chat attachment metadata")
+    public ResponseEntity<ApiResponse<ChatAttachmentDTO>> getAttachment(
+            @PathVariable String attachmentId,
+            Authentication authentication) {
+        String userId = PrincipalIdentity.requireUserId(authentication);
+        return ResponseEntity.ok(ApiResponse.<ChatAttachmentDTO>builder()
+                .success(true)
+                .data(chatAttachmentService.getAttachment(attachmentId, userId))
+                .build());
+    }
+
+    /** Only the uploader can remove an attachment; GridFS data is removed with it. */
+    @DeleteMapping("/attachments/{attachmentId}")
+    @Operation(summary = "Delete a chat attachment")
+    public ResponseEntity<ApiResponse<Void>> deleteAttachment(
+            @PathVariable String attachmentId,
+            Authentication authentication) {
+        String userId = PrincipalIdentity.requireUserId(authentication);
+        chatAttachmentService.delete(attachmentId, userId);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .success(true)
+                .message("Attachment deleted")
+                .build());
     }
 }

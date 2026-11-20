@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.adnan.travner.dto.chat.ChatAttachmentDTO;
 import org.adnan.travner.dto.chat.ChatParticipantDTO;
 import org.springframework.data.annotation.Id;
 
@@ -31,4 +32,7 @@ public class ChatMessageDTO {
     private String replyToMessageId;
     private List<String> readBy; // List of user IDs who read this message
     private String status; // SENT, DELIVERED, READ
+    private String attachmentId;
+    /** Resolved attachment metadata, never a raw storage path. */
+    private ChatAttachmentDTO attachment;
 }

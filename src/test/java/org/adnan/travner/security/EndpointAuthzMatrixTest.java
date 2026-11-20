@@ -13,6 +13,7 @@ import org.adnan.travner.controller.OrderController;
 import org.adnan.travner.controller.UserController;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.service.CartService;
+import org.adnan.travner.service.ChatAttachmentService;
 import org.adnan.travner.service.ChatService;
 import org.adnan.travner.service.ItineraryService;
 import org.adnan.travner.service.MediaService;
@@ -103,6 +104,8 @@ class EndpointAuthzMatrixTest {
     @MockBean
     private ChatService chatService;
     @MockBean
+    private ChatAttachmentService chatAttachmentService;
+    @MockBean
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
     @MockBean
     private ItineraryService itineraryService;
@@ -157,6 +160,7 @@ class EndpointAuthzMatrixTest {
                 new Endpoint("GET /api/chat/conversations", HttpMethod.GET, "/api/chat/conversations", false),
                 new Endpoint("GET /api/users/search", HttpMethod.GET, "/api/users/search?q=alice", false),
                 new Endpoint("POST /api/media/upload", HttpMethod.POST, "/api/media/upload", true),
+                new Endpoint("POST /api/chat/upload", HttpMethod.POST, "/api/chat/upload", true),
                 new Endpoint("POST /api/market/orders/{id}/fulfill", HttpMethod.POST,
                         "/api/market/orders/ord1/fulfill", false),
                 new Endpoint("POST /api/users/{id}/follow", HttpMethod.POST,
@@ -213,7 +217,8 @@ class EndpointAuthzMatrixTest {
     private MockHttpServletRequestBuilder requestFor(Endpoint endpoint) {
         if (endpoint.multipart()) {
             return multipart(endpoint.path())
-                    .file(new MockMultipartFile("file", "probe.txt", "text/plain", new byte[]{1}));
+                    .file(new MockMultipartFile("file", "probe.txt", "text/plain", new byte[]{1}))
+                    .param("conversationId", "conv1");
         }
         return switch (endpoint.method().name()) {
             case "GET" -> get(endpoint.path());

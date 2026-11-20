@@ -3,10 +3,12 @@ package org.adnan.travner.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.adnan.travner.dto.*;
+import org.adnan.travner.dto.chat.ChatAttachmentDTO;
 import org.adnan.travner.dto.chat.ChatParticipantDTO;
 import org.adnan.travner.entry.ChatMessage;
 import org.adnan.travner.entry.ChatConversation;
 import org.adnan.travner.entry.UserEntry;
+import org.adnan.travner.repository.ChatAttachmentRepository;
 import org.adnan.travner.repository.ChatMessageRepository;
 import org.adnan.travner.repository.ChatConversationRepository;
 import org.springframework.data.domain.Page;
@@ -30,6 +32,7 @@ public class ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
     private final ChatConversationRepository chatConversationRepository;
+    private final ChatAttachmentRepository chatAttachmentRepository;
     private final UserService userService;
 
     /**
@@ -96,6 +99,18 @@ public class ChatService {
         ChatConversation conversation = requireConversation(request.getConversationId());
         assertParticipant(conversation, senderId);
 
+        // An attachment may only be attached by its uploader, to its own conversation.
+        if (request.getAttachmentId() != null && !request.getAttachmentId().isBlank()) {
+            var attachment = chatAttachmentRepository.findById(request.getAttachmentId())
+                    .orElseThrow(() -> new org.adnan.travner.exception.ResourceNotFoundException(
+                            "Attachment not found"));
+            if (!conversation.getId().equals(attachment.getConversationId())
+                    || !senderId.equals(attachment.getUploaderId())) {
+                throw new IllegalArgumentException(
+                        "Attachment does not belong to this conversation and sender");
+            }
+        }
+
         ChatParticipantDTO sender = resolveParticipant(senderId, null);
 
         ChatMessage message = ChatMessage.builder()
@@ -110,6 +125,7 @@ public class ChatService {
                 .replyToMessageId(request.getReplyToMessageId())
                 .readBy(new java.util.ArrayList<>(List.of(senderId))) // sender has read their own message
                 .status("DELIVERED")
+                .attachmentId(request.getAttachmentId())
                 .build();
 
         ChatMessage savedMessage = chatMessageRepository.save(message);
@@ -217,7 +233,18 @@ public class ChatService {
                 .replyToMessageId(message.getReplyToMessageId())
                 .readBy(message.getReadBy())
                 .status(message.getStatus())
+                .attachmentId(message.getAttachmentId())
+                .attachment(resolveAttachment(message.getAttachmentId()))
                 .build();
+    }
+
+    private ChatAttachmentDTO resolveAttachment(String attachmentId) {
+        if (attachmentId == null || attachmentId.isBlank()) {
+            return null;
+        }
+        return chatAttachmentRepository.findById(attachmentId)
+                .map(ChatAttachmentDTO::from)
+                .orElse(null);
     }
 
     private ChatParticipantDTO resolveParticipant(String userId) {

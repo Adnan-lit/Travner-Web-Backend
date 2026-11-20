@@ -4,10 +4,12 @@ import org.adnan.travner.dto.ChatConversationDTO;
 import org.adnan.travner.dto.ChatMessageDTO;
 import org.adnan.travner.dto.SendMessageDTO;
 import org.adnan.travner.dto.chat.ChatParticipantDTO;
+import org.adnan.travner.entry.ChatAttachment;
 import org.adnan.travner.entry.ChatConversation;
 import org.adnan.travner.entry.ChatMessage;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.exception.ForbiddenException;
+import org.adnan.travner.repository.ChatAttachmentRepository;
 import org.adnan.travner.repository.ChatConversationRepository;
 import org.adnan.travner.repository.ChatMessageRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +45,9 @@ class ChatServiceTest {
 
     @Mock
     private ChatConversationRepository chatConversationRepository;
+
+    @Mock
+    private ChatAttachmentRepository chatAttachmentRepository;
 
     @Mock
     private UserService userService;
@@ -282,6 +287,52 @@ class ChatServiceTest {
 
         assertEquals("READ", testMessage.getStatus());
         assertTrue(testMessage.getReadBy().containsAll(List.of("user1", "user2")));
+    }
+
+    @Test
+    void sendMessage_rejectsAttachmentFromAnotherConversation() {
+        ChatAttachment foreign = ChatAttachment.builder()
+                .id("att1").conversationId("other").uploaderId("user1").build();
+        SendMessageDTO request = SendMessageDTO.builder()
+                .conversationId("conv1").content("hi").messageType("FILE").attachmentId("att1").build();
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
+        when(chatAttachmentRepository.findById("att1")).thenReturn(Optional.of(foreign));
+
+        assertThrows(IllegalArgumentException.class, () -> chatService.sendMessage(request, "user1"));
+        verifyNoInteractions(chatMessageRepository);
+    }
+
+    @Test
+    void sendMessage_rejectsAttachmentUploadedByAnotherUser() {
+        ChatAttachment foreign = ChatAttachment.builder()
+                .id("att1").conversationId("conv1").uploaderId("user2").build();
+        SendMessageDTO request = SendMessageDTO.builder()
+                .conversationId("conv1").content("hi").messageType("FILE").attachmentId("att1").build();
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
+        when(chatAttachmentRepository.findById("att1")).thenReturn(Optional.of(foreign));
+
+        assertThrows(IllegalArgumentException.class, () -> chatService.sendMessage(request, "user1"));
+        verifyNoInteractions(chatMessageRepository);
+    }
+
+    @Test
+    void sendMessage_storesAttachmentAndResolvesMetadataInDto() {
+        ChatAttachment owned = ChatAttachment.builder()
+                .id("att1").conversationId("conv1").uploaderId("user1")
+                .originalFilename("notes.txt").contentType("text/plain").size(5).build();
+        SendMessageDTO request = SendMessageDTO.builder()
+                .conversationId("conv1").content("see file").messageType("FILE").attachmentId("att1").build();
+        when(chatConversationRepository.findById("conv1")).thenReturn(Optional.of(testConversation));
+        when(chatAttachmentRepository.findById("att1")).thenReturn(Optional.of(owned));
+        when(chatMessageRepository.save(any(ChatMessage.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ChatMessageDTO result = chatService.sendMessage(request, "user1");
+
+        assertEquals("att1", result.getAttachmentId());
+        assertNotNull(result.getAttachment());
+        assertEquals("notes.txt", result.getAttachment().getFileName());
+        assertEquals("/api/chat/attachments/att1/download", result.getAttachment().getDownloadUrl());
     }
 
     private UserEntry user(String username, String first, String last) {

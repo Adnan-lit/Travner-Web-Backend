@@ -10,6 +10,7 @@ import org.adnan.travner.controller.MediaController;
 import org.adnan.travner.controller.OrderController;
 import org.adnan.travner.exception.ForbiddenException;
 import org.adnan.travner.repository.ProductRepository;
+import org.adnan.travner.service.ChatAttachmentService;
 import org.adnan.travner.service.ChatService;
 import org.adnan.travner.service.MediaService;
 import org.adnan.travner.service.OrderService;
@@ -81,6 +82,8 @@ class ObjectLevelAuthzMatrixTest {
     private MediaService mediaService;
     @MockBean
     private ChatService chatService;
+    @MockBean
+    private ChatAttachmentService chatAttachmentService;
     @MockBean
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
     @MockBean
