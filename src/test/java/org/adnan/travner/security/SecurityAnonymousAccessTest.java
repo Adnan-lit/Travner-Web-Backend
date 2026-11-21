@@ -1,6 +1,8 @@
 package org.adnan.travner.security;
 
 import org.adnan.travner.config.CorsConfig;
+import org.adnan.travner.config.ClientAddressResolver;
+import org.adnan.travner.config.RateLimitDecision;
 import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.config.SpringSecurity;
 import org.adnan.travner.controller.PostController;
@@ -54,11 +56,16 @@ class SecurityAnonymousAccessTest {
     private RateLimiter rateLimiter;
 
     @MockBean
+    private ClientAddressResolver clientAddressResolver;
+
+    @MockBean
     private org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder;
 
     @BeforeEach
     void allowRequests() {
         Mockito.when(rateLimiter.isApiAllowed(Mockito.anyString())).thenReturn(true);
+        Mockito.when(rateLimiter.allowApi(Mockito.anyString())).thenReturn(RateLimitDecision.permit());
+        Mockito.when(clientAddressResolver.resolveClientIp(Mockito.any())).thenReturn("127.0.0.1");
     }
 
     @Test
@@ -89,4 +96,3 @@ class SecurityAnonymousAccessTest {
                 .andExpect(status().isUnauthorized());
     }
 }
-

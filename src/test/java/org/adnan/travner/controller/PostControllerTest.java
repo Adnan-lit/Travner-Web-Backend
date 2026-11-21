@@ -1,5 +1,7 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.config.ClientAddressResolver;
+import org.adnan.travner.config.RateLimitDecision;
 import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.dto.PostDTO;
 import org.adnan.travner.dto.PostRequest;
@@ -53,9 +55,14 @@ class PostControllerTest {
     @MockBean
     private RateLimiter rateLimiter;
 
+    @MockBean
+    private ClientAddressResolver clientAddressResolver;
+
     @BeforeEach
     void allowRequests() {
         when(rateLimiter.isApiAllowed(anyString())).thenReturn(true);
+        when(rateLimiter.allowApi(anyString())).thenReturn(RateLimitDecision.permit());
+        when(clientAddressResolver.resolveClientIp(any())).thenReturn("127.0.0.1");
     }
 
     @Test

@@ -1,7 +1,9 @@
 package org.adnan.travner.security;
 
 import org.adnan.travner.config.CorsConfig;
+import org.adnan.travner.config.ClientAddressResolver;
 import org.adnan.travner.config.JwtConfig;
+import org.adnan.travner.config.RateLimitDecision;
 import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.config.SpringSecurity;
 import org.adnan.travner.controller.AdminController;
@@ -82,6 +84,8 @@ class EndpointAuthzMatrixTest {
     @MockBean
     private RateLimiter rateLimiter;
     @MockBean
+    private ClientAddressResolver clientAddressResolver;
+    @MockBean
     private UserDetailsServiceImpl userDetailsService;
     @MockBean
     private PasswordEncoder passwordEncoder;
@@ -123,6 +127,12 @@ class EndpointAuthzMatrixTest {
         when(rateLimiter.isChatAllowed(anyString())).thenReturn(true);
         when(rateLimiter.isUploadAllowed(anyString())).thenReturn(true);
         when(rateLimiter.isLoginAllowed(anyString())).thenReturn(true);
+        when(rateLimiter.allowApi(anyString())).thenReturn(RateLimitDecision.permit());
+        when(rateLimiter.allowChat(anyString())).thenReturn(RateLimitDecision.permit());
+        when(rateLimiter.allowUpload(anyString())).thenReturn(RateLimitDecision.permit());
+        when(rateLimiter.allowLogin(anyString())).thenReturn(RateLimitDecision.permit());
+        when(rateLimiter.allowRefresh(anyString())).thenReturn(RateLimitDecision.permit());
+        when(clientAddressResolver.resolveClientIp(any())).thenReturn("127.0.0.1");
         when(mongoTemplate.count(any(Query.class), eq(UserEntry.class))).thenReturn(0L);
         when(mongoTemplate.find(any(Query.class), eq(UserEntry.class))).thenReturn(List.of());
         when(orderService.getAllOrders()).thenReturn(List.of());

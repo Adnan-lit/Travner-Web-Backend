@@ -1,5 +1,7 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.config.ClientAddressResolver;
+import org.adnan.travner.config.RateLimitDecision;
 import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.repository.PostRepository;
 import org.adnan.travner.repository.UserRepository;
@@ -20,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -42,10 +45,13 @@ class AdminBulkOperationErrorTest {
     @MockBean private ProductService productService;
     @MockBean private PasswordEncoder passwordEncoder;
     @MockBean private RateLimiter rateLimiter;
+    @MockBean private ClientAddressResolver clientAddressResolver;
 
     @BeforeEach
     void allowRequests() {
         when(rateLimiter.isApiAllowed(anyString())).thenReturn(true);
+        when(rateLimiter.allowApi(anyString())).thenReturn(RateLimitDecision.permit());
+        when(clientAddressResolver.resolveClientIp(any())).thenReturn("127.0.0.1");
     }
 
     @Test

@@ -6,7 +6,11 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.adnan.travner.config.ClientAddressResolver;
+import org.adnan.travner.config.CorrelationIdFilter;
+import org.adnan.travner.config.RateLimitDecision;
 import org.adnan.travner.config.RateLimiter;
+import org.adnan.travner.dto.ApiResponse;
 import org.adnan.travner.dto.auth.AuthResponse;
 import org.adnan.travner.dto.auth.AuthUser;
 import org.adnan.travner.dto.auth.LoginRequest;
@@ -21,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
+import org.slf4j.MDC;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 /** Login / refresh / logout and current-user endpoints (decision D1/D2). */
 @RestController
@@ -41,6 +47,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final RateLimiter rateLimiter;
+    private final ClientAddressResolver clientAddressResolver;
 
     @Value("${app.jwt.refresh-cookie-name:travner_refresh}")
     private String cookieName;
@@ -55,9 +62,9 @@ public class AuthController {
     @Operation(summary = "Log in", description = "Returns a bearer access token and sets an HttpOnly refresh cookie")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request,
                                    HttpServletRequest httpRequest) {
-        if (!rateLimiter.isLoginAllowed(clientKey(httpRequest))) {
-            return ExceptionResponses.of(ErrorCode.RATE_LIMITED, HttpStatus.TOO_MANY_REQUESTS,
-                    "Too many login attempts. Please try again later.");
+        RateLimitDecision decision = rateLimiter.allowLogin(clientKey(httpRequest));
+        if (!decision.allowed()) {
+            return rateLimitedResponse("Too many login attempts. Please try again later.", decision.retryAfterSeconds());
         }
         try {
             AuthService.AuthResult result = authService.login(request.getUsername(), request.getPassword());
@@ -73,7 +80,12 @@ public class AuthController {
     @PostMapping("/refresh")
     @Operation(summary = "Refresh access token", description = "Rotates the refresh cookie and returns a new access token")
     public ResponseEntity<?> refresh(
-            @CookieValue(name = "${app.jwt.refresh-cookie-name:travner_refresh}", required = false) String refreshCookie) {
+            @CookieValue(name = "${app.jwt.refresh-cookie-name:travner_refresh}", required = false) String refreshCookie,
+            HttpServletRequest httpRequest) {
+        RateLimitDecision decision = rateLimiter.allowRefresh(clientKey(httpRequest));
+        if (!decision.allowed()) {
+            return rateLimitedResponse("Too many refresh attempts. Please try again later.", decision.retryAfterSeconds());
+        }
         try {
             AuthService.AuthResult result = authService.refresh(refreshCookie);
             return ResponseEntity.ok()
@@ -144,10 +156,17 @@ public class AuthController {
     }
 
     private String clientKey(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return "ip:" + forwarded.split(",")[0].trim();
-        }
-        return "ip:" + request.getRemoteAddr();
+        return "ip:" + clientAddressResolver.resolveClientIp(request);
+    }
+
+    private ResponseEntity<?> rateLimitedResponse(String message, long retryAfterSeconds) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds))
+                .body(ApiResponse.error(ErrorCode.RATE_LIMITED.value(), message, traceId()));
+    }
+
+    private String traceId() {
+        String traceId = MDC.get(CorrelationIdFilter.MDC_KEY);
+        return (traceId == null || traceId.isBlank()) ? UUID.randomUUID().toString() : traceId;
     }
 }

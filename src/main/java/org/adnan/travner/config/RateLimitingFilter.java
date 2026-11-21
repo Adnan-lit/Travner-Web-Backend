@@ -8,7 +8,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -21,10 +21,11 @@ import java.io.IOException;
 @Component
 @Order(1)
 @Slf4j
+@RequiredArgsConstructor
 public class RateLimitingFilter implements Filter {
 
-    @Autowired
-    private RateLimiter rateLimiter;
+    private final RateLimiter rateLimiter;
+    private final ClientAddressResolver clientAddressResolver;
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -44,15 +45,16 @@ public class RateLimitingFilter implements Filter {
         String clientId = getClientIdentifier(httpRequest);
         
         // Apply rate limiting based on endpoint type
-        boolean allowed = isRateLimitAllowed(httpRequest, clientId);
+        RateLimitDecision decision = getRateLimitDecision(httpRequest, clientId);
         
-        if (allowed) {
+        if (decision.allowed()) {
             chain.doFilter(request, response);
         } else {
             log.warn("Rate limit exceeded [trace={}] for client: {} on path: {}",
                     org.slf4j.MDC.get(CorrelationIdFilter.MDC_KEY), clientId, requestPath);
             httpResponse.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             httpResponse.setContentType("application/json");
+            httpResponse.setHeader("Retry-After", String.valueOf(decision.retryAfterSeconds()));
             String traceId = org.slf4j.MDC.get(CorrelationIdFilter.MDC_KEY);
             if (traceId == null || traceId.isBlank()) {
                 traceId = java.util.UUID.randomUUID().toString();
@@ -74,29 +76,21 @@ public class RateLimitingFilter implements Filter {
     }
 
     private String getClientIdentifier(HttpServletRequest request) {
-        // Authentication happens after this filter, so the SecurityContext is
-        // not populated yet. Never decode credentials here (Basic was removed).
-        // Key on the client IP; trust X-Forwarded-For only behind a known proxy.
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return "ip:" + xForwardedFor.split(",")[0].trim();
-        }
-        
-        return "ip:" + request.getRemoteAddr();
+        return "ip:" + clientAddressResolver.resolveClientIp(request);
     }
 
-    private boolean isRateLimitAllowed(HttpServletRequest request, String clientId) {
+    private RateLimitDecision getRateLimitDecision(HttpServletRequest request, String clientId) {
         String path = request.getRequestURI();
         
         // Different rate limits for different endpoint types
         if (path.startsWith("/api/public/register")) {
-            return rateLimiter.isLoginAllowed(clientId);
+            return rateLimiter.allowLogin(clientId);
         } else if (path.startsWith("/api/media/upload") || path.startsWith("/api/chat/upload")) {
-            return rateLimiter.isUploadAllowed(clientId);
+            return rateLimiter.allowUpload(clientId);
         } else if (path.startsWith("/api/chat/") || path.startsWith("/ws/")) {
-            return rateLimiter.isChatAllowed(clientId);
+            return rateLimiter.allowChat(clientId);
         } else {
-            return rateLimiter.isApiAllowed(clientId);
+            return rateLimiter.allowApi(clientId);
         }
     }
 }

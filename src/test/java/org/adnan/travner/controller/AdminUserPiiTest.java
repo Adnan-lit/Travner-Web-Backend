@@ -1,5 +1,7 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.config.ClientAddressResolver;
+import org.adnan.travner.config.RateLimitDecision;
 import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.entry.UserEntry;
 import org.adnan.travner.repository.PostRepository;
@@ -21,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -43,10 +46,13 @@ class AdminUserPiiTest {
     @MockBean private ProductService productService;
     @MockBean private PasswordEncoder passwordEncoder;
     @MockBean private RateLimiter rateLimiter;
+    @MockBean private ClientAddressResolver clientAddressResolver;
 
     @BeforeEach
     void allowRequests() {
         when(rateLimiter.isApiAllowed(anyString())).thenReturn(true);
+        when(rateLimiter.allowApi(anyString())).thenReturn(RateLimitDecision.permit());
+        when(clientAddressResolver.resolveClientIp(any())).thenReturn("127.0.0.1");
     }
 
     @Test

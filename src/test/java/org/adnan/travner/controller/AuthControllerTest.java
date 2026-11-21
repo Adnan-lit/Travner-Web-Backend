@@ -1,5 +1,7 @@
 package org.adnan.travner.controller;
 
+import org.adnan.travner.config.ClientAddressResolver;
+import org.adnan.travner.config.RateLimitDecision;
 import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.config.SpringSecurity;
 import org.adnan.travner.dto.auth.AuthResponse;
@@ -55,6 +57,9 @@ class AuthControllerTest {
     private RateLimiter rateLimiter;
 
     @MockBean
+    private ClientAddressResolver clientAddressResolver;
+
+    @MockBean
     private UserDetailsServiceImpl userDetailsService;
 
     @MockBean
@@ -70,6 +75,12 @@ class AuthControllerTest {
     void setUp() {
         when(rateLimiter.isApiAllowed(anyString())).thenReturn(true);
         when(rateLimiter.isLoginAllowed(anyString())).thenReturn(true);
+        when(rateLimiter.allowApi(anyString())).thenReturn(RateLimitDecision.permit());
+        when(rateLimiter.allowChat(anyString())).thenReturn(RateLimitDecision.permit());
+        when(rateLimiter.allowUpload(anyString())).thenReturn(RateLimitDecision.permit());
+        when(rateLimiter.allowLogin(anyString())).thenReturn(RateLimitDecision.permit());
+        when(rateLimiter.allowRefresh(anyString())).thenReturn(RateLimitDecision.permit());
+        when(clientAddressResolver.resolveClientIp(any())).thenReturn("198.51.100.20");
 
         user = UserEntry.builder()
                 .id(new ObjectId())
@@ -125,12 +136,13 @@ class AuthControllerTest {
 
     @Test
     void login_whenRateLimited_returns429WithoutAuthenticating() throws Exception {
-        when(rateLimiter.isLoginAllowed(anyString())).thenReturn(false);
+        when(rateLimiter.allowLogin(anyString())).thenReturn(RateLimitDecision.rejected(42));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(LOGIN_BODY))
                 .andExpect(status().isTooManyRequests())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "42"))
                 .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
                 .andExpect(jsonPath("$.traceId").exists());
 
@@ -158,6 +170,19 @@ class AuthControllerTest {
                         new jakarta.servlet.http.Cookie("travner_refresh", "stolen")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Max-Age=0")));
+    }
+
+    @Test
+    void refresh_whenRateLimited_returns429WithoutCallingService() throws Exception {
+        when(rateLimiter.allowRefresh(anyString())).thenReturn(RateLimitDecision.rejected(17));
+
+        mockMvc.perform(post("/api/auth/refresh").cookie(
+                        new jakarta.servlet.http.Cookie("travner_refresh", "old-refresh")))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "17"))
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+
+        Mockito.verify(authService, Mockito.never()).refresh(anyString());
     }
 
     @Test
@@ -197,5 +222,21 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(user.getId().toHexString()))
                 .andExpect(jsonPath("$.username").value("alice"));
+    }
+
+    @Test
+    void login_trustsForwardedForOnlyViaConfiguredProxyResolver() throws Exception {
+        when(authService.login("alice", "correct"))
+                .thenReturn(new AuthService.AuthResult("signed-access-token", "raw-refresh-secret", user));
+        when(authService.toResponse(any())).thenReturn(response);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Forwarded-For", "198.51.100.99")
+                        .content(LOGIN_BODY))
+                .andExpect(status().isOk());
+
+        Mockito.verify(clientAddressResolver, Mockito.times(2)).resolveClientIp(any());
+        verify(rateLimiter).allowLogin("ip:198.51.100.20");
     }
 }

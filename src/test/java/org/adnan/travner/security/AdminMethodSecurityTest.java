@@ -1,6 +1,8 @@
 package org.adnan.travner.security;
 
 import org.adnan.travner.config.JwtConfig;
+import org.adnan.travner.config.ClientAddressResolver;
+import org.adnan.travner.config.RateLimitDecision;
 import org.adnan.travner.config.RateLimiter;
 import org.adnan.travner.config.SpringSecurity;
 import org.adnan.travner.controller.OrderController;
@@ -50,6 +52,9 @@ class AdminMethodSecurityTest {
     private RateLimiter rateLimiter;
 
     @MockBean
+    private ClientAddressResolver clientAddressResolver;
+
+    @MockBean
     private UserDetailsServiceImpl userDetailsService;
 
     @MockBean
@@ -58,6 +63,8 @@ class AdminMethodSecurityTest {
     @BeforeEach
     void setUp() {
         when(rateLimiter.isApiAllowed(any(String.class))).thenReturn(true);
+        when(rateLimiter.allowApi(any(String.class))).thenReturn(RateLimitDecision.permit());
+        when(clientAddressResolver.resolveClientIp(any())).thenReturn("127.0.0.1");
     }
 
     @Test
